@@ -99,6 +99,7 @@ function cleanProfile(p) {
     avoid: chipList(p.avoid, [], 16),
     cuisines: chipList(p.cuisines, CUISINES, 12),
     goal: Object.prototype.hasOwnProperty.call(GOALS, p.goal) ? p.goal : '',
+    buddy: word(p.buddy, 16),
     eatOut: Math.max(0, Math.min(7, Math.round(Number(p.eatOut) || 0))),
     cook: Object.prototype.hasOwnProperty.call(COOK, p.cook) ? p.cook : 'any',
     shopDay: DAYS.includes(p.shopDay) ? p.shopDay : '',
@@ -380,7 +381,7 @@ function chatReply(result) {
 async function chatAnswer(env, text, history, rows, today, profile, missed) {
   const stock = rows.slice(0, 150).map((r) => r.name + ': ' + (r.qty <= 0 ? 'none left' : qtyOf(r.qty, r.unit)) + (r.low ? ', running low' : '') + (r.frozen ? ', frozen' : r.expiry && r.qty > 0 ? ', best before ' + r.expiry : '') + (r.area ? ' [' + r.area + ']' : '')).join('\n');
   const sys =
-    'You are Stocker, a friendly assistant that keeps track of what a household has at home. Today is ' + today + '.\n' + describe(profile) +
+    'You are ' + ((profile && profile.buddy) || 'Tote') + ', the friendly helper character in the Stocker app. You are an AI assistant that keeps an eye on what a household has at home; speak warmly and plainly, in the first person. Today is ' + today + '.\n' + describe(profile) +
     'Answer the person in at most three short sentences, in plain text with no lists or markdown, using only the inventory below. ' +
     'You did not change anything this turn, so never say or imply that you updated, added or removed something. ' +
     'If they told you about cooking, using or buying something and nothing matched' + (missed.length ? ' (not found: ' + missed.join(', ') + ')' : '') + ', say you could not match it to what is tracked and ask one short question that would let you update it, such as which items they used. ' +

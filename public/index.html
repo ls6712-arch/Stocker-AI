@@ -117,6 +117,10 @@ input[type=text],input[type=password],input[type=number],input[type=date],input[
 .wrapchips{display:flex;flex-wrap:wrap;gap:8px}
 #profH:focus{outline:0}
 html.big{zoom:1.16}
+.tote3d{display:block;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.herorow{display:flex;align-items:center;gap:8px}.herorow>div:first-child{flex:1;min-width:0}
+.totehost{flex:none;width:112px;height:112px;margin:-10px -10px -6px 0}
+.chathead{display:flex;align-items:center;gap:10px}.chathead .totehost{flex:none;width:84px;height:84px;margin:-6px 0 -6px -8px}.chathead>div:last-child{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
 .chat{display:flex;flex-direction:column;gap:8px;max-height:44vh;min-height:120px;overflow-y:auto;padding:2px}
 .msg{max-width:88%;padding:10px 12px;border-radius:16px;overflow-wrap:anywhere;font-size:15px;line-height:1.4}
 .msg.me{align-self:flex-end;background:var(--accent);color:#fff;border-bottom-right-radius:4px}
@@ -275,8 +279,8 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
 <dialog class="sheet" id="chatDlg" aria-labelledby="chatH">
   <div class="pad">
     <div class="grab"></div>
-    <h2 id="chatH">Talk to Stocker</h2>
-    <p class="sub">Tell me what you are cooking, what you used up or what you bought, and I will update your home. Or ask me what you have.</p>
+    <div class="chathead"><div class="totehost" id="toteChat"></div><div><h2 id="chatH">Talk to Tote</h2>
+    <p class="sub">Tell me what you are cooking, used up or bought and I will update your home. Or ask what you have.</p></div></div>
     <div class="chat" id="chatLog" role="log" aria-live="polite" aria-label="Conversation"></div>
     <div class="wrapchips" id="chatTips"></div>
     <form class="chatbar" id="chatForm">
@@ -441,6 +445,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
         <div class="wrapchips" id="profCui" role="group" aria-label="Favourite food"></div>
         <h3>Weeknight cooking time</h3>
         <div class="wrapchips" id="profCook" role="group" aria-label="Cooking time"></div>
+        <label for="profBuddy" class="field">Name your helper<input type="text" id="profBuddy" maxlength="16" placeholder="Tote"></label>
         <h3>Nights you eat out or order in each week</h3>
         <div class="people" id="profOut"></div>
         <h3>Your shopping</h3>
@@ -675,7 +680,8 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     var hp=el('button','hpill',profileLine());hp.type='button';hp.setAttribute('aria-label','Your home profile: '+profileLine());hp.onclick=openProfile;
     top.append(el('h2','',!items.length?'Nothing tracked yet':n?n+(n===1?' thing needs you':' things need you'):"You're all set"));
     top.append(el('p','',!items.length?'Scan your last grocery receipt and I will take it from there.':profile&&profile.shopDay===DAYS[today().getDay()]?"It's your shopping day"+(profile.store?' at '+profile.store:'')+'. '+(buy.length+extras.length)+' on your list.':n?'Here is what to use up and what to pick up.':'Nothing to use up, and nothing on your list.'));
-    hero.append(hp,top);
+    var hr=el('div','herorow'),th=el('div','totehost');th.id='toteHome';hr.append(top,th);hero.append(hp,hr);
+    if(window.Tote&&!$('chatDlg').open){Tote.onTap=openChat;Tote.mood(!items.length?'sleepy':use.length||buy.some(function(i){return i.essential})?'alert':'happy');Tote.mount(th,112,buddy()+', your helper. Tap to talk.')}
     var trio=el('div','trio');[[items.length,'items','pantry'],[use.length,'use soon','today'],[buy.length+extras.length,'to buy','list']].forEach(function(s){
       var b=el('button');b.type='button';b.append(el('b','',String(s[0])),el('span','',s[1]));b.onclick=function(){go(s[2])};trio.append(b)});
     hero.append(trio);v.append(hero);
@@ -687,7 +693,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
           catch(e){m.away=!m.away;render();if(e.code!=='locked')toast('Could not save that. Check your connection.')}};wc.append(b)});
       wh.append(wc);v.append(wh)}
     var talk=el('button','talk');talk.type='button';talk.append(icon('M9 3h6v11H9zM5 11a7 7 0 0 0 14 0M12 18v3'));
-    var tt=el('span');tt.append(el('b','','Talk to Stocker'),el('span','sub','Say \u201cI\u2019m cooking pasta\u201d and I update what you have'));talk.append(tt);
+    var tt=el('span');tt.append(el('b','','Talk to '+buddy()),el('span','sub','Say \u201cI\u2019m cooking pasta\u201d and I update what you have'));talk.append(tt);
     talk.onclick=openChat;v.append(talk);
     if(items.filter(function(i){return areaOf(i)==='Kitchen'&&i.qty>0}).length>=2){
       var ck=el('button','talk');ck.type='button';ck.append(icon(POT));var ct=el('span');
@@ -1043,12 +1049,12 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     draft=p?{personas:cp(p.personas||[p.persona]),adults:p.adults,kids:p.kids,members:(p.members||[]).map(function(m){return {name:m.name,kind:m.kind,when:m.when,away:!!m.away,diet:cp(m.diet),allergies:cp(m.allergies),rules:cp(m.rules),avoid:cp(m.avoid)}}),
         pets:cp(p.pets),diet:cp(p.diet),allergies:cp(p.allergies),rules:cp(p.rules),avoid:cp(p.avoid),cuisines:cp(p.cuisines),goal:p.goal||'',eatOut:p.eatOut||0,cook:p.cook||'any',shopDay:p.shopDay||'',stores:cp(p.stores)}:
       {personas:[],adults:2,kids:0,members:[],pets:[],diet:[],allergies:[],rules:[],avoid:[],cuisines:[],goal:'',eatOut:0,cook:'any',shopDay:'',stores:[]};
-    $('profBudget').value=p&&p.budget?p.budget:'';$('profAbout').value=p&&p.about||'';
-    $('profMore').open=!!(p&&(p.avoid&&p.avoid.length||p.goal||p.eatOut||p.cuisines&&p.cuisines.length||p.cook!=='any'||p.shopDay||p.stores&&p.stores.length||p.budget||p.about));
+    $('profBuddy').value=p&&p.buddy||'';$('profBudget').value=p&&p.budget?p.budget:'';$('profAbout').value=p&&p.about||'';
+    $('profMore').open=!!(p&&(p.avoid&&p.avoid.length||p.goal||p.eatOut||p.buddy||p.cuisines&&p.cuisines.length||p.cook!=='any'||p.shopDay||p.stores&&p.stores.length||p.budget||p.about));
     drawProfile();$('profDlg').showModal();$('profH').tabIndex=-1;$('profH').focus();$('profDlg').scrollTop=0}
   $('profSkip').onclick=function(){try{localStorage.setItem('stocker.profSkip','1')}catch(e){}$('profDlg').close()};
   $('profSave').onclick=async function(){if(!draft.personas.length)return;$('profSave').disabled=true;
-    draft.budget=Number($('profBudget').value)||0;draft.about=$('profAbout').value;
+    draft.budget=Number($('profBudget').value)||0;draft.about=$('profAbout').value;draft.buddy=$('profBuddy').value;
     try{var r=await api('/api/profile',{method:'POST',body:JSON.stringify(draft)});profile=r.profile;try{localStorage.removeItem('stocker.starterHide')}catch(e){}$('profDlg').close();render();toast('Saved. Stocker is set up for '+(pers().length===1&&pers()[0]!=='other'?'a '+PERSONA[pers()[0]][0].toLowerCase():'your home')+'.')}
     catch(e){if(e.code!=='locked')toast('Could not save that. Check your connection.')}finally{$('profSave').disabled=false}};
   $('shareProf').onclick=openProfile;
@@ -1145,10 +1151,15 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
   function chatTips(){var box=$('chatTips');box.textContent='';var k=items.filter(function(i){return areaOf(i)==='Kitchen'&&i.qty>0}),tips=["I'm cooking pasta tonight",'What should I use up first?'];
     if(k.length)tips.push('Do we have '+k[0].name.toLowerCase()+'?','We ran out of '+k[k.length-1].name.toLowerCase());else tips.push('I bought milk, eggs and bread');
     tips.forEach(function(t){var b=el('button','mini',t);b.type='button';b.onclick=function(){chatSend({text:t},t)};box.append(b)})}
-  function openChat(){if(!$('chatLog').firstChild)bubble('bot','Hi'+(me?' '+me:'')+'. Tell me what you cooked, used or bought and I will keep your home up to date. You can also ask what you have.');chatTips();$('chatDlg').showModal();$('chatText').focus()}
+  function buddy(){return profile&&profile.buddy||'Tote'}
+  function openChat(){if($('chatDlg').open)return;$('chatH').textContent='Talk to '+buddy();
+    if(!$('chatLog').firstChild)bubble('bot','Hi'+(me?' '+me:'')+", I'm "+buddy()+'. I keep an eye on the house. Tell me what you cooked, used or bought and I will keep everything up to date, or ask me what you have.');
+    chatTips();$('chatDlg').showModal();if(window.Tote&&Tote.mount($('toteChat'),84,buddy())){Tote.onTap=null;Tote.mood('happy');Tote.wave()}$('chatText').focus()}
+  $('chatDlg').addEventListener('close',function(){if(window.Tote)Tote.talk(false);render()});
+  window.addEventListener('tote-ready',function(){if(!$('app').hidden)render()});
   async function chatSend(payload,label){
     if(chatBusy)return;chatBusy=true;$('chatGo').disabled=true;$('chatTips').textContent='';
-    var mine=bubble('me',label),wait=bubble('bot','Thinking\u2026');payload.history=chatHist.slice(-4);
+    var mine=bubble('me',label),wait=bubble('bot','Thinking\u2026');payload.history=chatHist.slice(-4);if(window.Tote)Tote.talk(true);
     try{var r=await api('/api/chat',{method:'POST',body:JSON.stringify(payload)});
       if(r.heard)mine.textContent=r.heard;wait.textContent=r.reply;
       (r.changes||[]).forEach(function(c){var row=el('div','chg'),t=el('span','',c.name+': '+(c.action==='low'?'running low':amount(c.prevQty,c.unit)+' \u2192 '+(c.qty<=0?'none':amount(c.qty,c.unit)))),u=el('button','mini','Undo');u.type='button';
@@ -1156,9 +1167,9 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
         u.onclick=async function(){u.disabled=true;try{await takeBack(c);await refresh();var st=el('s','',t.textContent);t.textContent='';t.append(st);u.textContent='Undone'}catch(er){u.disabled=false;if(er.code!=='locked')toast('Could not undo that. Check your connection.')}};
         row.append(t,u);wait.append(row)});
       chatHist.push({role:'user',text:r.heard||payload.text||''},{role:'assistant',text:r.reply});
-      if(r.changes&&r.changes.length)await refresh();
+      if(r.changes&&r.changes.length){if(window.Tote)Tote.hop();await refresh()}
     }catch(e){wait.textContent=e.code==='silent'?"I couldn't hear anything in that. Try again a little closer to the phone.":e.code==='offline'?'You seem to be offline. Nothing was changed.':e.code==='locked'?'':'I could not work that out just now. Nothing was changed. Try again in a moment.'}
-    chatBusy=false;$('chatGo').disabled=false;chatTips();$('chatLog').scrollTop=$('chatLog').scrollHeight}
+    if(window.Tote)Tote.talk(false);chatBusy=false;$('chatGo').disabled=false;chatTips();$('chatLog').scrollTop=$('chatLog').scrollHeight}
   $('chatForm').addEventListener('submit',function(ev){ev.preventDefault();var t=$('chatText').value.trim();if(!t)return;$('chatText').value='';chatSend({text:t},t)});
   $('chatMic').onclick=function(){recMode='chat';startRec()};
   /* dinner ideas: suggestions come from what is at home; "I cooked this" deducts the ingredients */
@@ -1225,5 +1236,6 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
   start();
 })();
 </script>
+<script type="module" src="/vendor/tote.js"></script>
 </body>
 </html>
