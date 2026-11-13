@@ -271,7 +271,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     <h2 id="capH">Add to your home</h2>
     <div class="tiles">
       <label class="tile"><span class="ico" style="--h:165"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6"/></svg></span><b>Scan a receipt</b><span>Photo of a receipt</span><input type="file" id="billFile" accept="image/*" title="" aria-label="Photograph a receipt"></label>
-      <label class="tile"><span class="ico" style="--h:205"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h3l2-3h6l2 3h3v13H4z"/><circle cx="12" cy="13" r="3.500"/></svg></span><b>Scan a shelf</b><span>Kitchen, bathroom, any cupboard</span><input type="file" id="shelfFile" accept="image/*" title="" aria-label="Photograph a shelf"></label>
+      <label class="tile"><span class="ico" style="--h:205"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h3l2-3h6l2 3h3v13H4z"/><circle cx="12" cy="13" r="3.500"/></svg></span><b>Snap what you have</b><span>Fridge, shelf or shopping bag</span><input type="file" id="shelfFile" accept="image/*" title="" aria-label="Photograph your fridge, a shelf or a shopping bag"></label>
       <button type="button" class="tile" id="capVoice"><span class="ico" style="--h:355"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></span><b>Voice note</b><span>Bought, cooked or running low</span></button>
       <button type="button" class="tile" id="capCode"><span class="ico" style="--h:265"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6v12M7 6v12M11 6v12M14 6v12M17 6v12M20 6v12"/></svg></span><b>Barcode</b><span>Scan a product</span></button>
       <button type="button" class="tile wide" id="capType"><span class="ico" style="--h:35"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16zM13 7l4 4"/></svg></span><span style="display:flex;flex-direction:column;color:inherit"><b>Type or paste</b><span>A note, or an emailed receipt</span></span></button>
@@ -738,6 +738,10 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
       use.forEach(function(it){var e=expiry(it),x=itemRow(it,el('span','pill '+e.cls,e.text));
         x.grow.append(el('div','sub',e.d<0?'Went past its date '+(-e.d)+(e.d===-1?' day ago':' days ago'):'Best before '+fmt(it.expiry)));c1.append(x.row)});
       s1.append(c1);v.append(s1)}
+    var unk=items.filter(function(i){return i.unsure&&i.qty>0});
+    if(unk.length){var s4=el('div','sec');s4.append(el('h2','','How many are there?'),el('p','sub','I saw these in your photo but could not count them. Tap a number, or skip and I will assume one.'));var c4=el('div','card');
+      unk.slice(0,5).forEach(function(it){var wrap=el('div','sec'),x=itemRow(it);wrap.style.gap='8px';wrap.append(x.row,howMany(it.id,it.name,function(){refresh().catch(function(){})}));c4.append(wrap)});
+      if(unk.length>5)c4.append(el('p','sub','and '+(unk.length-5)+' more in At home'));s4.append(c4);v.append(s4)}
     var chk=items.filter(function(i){return i.warn&&i.qty>0});
     if(chk.length){var s3=el('div','sec');s3.append(el('h2','','Check the label'),el('p','sub','These may not suit someone at home. I can miss things, so read the pack before anyone eats them.'));var c3=el('div','card');
       chk.forEach(function(it){var x=itemRow(it);x.grow.append(el('div','sub',it.warn.charAt(0).toUpperCase()+it.warn.slice(1)));c3.append(x.row)});s3.append(c3);v.append(s3)}
@@ -757,6 +761,11 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
   function owners(){var o=[''];if(profile)(profile.members||[]).forEach(function(m){o.push(m.name)});if(me&&o.indexOf(me)<0)o.push(me);return o.length>2||(profile&&profile.members&&profile.members.length)?o:['']}
   function ownerFill(sel,cur){sel.textContent='';var o=owners();if(cur&&o.indexOf(cur)<0)o.push(cur);o.forEach(function(n){var op=el('option','',n||'Everyone');op.value=n;sel.append(op)});sel.value=cur||''}
   function fullName(it){return it.name+(it.note?', '+it.note:'')}
+  function howMany(id,name,after){var w=el('div','wrapchips');w.setAttribute('role','group');w.setAttribute('aria-label','How many '+name);
+    [1,2,3,4,6].forEach(function(n){var b=el('button','mini',String(n));b.type='button';b.setAttribute('aria-label',n+' of '+name);
+      b.onclick=async function(){w.querySelectorAll('button').forEach(function(x){x.disabled=true});try{await api('/api/items/'+id,{method:'PATCH',body:JSON.stringify({qty:n})});after(n)}
+        catch(er){w.querySelectorAll('button').forEach(function(x){x.disabled=false});if(er.code!=='locked')toast('Could not save that. Check your connection.')}};w.append(b)});
+    var ok=el('button','mini','Skip');ok.type='button';ok.onclick=async function(){try{var cur=items.filter(function(i){return i.id===id})[0];await api('/api/items/'+id,{method:'PATCH',body:JSON.stringify({qty:cur?cur.qty:1})});after(cur?cur.qty:1)}catch(er){}};w.append(ok);return w}
   function itemBlock(it){
     var wrap=el('div','it'),e=expiry(it),p=plan(it),isOpen=!!open[it.id];
     var head=el('button','ihead'),g=el('span','grow'),sub=el('span','sub');head.type='button';head.setAttribute('aria-expanded',isOpen?'true':'false');
@@ -765,6 +774,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     else if(e&&e.cls)sub.append(el('span','pill '+e.cls,e.text));
     else if(it.expiry)sub.append(document.createTextNode(it.expiry_est&&daysFrom(it.expiry)>=150&&areaOf(it)!=='Health'?'Keeps a long time':'Best before '+fmt(it.expiry)));
     if(it.warn)sub.append(el('span','pill bad','Check label: '+it.warn));
+    if(it.unsure&&it.qty>0)sub.append(el('span','pill warn','How many?'));
     if(it.frozen)sub.append(el('span','pill plain','Frozen'));
     if(it.essential)sub.append(el('span','pill plain','Essential'));
     if(it.owner)sub.append(el('span','pill plain',it.owner+"'s"));
@@ -1234,7 +1244,8 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
       var li=el('li','row'),g=el('div','grow'),x=el('button','iconbtn');
       g.append(el('div','name',c.name));if(c.warn)g.append(el('span','pill bad','Check label: '+c.warn));
       g.append(el('div','sub',c.action==='low'?'Marked as running low, added to your list':c.action==='use'?(c.qty<=0?'Marked as finished':'Now '+amount(c.qty,c.unit)+' left'):
-        amount(c.added,c.unit)+(c.expiry?' \u00b7 good until '+(c.est?'about ':'')+fmt(c.expiry):'')));
+        (c.unsure?'I could not count these. How many?':amount(c.added,c.unit))+(c.expiry?' \u00b7 best before '+(c.est?'about ':'')+fmt(c.expiry):'')));
+      if(c.unsure&&c.created)g.append(howMany(c.id,c.name,function(n){c.unsure=false;c.added=c.qty=n;refresh().then(drawDone,drawDone)}));
       x.type='button';x.setAttribute('aria-label',"That's wrong, take back "+c.name);x.append(icon('M6 6l12 12M18 6L6 18'));
       x.onclick=async function(){x.disabled=true;try{await takeBack(c);done=done.filter(function(k){return k!==c});await refresh();
         if(done.length)drawDone();else{$('doneDlg').close();toast('Taken back. Nothing was changed.')}}

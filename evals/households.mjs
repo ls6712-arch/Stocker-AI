@@ -2,7 +2,8 @@ import fs from 'fs';
 import {fileURLToPath} from 'url';const R=fileURLToPath(new URL('../',import.meta.url));
 const src=fs.readFileSync(R+'src/index.js','utf8'),html=fs.readFileSync(R+'public/index.html','utf8');
 // server pieces
-const S=new Function(src.slice(src.indexOf('const PERSONAS = {'),src.indexOf('const json = (data'))+src.slice(src.indexOf('const OFF = {'),src.indexOf('// ---------- picture'))+
+const scrubSrc=src.slice(src.indexOf('const scrub ='),src.indexOf('\n',src.indexOf('const scrub =')));
+const S=new Function(scrubSrc+'\n'+src.slice(src.indexOf('const PERSONAS = {'),src.indexOf('const json = (data'))+src.slice(src.indexOf('const OFF = {'),src.indexOf('// ---------- picture'))+
  ';return {PERSONAS,DIETS,ALLERGENS,RULES,CUISINES,cleanProfile,describe,restricted,labelCheck}')();
 // client pieces
 const cs=html.slice(html.indexOf('  var PERSONA={mom:'),html.indexOf("  var SVGNS="));

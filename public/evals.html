@@ -24,6 +24,8 @@ h2{font-size:1.05rem;margin:22px 0 4px}
     if(k==='hasNot')return [!A.some(function(a){return match(a,v)}),'has no '+JSON.stringify(v)];
     if(k==='count')return [A.length>=v[0]&&A.length<=v[1],'between '+v[0]+' and '+v[1]+' actions (got '+A.length+')'];
     if(k==='maxQuantity')return [A.every(function(a){return a.quantity<=v}),'no quantity above '+v];
+    if(k==='sure')return [A.some(function(a){return nm(a,v)&&a.sure!==false}),'counted '+v];
+    if(k==='unsure')return [A.some(function(a){return nm(a,v)&&a.sure===false}),'left the amount of '+v+' open'];
     if(k==='warned')return [A.some(function(a){return nm(a,v)&&a.warn}),'flags '+v];
     if(k==='notWarned')return [!A.some(function(a){return nm(a,v)&&a.warn}),'does not flag '+v];
     if(k==='useBetween')return [A.some(function(a){return a.action==='use'&&nm(a,v[0])&&a.quantity>=v[1]&&a.quantity<=v[2]}),'uses between '+v[1]+' and '+v[2]+' of '+v[0]];

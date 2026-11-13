@@ -41,14 +41,31 @@ The same voice is used in the chat prompt (`VOICE` and `LIMITS` in `src/index.js
 | Runaway cost or abuse | 40 model calls per 10 minutes and 400 per day for the whole home | `aiBudget` |
 | Passcode guessing | 12 attempts per 10 minutes | `allow('login')` |
 | A wrong guess | Every scan and every chat change has Undo | app |
+| A photo that cannot be counted | The amount is left open and the app asks "How many?"; a photo never stacks on top of what is already tracked | `apply`, app |
+| Private details typed, spoken or photographed | Card, account, identity and phone numbers and email addresses are removed before text reaches a model or the database; the vision prompt ignores people, letters, cards and screens | `scrub`, `seeImage` |
+| The helper asking for private details | It is told it never needs them, and any reply that asks is replaced | `LIMITS`, `guardReply` |
+| Other people's data | One deployment holds one household; the helper is given only that home's inventory and says so if asked about anyone else | design, `LIMITS` |
 | Allergy flags mistaken for a guarantee | Wording is always "check the label"; barcode scans use the real ingredient list | `labelCheck` |
+
+## Security
+
+| Area | What is in place |
+|---|---|
+| Sign-in | Shared passcode, compared in constant time; 12 attempts per 10 minutes; cookie is HttpOnly, Secure, SameSite=Strict and derived from the passcode plus a random value held only in the database |
+| Requests | Every API call needs the cookie; changes are refused from any other website (Origin check); bodies over 9 MB are refused |
+| Browser | Content-Security-Policy (own scripts only, no framing, no plugins), nosniff, no referrer, camera and microphone limited to this site (`public/_headers`) |
+| Database | Every query is parameterised; all model output is validated before it is written |
+| Errors | Internal error text is logged, never sent to the browser |
+| Secrets | `APP_PIN` and `MCP_TOKEN` should be stored as Worker secrets, not plain variables |
+
+Known limits: the passcode is shared by the household, so anyone who has it sees everything in that home; the inline app script means the policy allows inline scripts; item pictures and model calls run on Cloudflare Workers AI.
 
 ## Evals
 
 Two layers, both in this repository.
 
 1. **Household simulation** (`npm test`, no network). Generates 1,000 varied households, including hostile input, and checks the profile, starter-list, allergen and label logic against fixed rules. It exits with an error if a hard rule breaks.
-2. **Agent evals** (`/evals.html` on the deployed app, signed in). Sends 24 cases to the live models through `/api/eval`, a dry-run that uses a made-up inventory and never touches the real one. Cases cover reading receipts, cooking updates, plain updates, questions, allergies, safety and personality. Each case is scored by fixed checks, not by another model. Add a case by editing `public/evals/cases.json`.
+2. **Agent evals** (`/evals.html` on the deployed app, signed in). Sends 31 cases to the live models through `/api/eval`, a dry-run that uses a made-up inventory and never touches the real one. Cases cover reading receipts, photos of what is at home, cooking updates, plain updates, questions, allergies, privacy, safety and personality. Each case is scored by fixed checks, not by another model. Add a case by editing `public/evals/cases.json`.
 
 Run the agent evals after changing a prompt, a model name or a guardrail, and compare the score with the last run.
 
