@@ -1,0 +1,15 @@
+{
+  "name": "stocker-ai",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "db:init": "wrangler d1 execute pantry-keeper --remote --file=schema.sql",
+    "golive": "wrangler deploy && wrangler secret put APP_PIN"
+  },
+  "devDependencies": {
+    "wrangler": "^4.162.0"
+  }
+}

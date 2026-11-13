@@ -1,0 +1,551 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Stocker AI</title>
+<meta name="theme-color" content="#0E6B5C">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Stocker">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icon.svg">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Instrument+Sans:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#EEF3F0; --surface:#FFFFFF; --surface2:#F6F9F7; --fg:#11211D; --muted:#56685F; --line:#DCE5E0;
+  --accent:#0E6B5C; --accent-fg:#FFFFFF; --hero-a:#0E6B5C; --hero-b:#0A4F45; --hero-fg:#FFFFFF; --hero-soft:#CFEDE5;
+  --bad:#A8231C; --bad-bg:#FBE4E1; --warn:#8A5200; --warn-bg:#FCEFD2; --ok:#1B6A45; --ok-bg:#DDF2E6;
+  --ts:62%; --tl:90%; --fs:55%; --fl:27%;
+  --shadow:0 1px 2px rgba(17,33,29,.06),0 6px 18px rgba(17,33,29,.06);
+  --display:"Bricolage Grotesque","Arial Narrow",system-ui,sans-serif;
+  --body:"Instrument Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#0C1412; --surface:#16211E; --surface2:#1C2925; --fg:#E7F0EC; --muted:#9DB0A8; --line:#2A3833;
+    --accent:#5FD0B8; --accent-fg:#0C1412; --hero-a:#12564B; --hero-b:#0D3F37; --hero-fg:#F2FBF8; --hero-soft:#A9DDD1;
+    --bad:#FF9A90; --bad-bg:#45201C; --warn:#F5C063; --warn-bg:#3D2E0E; --ok:#86DBA8; --ok-bg:#163526;
+    --ts:38%; --tl:20%; --fs:70%; --fl:80%;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 22px rgba(0,0,0,.3); color-scheme:dark}
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+[hidden]{display:none!important}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:16px;line-height:1.45}
+p{margin:0}
+h1,h2,h3{font-family:var(--display);font-weight:800;letter-spacing:-.02em;line-height:1.08;margin:0}
+h1{font-size:1.75rem} h2{font-size:1.2rem} h3{font-size:1.05rem}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.sub{font-size:13px;color:var(--muted)}
+.shell{max-width:560px;margin:0 auto;min-height:100%;display:flex;flex-direction:column;
+  padding:0 max(16px,env(safe-area-inset-right,0px)) 0 max(16px,env(safe-area-inset-left,0px))}
+.appbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:calc(14px + env(safe-area-inset-top,0px)) 0 10px;
+  position:sticky;top:0;background:var(--bg);z-index:4}
+.iconbtn{width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:var(--surface);display:grid;place-items:center}
+svg.i{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+main{flex:1;display:flex;flex-direction:column;gap:22px;padding:6px 0 calc(120px + env(safe-area-inset-bottom,0px))}
+.view{display:flex;flex-direction:column;gap:22px}
+.sec{display:flex;flex-direction:column;gap:10px}
+.sechead{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.link{border:0;background:none;color:var(--accent);font-weight:600;padding:8px 0}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--line);background:var(--surface);
+  padding:10px 18px;border-radius:14px;font-weight:600;min-height:48px}
+.btn.primary{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+.btn.block{width:100%}
+.btn[disabled]{opacity:.5}
+input[type=text],input[type=password],input[type=number],input[type=date],input[type=search],select,textarea{background:var(--surface2);border:1px solid var(--line);
+  border-radius:12px;padding:11px 12px;min-width:0;width:100%}
+.pill{display:inline-block;font-size:12.5px;font-weight:600;padding:3px 10px;border-radius:999px;white-space:nowrap}
+.pill.bad{background:var(--bad-bg);color:var(--bad)} .pill.warn{background:var(--warn-bg);color:var(--warn)} .pill.ok{background:var(--ok-bg);color:var(--ok)}
+.pill.plain{background:var(--surface2);color:var(--muted);border:1px solid var(--line)}
+
+/* hero */
+.hero{background:linear-gradient(150deg,var(--hero-a),var(--hero-b));color:var(--hero-fg);border-radius:26px;padding:22px 20px;display:flex;flex-direction:column;gap:18px;box-shadow:var(--shadow)}
+.hero .day{font-size:13px;color:var(--hero-soft);font-weight:500}
+.hero h2{font-size:1.7rem;color:var(--hero-fg)}
+.hero p{color:var(--hero-soft)}
+.trio{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.trio button{border:0;background:rgba(255,255,255,.12);color:var(--hero-fg);border-radius:16px;padding:12px 10px;text-align:left;display:flex;flex-direction:column;gap:2px}
+.trio b{font-family:var(--display);font-size:1.7rem;line-height:1;font-variant-numeric:tabular-nums}
+.trio span{font-size:12.5px;color:var(--hero-soft)}
+
+/* cards */
+.card{background:var(--surface);border-radius:20px;padding:14px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:12px}
+.list{display:flex;flex-direction:column;gap:10px;margin:0;padding:0;list-style:none}
+.row{display:flex;align-items:center;gap:12px;min-width:0}
+.row .grow{flex:1;min-width:0}
+.name{font-weight:600;overflow-wrap:anywhere}
+.ico{flex:none;width:44px;height:44px;border-radius:14px;display:grid;place-items:center;background:hsl(var(--h) var(--ts) var(--tl));color:hsl(var(--h) var(--fs) var(--fl))}
+.qty{display:inline-flex;align-items:center;gap:4px;white-space:nowrap;font-variant-numeric:tabular-nums;font-weight:600}
+.qty button{width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:var(--surface2);font-weight:700;font-size:18px;line-height:1}
+.bar{height:6px;border-radius:999px;background:var(--surface2);overflow:hidden}
+.bar i{display:block;height:100%;border-radius:999px;background:var(--ok)}
+.bar i.warn{background:var(--warn)} .bar i.bad{background:var(--bad)}
+.facts{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;color:var(--muted)}
+.facts b{color:var(--fg);font-weight:600}
+.more{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between;border-top:1px solid var(--line);padding-top:10px;font-size:13px;color:var(--muted)}
+.danger{border:0;background:none;color:var(--bad);font-weight:600;padding:8px 0}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:2px 0 4px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:8px 14px;font-weight:600;font-size:14px;min-height:40px}
+.chip[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.check{flex:none;width:44px;height:44px;border-radius:50%;border:2px solid var(--line);background:var(--surface2);display:grid;place-items:center;color:var(--accent)}
+.empty{background:var(--surface);border-radius:20px;padding:26px 20px;display:flex;flex-direction:column;gap:12px;align-items:flex-start;box-shadow:var(--shadow)}
+.empty .ico{width:56px;height:56px;border-radius:18px}
+.tl{display:flex;flex-direction:column;gap:14px;margin:0;padding:0;list-style:none}
+.tl li{display:flex;gap:12px;align-items:flex-start}
+
+/* tab bar */
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--surface);border-top:1px solid var(--line);
+  padding:6px max(8px,env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(8px,env(safe-area-inset-left,0px))}
+.tabbar .in{max-width:560px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr 76px 1fr 1fr;align-items:end}
+.tab{border:0;background:none;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 2px;font-size:11.5px;font-weight:600;color:var(--muted);min-height:52px;position:relative}
+.tab[aria-current="page"]{color:var(--accent)}
+.badge{position:absolute;top:4px;left:calc(50% + 6px);min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:var(--bad);color:#fff;font-size:11px;line-height:18px;text-align:center}
+.fab{justify-self:center;width:64px;height:64px;border-radius:50%;border:0;background:var(--accent);color:var(--accent-fg);display:grid;place-items:center;
+  margin-bottom:10px;box-shadow:0 8px 20px rgba(14,107,92,.35)}
+.fab svg{width:28px;height:28px;stroke-width:2.2}
+
+/* sheets */
+dialog{border:0;background:var(--surface);color:var(--fg);padding:0}
+dialog::backdrop{background:rgba(6,14,12,.55)}
+dialog.sheet{margin:auto auto 0;width:100%;max-width:560px;max-height:90vh;border-radius:26px 26px 0 0;overflow:auto}
+dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:14px}
+.grab{width:44px;height:5px;border-radius:999px;background:var(--line);margin:4px auto 2px}
+.tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.tile{position:relative;border:1px solid var(--line);background:var(--surface2);border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:8px;align-items:flex-start;text-align:left;min-height:104px}
+.tile b{font-weight:600} .tile span{font-size:13px;color:var(--muted)}
+.tile input{position:absolute;inset:0;opacity:0;width:100%;cursor:pointer}
+.tile:focus-within{outline:2px solid var(--accent);outline-offset:2px}
+.tile.wide{grid-column:1 / -1;min-height:0;flex-direction:row;align-items:center}
+.rv{border-top:1px solid var(--line);padding:12px 0;display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px 12px;align-items:start}
+.rv .fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.rv label,.meta label{display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:var(--muted);min-width:0}
+.rv .full{grid-column:1 / -1}
+.rv input[type=checkbox]{width:24px;height:24px;margin-top:22px;accent-color:var(--accent)}
+.meta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.heard{background:var(--surface2);border-radius:14px;padding:10px 12px;font-style:italic;color:var(--muted)}
+#reader{width:100%;min-height:230px;background:#000;border-radius:16px;overflow:hidden}
+.mic{align-self:center;width:112px;height:112px;border-radius:50%;background:var(--bad-bg);color:var(--bad);display:grid;place-items:center}
+.mic svg{width:44px;height:44px}
+.timer{align-self:center;font-family:var(--display);font-size:2rem;font-variant-numeric:tabular-nums}
+@media (prefers-reduced-motion:no-preference){
+  .mic{animation:pulse 1.4s ease-in-out infinite}
+  @keyframes pulse{50%{transform:scale(1.08)}}
+  .scanline{animation:sweep 1.6s ease-in-out infinite}
+  @keyframes sweep{0%,100%{transform:translateY(0)}50%{transform:translateY(74px)}}
+}
+/* busy + toast */
+.busy{position:fixed;inset:0;z-index:20;background:rgba(6,14,12,.6);display:grid;place-items:center;padding:24px}
+.busy .box{background:var(--surface);border-radius:24px;padding:26px 24px;display:flex;flex-direction:column;gap:14px;align-items:center;text-align:center;max-width:300px}
+.doc{width:72px;height:88px;border-radius:10px;border:2px solid var(--accent);position:relative;overflow:hidden}
+.scanline{position:absolute;left:0;right:0;top:6px;height:3px;background:var(--accent)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(104px + env(safe-area-inset-bottom,0px));z-index:15;background:var(--fg);color:var(--bg);
+  border-radius:14px;padding:12px 16px;max-width:min(92vw,520px);font-size:14.5px;display:flex;gap:12px;align-items:center;box-shadow:var(--shadow)}
+.toast button{border:0;background:none;color:var(--bg);font-weight:700;text-decoration:underline;padding:4px}
+.gate{min-height:100%;max-width:380px;margin:0 auto;display:flex;flex-direction:column;justify-content:center;gap:16px;padding:24px}
+.logo{width:72px;height:72px;border-radius:22px;background:var(--accent);color:var(--accent-fg);display:grid;place-items:center}
+.logo svg{width:38px;height:38px}
+</style>
+</head>
+<body>
+
+<div class="gate" id="gate" hidden>
+  <div class="logo"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 9h10l-1 11H8zM9.500 9c0-3 1-5 2.500-5s2.500 2 2.500 5M10 14l1.500 1.500L14 13"/></svg></div>
+  <h1>Stocker AI</h1>
+  <p class="sub" id="gateMsg" style="font-size:15px">Enter your passcode to open the pantry.</p>
+  <form id="gateForm" style="display:flex;flex-direction:column;gap:12px">
+    <label for="pin" class="sub">Passcode</label>
+    <input type="password" id="pin" autocomplete="current-password" required>
+    <button type="submit" class="btn primary block">Open</button>
+  </form>
+</div>
+
+<div class="shell" id="app" hidden>
+  <header class="appbar">
+    <div><p class="sub" id="barDate"></p><h1 id="barTitle">Today</h1></div>
+    <button type="button" class="iconbtn" id="lockBtn" aria-label="Lock the pantry"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></button>
+  </header>
+  <main>
+    <div class="view" id="v-today"></div>
+    <div class="view" id="v-pantry" hidden>
+      <input type="search" id="search" placeholder="Search your pantry" aria-label="Search your pantry">
+      <div class="chips" id="chips" role="group" aria-label="Filter by category"></div>
+      <ul class="list" id="pantryList"></ul>
+    </div>
+    <div class="view" id="v-list" hidden></div>
+    <div class="view" id="v-log" hidden></div>
+  </main>
+</div>
+
+<nav class="tabbar" id="tabbar" aria-label="Sections" hidden>
+  <div class="in">
+    <button type="button" class="tab" data-tab="today" aria-current="page"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11l8-7 8 7v9h-5v-6H9v6H4z"/></svg>Today</button>
+    <button type="button" class="tab" data-tab="pantry"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14v16H5zM5 10h14M5 15h14"/></svg>Pantry</button>
+    <button type="button" class="fab" id="fab" aria-label="Add to the pantry"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+    <button type="button" class="tab" data-tab="list"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h2l2 10h9l2-7H8M10 20h.01M17 20h.01"/></svg>List<span class="badge" id="listBadge" hidden></span></button>
+    <button type="button" class="tab" data-tab="log"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg>Activity</button>
+  </div>
+</nav>
+
+<dialog class="sheet" id="capDlg" aria-labelledby="capH">
+  <div class="pad">
+    <div class="grab"></div>
+    <h2 id="capH">Add to the pantry</h2>
+    <div class="tiles">
+      <label class="tile"><span class="ico" style="--h:165"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6"/></svg></span><b>Scan a bill</b><span>Photo of a receipt</span><input type="file" id="billFile" accept="image/*" aria-label="Photograph a bill"></label>
+      <label class="tile"><span class="ico" style="--h:205"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h3l2-3h6l2 3h3v13H4z"/><circle cx="12" cy="13" r="3.500"/></svg></span><b>Scan a shelf</b><span>Photo of what you have</span><input type="file" id="shelfFile" accept="image/*" aria-label="Photograph a shelf"></label>
+      <button type="button" class="tile" id="capVoice"><span class="ico" style="--h:355"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></span><b>Voice note</b><span>Say what you bought or used</span></button>
+      <button type="button" class="tile" id="capCode"><span class="ico" style="--h:265"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6v12M7 6v12M11 6v12M14 6v12M17 6v12M20 6v12"/></svg></span><b>Barcode</b><span>Scan a product</span></button>
+      <button type="button" class="tile wide" id="capType"><span class="ico" style="--h:35"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16zM13 7l4 4"/></svg></span><span style="display:flex;flex-direction:column;color:inherit"><b>Type or paste</b><span>A note, or an emailed receipt</span></span></button>
+    </div>
+    <button type="button" class="btn block" data-close>Cancel</button>
+  </div>
+</dialog>
+
+<dialog class="sheet" id="recDlg" aria-labelledby="recH">
+  <div class="pad">
+    <div class="grab"></div>
+    <h2 id="recH">Listening</h2>
+    <p class="sub">Try: "Bought two litres of milk and a dozen eggs. Finished the olive oil."</p>
+    <div class="mic"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></div>
+    <div class="timer" id="recTime" aria-live="off">0:00</div>
+    <button type="button" class="btn primary block" id="recStop">Stop and send</button>
+    <button type="button" class="btn block" id="recCancel">Cancel</button>
+  </div>
+</dialog>
+
+<dialog class="sheet" id="codeDlg" aria-labelledby="codeH">
+  <div class="pad">
+    <div class="grab"></div>
+    <h2 id="codeH">Scan a barcode</h2>
+    <div id="reader"></div>
+    <p class="sub" id="codeNote">Point the camera at the barcode on the pack.</p>
+    <form id="codeForm" style="display:flex;gap:8px">
+      <input type="text" id="codeInput" inputmode="numeric" placeholder="or type the number" aria-label="Barcode number">
+      <button type="submit" class="btn primary">Look up</button>
+    </form>
+    <button type="button" class="btn block" data-close>Close</button>
+  </div>
+</dialog>
+
+<dialog class="sheet" id="typeDlg" aria-labelledby="typeH">
+  <form class="pad" id="typeForm">
+    <div class="grab"></div>
+    <h2 id="typeH">Tell me what changed</h2>
+    <label for="typeText" class="sub">A note in your own words, or a pasted receipt</label>
+    <textarea id="typeText" rows="5" placeholder="Bought 2 litres of milk and a dozen eggs at Trader Joe's. Finished the olive oil."></textarea>
+    <button type="submit" class="btn primary block">Read it</button>
+    <button type="button" class="btn block" data-close>Cancel</button>
+  </form>
+</dialog>
+
+<dialog class="sheet" id="rvDlg" aria-labelledby="rvTitle">
+  <div class="pad">
+    <div class="grab"></div>
+    <h2 id="rvTitle">Here's what I understood</h2>
+    <p class="sub">Fix anything that's wrong. Nothing is saved until you apply it.</p>
+    <p class="heard" id="rvHeard" hidden></p>
+    <div class="meta" id="rvMeta">
+      <label for="rvStore">Bought from<input type="text" id="rvStore" maxlength="40"></label>
+      <label for="rvDate">Bought on<input type="date" id="rvDate"></label>
+    </div>
+    <div id="rvBody"></div>
+    <button type="button" class="btn primary block" id="rvApply">Apply</button>
+    <button type="button" class="btn block" id="rvDiscard">Discard</button>
+  </div>
+</dialog>
+
+<div class="busy" id="busy" hidden role="status" aria-live="polite"><div class="box"><div class="doc"><div class="scanline"></div></div><b id="busyMsg">Reading</b><span class="sub">This can take up to a minute.</span></div></div>
+<div class="toast" id="toast" hidden role="status" aria-live="polite"><span id="toastMsg"></span><button type="button" id="toastBtn" hidden></button></div>
+
+<script src="/vendor/html5-qrcode.min.js" defer></script>
+<script>
+(function(){
+  var DAY=86400000,UNITS=['pcs','pack','g','kg','ml','L','lb','oz'];
+  var CAT={Produce:[135,'M5 19c0-8 5-13 14-14 0 9-5 14-13 14M5 19c3-5 6-8 10-10'],Dairy:[205,'M9 3h6v3l2 4v11H7V10l2-4zM7 14h10'],
+    Bakery:[35,'M4 11a4 4 0 0 1 4-4h8a4 4 0 0 1 4 4c0 1-1 2-2 2v6H6v-6c-1 0-2-1-2-2z'],Meat:[355,'M14 4a6 6 0 0 1 4 10l-5 5a3 3 0 0 1-4 0l-4-4a3 3 0 0 1 0-4zM8 16l-3 3'],
+    Frozen:[190,'M12 3v18M4 7l16 10M20 7L4 17'],Pantry:[45,'M8 3h8v3H8zM7 6h10l1 3v10a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V9z'],Drinks:[265,'M7 4h10l-1 16H8zM7 9h10'],
+    Snacks:[20,'M12 3a9 9 0 1 0 9 9 4 4 0 0 1-4-4 4 4 0 0 1-5-5zM9 12h.01M13 16h.01M9 16h.01'],Household:[230,'M12 3c4 5 6 8 6 11a6 6 0 0 1-12 0c0-3 2-6 6-11z'],
+    Other:[160,'M4 8l8-4 8 4v8l-8 4-8-4zM4 8l8 4 8-4M12 12v8']};
+  var SVGNS='http://www.w3.org/2000/svg';
+  var $=function(id){return document.getElementById(id)};
+  function el(t,c,txt){var e=document.createElement(t);if(c)e.className=c;if(txt!=null)e.textContent=txt;return e}
+  function icon(d){var s=document.createElementNS(SVGNS,'svg');s.setAttribute('class','i');s.setAttribute('viewBox','0 0 24 24');s.setAttribute('aria-hidden','true');
+    var p=document.createElementNS(SVGNS,'path');p.setAttribute('d',d);s.append(p);return s}
+  function catIcon(cat){var c=CAT[cat]||CAT.Other,b=el('span','ico');b.style.setProperty('--h',c[0]);b.append(icon(c[1]));return b}
+  function pad(n){return (n<10?'0':'')+n}
+  function today(){var d=new Date();d.setHours(0,0,0,0);return d}
+  function iso(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())}
+  function parse(s){if(typeof s!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(s))return null;var p=s.split('-').map(Number),d=new Date(p[0],p[1]-1,p[2]);return isNaN(d)?null:d}
+  function daysFrom(s){var d=parse(s);return d?Math.round((d-today())/DAY):null}
+  function addDays(s,n){var d=parse(s)||today();d.setDate(d.getDate()+n);return iso(d)}
+  function fmt(s){var d=parse(s);if(!d)return '—';var o={month:'short',day:'numeric'};if(d.getFullYear()!==today().getFullYear())o.year='numeric';return d.toLocaleDateString(undefined,o)}
+  function qtyText(q){return String(Math.round(q*100)/100)}
+
+  var items=[],log=[],tab='today',cat='All',query='',open={},busy=false,pending=null,toastTimer=null;
+
+  function toast(msg,label,fn){clearTimeout(toastTimer);$('toastMsg').textContent=msg;var b=$('toastBtn');b.hidden=!label;if(label){b.textContent=label;b.onclick=function(){$('toast').hidden=true;fn()}}
+    $('toast').hidden=false;toastTimer=setTimeout(function(){$('toast').hidden=true},label?12000:5000)}
+  function setBusy(msg){busy=!!msg;$('busy').hidden=!msg;if(msg)$('busyMsg').textContent=msg}
+
+  async function api(path,opts){
+    opts=opts||{};opts.headers=Object.assign({'x-today':iso(today())},opts.body?{'content-type':'application/json'}:{},opts.headers||{});opts.credentials='same-origin';
+    var r,data=null;try{r=await fetch(path,opts)}catch(e){throw {code:'offline'}}
+    try{data=await r.json()}catch(e){}
+    if(r.status===401&&data&&data.error==='locked'){showGate();throw {code:'locked'}}
+    if(!r.ok)throw {code:(data&&data.error)||'server',message:data&&data.message};
+    return data;
+  }
+  function showGate(msg){document.querySelectorAll('dialog[open]').forEach(function(d){d.close()});$('app').hidden=true;$('tabbar').hidden=true;$('gate').hidden=false;if(msg)$('gateMsg').textContent=msg}
+  $('gateForm').addEventListener('submit',async function(ev){ev.preventDefault();
+    try{await api('/api/login',{method:'POST',body:JSON.stringify({pin:$('pin').value})});$('pin').value='';$('gateMsg').textContent='Enter your passcode to open the pantry.';start()}
+    catch(e){$('gateMsg').textContent=e.code==='wrong_pin'?"That passcode isn't right. Try again.":e.code==='setup'?'This pantry has no passcode yet. Set one in the Worker settings as a secret named APP_PIN.':'Could not reach the pantry. Check your connection.'}});
+  $('lockBtn').onclick=async function(){try{await api('/api/logout',{method:'POST'})}catch(e){}showGate('Locked. Enter your passcode to open the pantry.')};
+
+  /* ---- the agent's rules ---- */
+  function plan(it){
+    if(it.qty<=0)return {days:0,date:iso(today()),why:"You're out"};
+    var runOut=addDays(it.bought||it.added,it.finish_days),date=runOut,why=it.learned?'at your usual pace':'at a typical pace';
+    if(it.expiry&&it.expiry<runOut){date=it.expiry;why='before it expires'}
+    return {days:daysFrom(date),date:date,why:why};
+  }
+  function expiry(it){
+    if(!it.expiry||it.qty<=0)return null;var d=daysFrom(it.expiry);
+    if(d<0)return {cls:'bad',text:'Expired',d:d};
+    if(d===0)return {cls:'warn',text:'Use today',d:d};
+    if(d<=3)return {cls:'warn',text:d+(d===1?' day left':' days left'),d:d};
+    return {cls:'',text:'',d:d};
+  }
+  function needsUse(it){var e=expiry(it);return !!e&&e.d<=3}
+  function needsBuy(it){return plan(it).days<=4}
+  function fresh(it){var s=parse(it.bought||it.added),e=parse(it.expiry);if(!s||!e||e<=s||it.qty<=0)return null;return Math.max(0,Math.min(1,(today()-s)/(e-s)))}
+
+  /* ---- views ---- */
+  function itemRow(it,right){var r=el('div','row'),g=el('div','grow');r.append(catIcon(it.category));g.append(el('div','name',it.name));r.append(g);if(right)r.append(right);return {row:r,grow:g}}
+  function emptyCard(cat,title,text,btn,fn){var c=el('div','empty');c.append(catIcon(cat),el('h2','',title),el('p','sub',text));
+    if(btn){var b=el('button','btn primary',btn);b.type='button';b.onclick=fn;c.append(b)}return c}
+
+  function renderToday(){
+    var v=$('v-today');v.textContent='';
+    var use=items.filter(needsUse).sort(function(a,b){return expiry(a).d-expiry(b).d}),buy=items.filter(needsBuy).sort(function(a,b){return plan(a).days-plan(b).days});
+    var n=use.length+buy.length,hero=el('div','hero'),top=el('div');
+    top.append(el('p','day',today().toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric'})));
+    top.append(el('h2','',!items.length?'Your pantry is empty':n?n+(n===1?' thing needs you':' things need you'):"You're all set"));
+    top.append(el('p','',!items.length?'Scan your last grocery bill and I will take it from there.':n?'Here is what to use up and what to pick up.':'Nothing to use up or buy in the next few days.'));
+    hero.append(top);
+    var trio=el('div','trio');[[items.length,'items','pantry'],[use.length,'use soon','today'],[buy.length,'to buy','list']].forEach(function(s){
+      var b=el('button');b.type='button';b.append(el('b','',String(s[0])),el('span','',s[1]));b.onclick=function(){go(s[2])};trio.append(b)});
+    hero.append(trio);v.append(hero);
+    if(!items.length){v.append(emptyCard('Pantry','Start with one photo','Photograph a receipt, scan a barcode, or just say what you bought.','Add your first items',function(){$('capDlg').showModal()}));return}
+    if(use.length){var s1=el('div','sec');s1.append(el('h2','','Use soon'));var c1=el('div','card');
+      use.forEach(function(it){var e=expiry(it),x=itemRow(it,el('span','pill '+e.cls,e.text));
+        x.grow.append(el('div','sub',e.d<0?'Went past its date '+(-e.d)+(e.d===-1?' day ago':' days ago'):'Good until '+fmt(it.expiry)));c1.append(x.row)});
+      s1.append(c1);v.append(s1)}
+    if(buy.length){var s2=el('div','sec'),h=el('div','sechead'),lk=el('button','link','Open list');lk.type='button';lk.onclick=function(){go('list')};
+      h.append(el('h2','','Buy next'),lk);s2.append(h);var c2=el('div','card');
+      buy.slice(0,4).forEach(function(it){var p=plan(it),x=itemRow(it,el('span','pill '+(p.days<=0?'bad':'warn'),p.days<=0?'Now':'By '+fmt(p.date)));
+        x.grow.append(el('div','sub',it.qty<=0?"You're out":'Runs out '+p.why));c2.append(x.row)});
+      if(buy.length>4)c2.append(el('p','sub','and '+(buy.length-4)+' more on the list'));
+      s2.append(c2);v.append(s2)}
+  }
+
+  function renderPantry(){
+    var chips=$('chips');chips.textContent='';
+    var cats=['All'].concat(Object.keys(CAT).filter(function(c){return items.some(function(i){return (i.category||'Other')===c})}));
+    if(cats.indexOf(cat)<0)cat='All';
+    cats.forEach(function(c){var b=el('button','chip',c);b.type='button';b.setAttribute('aria-pressed',c===cat?'true':'false');b.onclick=function(){cat=c;renderPantry()};chips.append(b)});
+    var ul=$('pantryList');ul.textContent='';
+    var q=query.toLowerCase(),shown=items.filter(function(it){return (cat==='All'||(it.category||'Other')===cat)&&(!q||it.name.toLowerCase().indexOf(q)>-1)})
+      .sort(function(a,b){return plan(a).days-plan(b).days});
+    if(!shown.length){var li0=el('li');li0.append(emptyCard('Other',items.length?'Nothing matches':'Nothing here yet',items.length?'Try a different search or category.':'Tap the plus button to add your first items.'));ul.append(li0);return}
+    shown.forEach(function(it){
+      var li=el('li','card'),p=plan(it),e=expiry(it),f=fresh(it);
+      var q2=el('span','qty'),minus=el('button','','−'),plus=el('button','','+');minus.type=plus.type='button';
+      minus.setAttribute('aria-label','Use some '+it.name);plus.setAttribute('aria-label','Add more '+it.name);
+      var step=it.qty>=100?50:(it.unit==='kg'||it.unit==='L'||it.unit==='lb')?0.5:1;
+      minus.onclick=function(){setQty(it,Math.max(0,it.qty-step))};plus.onclick=function(){setQty(it,it.qty+step)};
+      q2.append(minus,el('span','',qtyText(it.qty)+' '+it.unit),plus);
+      var x=itemRow(it,q2);x.grow.append(el('div','sub',(it.category||'Other')+(it.store?' · '+it.store:'')));li.append(x.row);
+      if(f!=null){var bar=el('div','bar'),fill=el('i',e&&e.cls?e.cls:'');fill.style.width=Math.max(4,Math.round((1-f)*100))+'%';bar.append(fill);bar.setAttribute('role','img');
+        bar.setAttribute('aria-label',Math.round((1-f)*100)+' percent of shelf life left');li.append(bar)}
+      var facts=el('div','facts'),a=el('span'),b=el('span');
+      if(it.qty<=0)a.append(el('span','pill bad','Out'));
+      else if(e&&e.cls)a.append(el('span','pill '+e.cls,e.text));
+      else if(it.expiry){a.append(document.createTextNode('Best before '),el('b','',fmt(it.expiry)),document.createTextNode(it.expiry_est?' (est.)':''))}
+      else a.textContent='No date recorded';
+      b.append(document.createTextNode(p.days<=0?'Buy ':'Buy by '),el('b','',p.days<=0?'now':fmt(p.date)));
+      facts.append(a,b);li.append(facts);
+      var tg=el('button','link',open[it.id]?'Hide details':'Details');tg.type='button';tg.style.padding='0';tg.style.textAlign='left';tg.setAttribute('aria-expanded',open[it.id]?'true':'false');
+      tg.onclick=function(){open[it.id]=!open[it.id];renderPantry()};li.append(tg);
+      if(open[it.id]){var m=el('div','more'),txt=el('span');
+        txt.textContent=(it.bought?'Bought '+fmt(it.bought):'Purchase date not recorded')+(it.store?' at '+it.store:'')+'. '+
+          (it.qty<=0?'':'Runs out '+p.why+'. ')+(it.expiry?(it.expiry_est?'Best-before date is my estimate.':'Best-before date was printed.'):'');
+        var rm=el('button','danger','Remove');rm.type='button';rm.setAttribute('aria-label','Remove '+it.name);
+        rm.onclick=async function(){try{await api('/api/items/'+it.id,{method:'DELETE'});items=items.filter(function(i){return i!==it});render();toast('Removed '+it.name+'.')}catch(er){if(er.code!=='locked')toast('Could not remove it. Try again.')}};
+        m.append(txt,rm);li.append(m)}
+      ul.append(li);
+    });
+  }
+
+  function renderList(){
+    var v=$('v-list');v.textContent='';
+    var buy=items.filter(needsBuy).sort(function(a,b){return plan(a).days-plan(b).days});
+    var badge=$('listBadge');badge.hidden=!buy.length;badge.textContent=String(buy.length);
+    if(!buy.length){v.append(emptyCard('Produce','Nothing to buy','When something runs low or is about to expire, it shows up here.'));return}
+    var c=el('div','card');
+    buy.forEach(function(it){var p=plan(it),ck=el('button','check');ck.type='button';ck.setAttribute('aria-label','Mark '+it.name+' as bought');ck.append(icon('M6 12l4 4 8-9'));
+      ck.onclick=function(){restock(it)};
+      var r=el('div','row'),g=el('div','grow');g.append(el('div','name',it.name),el('div','sub',(it.qty<=0?"You're out":p.days<=0?'Due now':'By '+fmt(p.date))+(it.store?' · usually from '+it.store:'')));
+      r.append(ck,g,catIcon(it.category));c.append(r)});
+    v.append(c,el('p','sub','Tick an item when you buy it and I will restock it in the pantry.'));
+    var cp=el('button','btn block','Copy shopping list');cp.type='button';cp.onclick=function(){
+      var text='Shopping list\n'+buy.map(function(i){return '- '+i.name+(i.store?' ('+i.store+')':'')}).join('\n');
+      try{navigator.clipboard.writeText(text).then(function(){toast('Shopping list copied.')},function(){toast(text.replace(/\n/g,'  '))})}catch(e){toast(text.replace(/\n/g,'  '))}};
+    v.append(cp);
+  }
+  async function restock(it){
+    var s=parse(it.bought||it.added),e=parse(it.expiry),shelf=s&&e&&e>s?Math.round((e-s)/DAY):0;
+    var q=it.unit==='g'||it.unit==='ml'?500:it.unit==='oz'?16:1;
+    try{await api('/api/apply',{method:'POST',body:JSON.stringify({source:'hand',store:it.store||'',bought:iso(today()),
+      actions:[{action:'add',name:it.name,quantity:q,unit:it.unit,category:it.category,expiry:'',shelfLifeDays:shelf,finishDays:it.finish_days}]})});
+      await refresh();toast('Restocked '+it.name+' with '+q+' '+it.unit+'. Adjust the amount in Pantry if needed.')}
+    catch(er){if(er.code!=='locked')toast('Could not save that. Check your connection.')}
+  }
+
+  var SRC={bill:['Bill','M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6',165],shelf:['Shelf photo','M4 7h3l2-3h6l2 3h3v13H4z',205],voice:['Voice note','M9 3h6v11H9zM5 11a7 7 0 0 0 14 0M12 18v3',355],
+    barcode:['Barcode','M4 6v12M7 6v12M11 6v12M14 6v12M17 6v12M20 6v12',265],text:['Typed note','M4 20h4L19 9l-4-4L4 16z',35],hand:['By hand','M6 12l4 4 8-9',135]};
+  function renderLog(){
+    var v=$('v-log');v.textContent='';
+    if(!log.length){v.append(emptyCard('Other','No activity yet','Every change I apply is recorded here, so you can see what I did and when.'));return}
+    var c=el('div','card'),ul=el('ul','tl');
+    log.forEach(function(l){var s=SRC[l.source]||SRC.hand,li=el('li'),ic=el('span','ico'),g=el('div'),d=new Date(l.at);ic.style.setProperty('--h',s[2]);ic.append(icon(s[1]));
+      g.append(el('div','name',l.summary.charAt(0).toUpperCase()+l.summary.slice(1)+'.'),el('div','sub',s[0]+(isNaN(d)?'':' · '+d.toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}))));
+      li.append(ic,g);ul.append(li)});
+    c.append(ul);v.append(c);
+  }
+  var TITLES={today:'Today',pantry:'Pantry',list:'Shopping list',log:'Activity'};
+  function render(){renderToday();renderPantry();renderList();renderLog();
+    $('barDate').textContent=tab==='today'?'Stocker AI':today().toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});$('barTitle').textContent=TITLES[tab]}
+  function go(t){tab=t;['today','pantry','list','log'].forEach(function(k){$('v-'+k).hidden=k!==t});
+    document.querySelectorAll('.tab').forEach(function(b){if(b.dataset.tab===t)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current')});
+    render();window.scrollTo(0,0)}
+  document.querySelectorAll('.tab').forEach(function(b){b.onclick=function(){go(b.dataset.tab)}});
+  $('search').addEventListener('input',function(){query=$('search').value.trim();renderPantry()});
+  var qtyTimer={};
+  function setQty(it,q){it.qty=q;render();clearTimeout(qtyTimer[it.id]);
+    qtyTimer[it.id]=setTimeout(function(){api('/api/items/'+it.id,{method:'PATCH',body:JSON.stringify({qty:q})}).catch(function(e){if(e.code!=='locked')toast('Could not save that change. Check your connection.')})},500)}
+  async function refresh(){var d=await api('/api/items');items=d.items||[];log=d.log||[];render()}
+
+  /* ---- capture ---- */
+  document.querySelectorAll('[data-close]').forEach(function(b){b.onclick=function(){b.closest('dialog').close()}});
+  document.querySelectorAll('dialog.sheet').forEach(function(d){d.addEventListener('click',function(ev){if(ev.target===d)d.close()})});
+  $('fab').onclick=function(){if(!busy)$('capDlg').showModal()};
+  var COPY={licence:'The vision model needs its licence accepted once before it can read photos.',
+    ai_failed:'The model could not process that. Try again in a moment.',bad_image:'That photo could not be used. Try another.',
+    bad_audio:'That recording was too long. Keep voice notes under a minute.',silent:"I couldn't hear anything in that recording. Try again closer to the mic.",
+    unknown_product:"That barcode isn't in the product database. Use a voice note or type it instead.",bad_code:"That doesn't look like a barcode number.",
+    empty:'Write something first.',offline:'You seem to be offline. Check your connection.',server:'Something went wrong. Try again.'};
+  async function scan(doFetch,waitMsg){
+    if(busy)return;setBusy(waitMsg);
+    try{var d=await doFetch();setBusy(null);showReview(d)}
+    catch(e){setBusy(null);if(e.code==='locked')return;
+      if(e.code==='licence')toast(COPY.licence,'Accept',async function(){try{await api('/api/agree',{method:'POST'});toast('Licence accepted. Take the photo again.')}catch(er){toast('Could not accept the licence. Try again.')}});
+      else toast(COPY[e.code]||COPY.server)}
+  }
+  function shrink(file){return new Promise(function(res,rej){var img=new Image(),u=URL.createObjectURL(file);
+    img.onload=function(){var s=Math.min(1,1400/Math.max(img.width,img.height)),c=document.createElement('canvas');
+      c.width=Math.round(img.width*s);c.height=Math.round(img.height*s);c.getContext('2d').drawImage(img,0,0,c.width,c.height);URL.revokeObjectURL(u);res(c.toDataURL('image/jpeg',0.85))};
+    img.onerror=function(){URL.revokeObjectURL(u);rej({code:'bad_image'})};img.src=u})}
+  function photo(input,kind){input.addEventListener('change',function(){var f=input.files&&input.files[0];input.value='';if(!f)return;$('capDlg').close();
+    scan(async function(){return api('/api/scan/'+kind,{method:'POST',body:JSON.stringify({image:await shrink(f)})})},kind==='shelf'?'Looking at the shelf':'Reading the bill')})}
+  photo($('billFile'),'bill');photo($('shelfFile'),'shelf');
+
+  /* voice */
+  var rec=null,chunks=[],recTimer=null,recStart=0,recSend=false;
+  $('capVoice').onclick=async function(){
+    $('capDlg').close();
+    if(!navigator.mediaDevices||!window.MediaRecorder){toast('This browser cannot record audio. Type it instead.');return}
+    var stream;try{stream=await navigator.mediaDevices.getUserMedia({audio:true})}catch(e){toast('Microphone access was blocked. Allow it in your browser settings.');return}
+    chunks=[];recSend=false;rec=new MediaRecorder(stream);recStart=Date.now();$('recTime').textContent='0:00';
+    rec.ondataavailable=function(e){if(e.data&&e.data.size)chunks.push(e.data)};
+    rec.onstop=function(){clearInterval(recTimer);stream.getTracks().forEach(function(t){t.stop()});
+      var blob=new Blob(chunks,{type:rec.mimeType||'audio/webm'});rec=null;if($('recDlg').open)$('recDlg').close();
+      if(!recSend)return;
+      if(blob.size<800){toast('That was too short. Try again and speak for a few seconds.');return}
+      scan(function(){return new Promise(function(res,rej){var fr=new FileReader();
+        fr.onload=function(){api('/api/scan/voice',{method:'POST',body:JSON.stringify({audio:String(fr.result).split(',')[1]})}).then(res,rej)};
+        fr.onerror=function(){rej({code:'server'})};fr.readAsDataURL(blob)})},'Listening back')};
+    rec.start();$('recDlg').showModal();
+    recTimer=setInterval(function(){var s=Math.round((Date.now()-recStart)/1000);$('recTime').textContent=Math.floor(s/60)+':'+pad(s%60);if(s>=60&&rec){recSend=true;rec.stop()}},400);
+  };
+  $('recStop').onclick=function(){if(rec){recSend=true;rec.stop()}};
+  $('recCancel').onclick=function(){if(rec){recSend=false;rec.stop()}else $('recDlg').close()};
+  $('recDlg').addEventListener('close',function(){if(rec){recSend=false;rec.stop()}});
+
+  /* barcode */
+  var qr=null;
+  async function stopQr(){if(qr){var q=qr;qr=null;try{await q.stop()}catch(e){}try{q.clear()}catch(e){}}}
+  function lookup(code){$('codeDlg').close();scan(function(){return api('/api/scan/barcode?code='+encodeURIComponent(code))},'Looking up that product')}
+  $('capCode').onclick=async function(){$('capDlg').close();$('codeDlg').showModal();$('codeNote').textContent='Point the camera at the barcode on the pack.';
+    if(!window.Html5Qrcode){$('codeNote').textContent='Camera scanning is not available here. Type the number under the barcode.';return}
+    try{var F=window.Html5QrcodeSupportedFormats,cfg={verbose:false};if(F)cfg.formatsToSupport=[F.EAN_13,F.EAN_8,F.UPC_A,F.UPC_E];
+      qr=new Html5Qrcode('reader',cfg);
+      await qr.start({facingMode:'environment'},{fps:10,qrbox:{width:260,height:150}},function(text){var code=String(text).replace(/\D/g,'');if(code.length>=6&&qr){stopQr();lookup(code)}},function(){});
+    }catch(e){qr=null;$('codeNote').textContent='The camera could not start. Allow camera access, or type the number under the barcode.'}};
+  $('codeDlg').addEventListener('close',stopQr);
+  $('codeForm').addEventListener('submit',function(ev){ev.preventDefault();var c=$('codeInput').value.replace(/\D/g,'');$('codeInput').value='';if(c)lookup(c)});
+
+  /* type */
+  $('capType').onclick=function(){$('capDlg').close();$('typeDlg').showModal()};
+  $('typeForm').addEventListener('submit',function(ev){ev.preventDefault();var t=$('typeText').value.trim();if(!t)return;$('typeDlg').close();$('typeText').value='';
+    scan(function(){return api('/api/scan/text',{method:'POST',body:JSON.stringify({text:t})})},'Reading your note')});
+
+  /* review before anything is saved */
+  function field(label,inp,cls){var l=el('label',cls||'',label);l.htmlFor=inp.id;l.append(inp);return l}
+  function showReview(d){
+    var acts=(d&&d.actions)||[];
+    if(!acts.length){toast(d&&d.kind==='voice'&&d.heard?'I heard “'+d.heard+'” but found nothing to add or use.':"I couldn't find any items in that. Try a clearer photo, or tell me instead.");return}
+    pending=d;
+    $('rvTitle').textContent=acts.length+(acts.length===1?' change to check':' changes to check');
+    $('rvHeard').hidden=!d.heard;$('rvHeard').textContent=d.heard?'“'+d.heard+'”':'';
+    $('rvMeta').hidden=!acts.some(function(a){return a.action==='add'});
+    $('rvStore').value=d.store||'';$('rvDate').value=d.bought||(d.kind==='shelf'?'':iso(today()));
+    var body=$('rvBody');body.textContent='';
+    acts.forEach(function(a,i){
+      var row=el('div','rv'),ck=el('input'),f=el('div','fields'),inp;
+      ck.type='checkbox';ck.checked=true;ck.id='rvKeep'+i;ck.setAttribute('aria-label','Keep change '+(i+1));row.append(ck);
+      inp=el('input');inp.type='text';inp.id='rvName'+i;inp.maxLength=60;inp.value=a.name;f.append(field(a.action==='use'?'Used up':'Add',inp,'full'));
+      inp=el('input');inp.type='number';inp.id='rvQty'+i;inp.min='0';inp.step='any';inp.value=String(a.quantity);f.append(field(a.action==='use'?'Amount (0 = all)':'Quantity',inp));
+      inp=el('select');inp.id='rvUnit'+i;UNITS.forEach(function(u){inp.append(new Option(u,u))});inp.value=a.unit;f.append(field('Unit',inp));
+      if(a.action==='add'){inp=el('input');inp.type='date';inp.id='rvExp'+i;inp.value=a.expiry||'';f.append(field(a.expiry?'Best before':'Best before (blank = I estimate)',inp,'full'))}
+      row.append(f);body.append(row);
+    });
+    $('rvDlg').showModal();
+  }
+  $('rvDiscard').onclick=function(){pending=null;$('rvDlg').close()};
+  $('rvApply').onclick=async function(){
+    if(!pending)return;var acts=[];
+    pending.actions.forEach(function(a,i){if(!$('rvKeep'+i).checked)return;var exp=$('rvExp'+i);
+      acts.push({action:a.action,name:$('rvName'+i).value,quantity:Number($('rvQty'+i).value),unit:$('rvUnit'+i).value,category:a.category,expiry:exp?exp.value:'',shelfLifeDays:a.shelfLifeDays,finishDays:a.finishDays})});
+    if(!acts.length){pending=null;$('rvDlg').close();toast('Nothing was ticked, so nothing changed.');return}
+    $('rvApply').disabled=true;
+    try{var r=await api('/api/apply',{method:'POST',body:JSON.stringify({source:pending.kind,store:$('rvStore').value,bought:$('rvDate').value,actions:acts})});
+      pending=null;$('rvDlg').close();await refresh();toast('Done: '+r.summary+'.')}
+    catch(e){if(e.code!=='locked')toast('Could not save that. Check your connection and try again.')}
+    finally{$('rvApply').disabled=false}
+  };
+
+  async function start(){
+    try{await refresh();$('gate').hidden=true;$('app').hidden=false;$('tabbar').hidden=false;go(tab)}
+    catch(e){if(e.code==='setup')showGate('This pantry has no passcode yet. Set one in the Worker settings as a secret named APP_PIN.');
+      else if(e.code==='locked')showGate();else showGate('Could not reach the pantry. Check your connection and reload.')}
+  }
+  start();
+})();
+</script>
+</body>
+</html>
