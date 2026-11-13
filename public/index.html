@@ -367,13 +367,16 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
   $('lockBtn').onclick=async function(){try{await api('/api/logout',{method:'POST'})}catch(e){}showGate('Locked. Enter your passcode to open Stocker.')};
 
   /* ---- the agent's rules ---- */
+  /* The shopping list holds only what you are out of, what you said is running low, and essentials about to run out.
+     Anything the app merely suspects is offered as a suggestion and never goes on the list by itself. */
+  function runOut(it){return addDays(it.bought||it.added,it.finish_days)}
   function plan(it){
-    if(it.qty<=0)return {days:0,date:iso(today()),why:"You're out"};
-    if(it.low)return {days:0,date:iso(today()),why:'Running low'};
-    var runOut=addDays(it.bought||it.added,it.finish_days),date=runOut,why=it.learned?'at your usual pace':'at a typical pace';
-    if(it.expiry&&it.expiry<runOut){date=it.expiry;why='before it expires'}
-    return {days:daysFrom(date),date:date,why:why};
+    if(it.qty<=0)return {days:-999,date:iso(today()),why:"You're out"};
+    if(it.low)return {days:-998,date:iso(today()),why:'Running low'};
+    var d=runOut(it);return {days:daysFrom(d),date:d,why:it.learned?'at your usual pace':'at a typical pace'};
   }
+  function guess(it){return it.qty>0&&!it.low&&daysFrom(runOut(it))<=(it.essential?3:1)&&-daysFrom(it.bought||it.added)>=2}
+  function maybeLow(it){return !needsBuy(it)&&guess(it)}
   function expiry(it){
     if(!it.expiry||it.qty<=0)return null;var d=daysFrom(it.expiry);
     if(d<0)return {cls:'bad',text:'Expired',d:d};
@@ -382,7 +385,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     return {cls:'',text:'',d:d};
   }
   function needsUse(it){var e=expiry(it);return !!e&&e.d<=3}
-  function needsBuy(it){return plan(it).days<=(it.essential?7:4)}
+  function needsBuy(it){return it.qty<=0||!!it.low||(!!it.essential&&guess(it))}
   function fresh(it){var s=parse(it.bought||it.added),e=parse(it.expiry);if(!s||!e||e<=s||it.qty<=0)return null;return Math.max(0,Math.min(1,(today()-s)/(e-s)))}
 
   /* ---- views ---- */
@@ -396,7 +399,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     var n=use.length+buy.length,hero=el('div','hero'),top=el('div');
     top.append(el('p','day',today().toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric'})));
     top.append(el('h2','',!items.length?'Nothing tracked yet':n?n+(n===1?' thing needs you':' things need you'):"You're all set"));
-    top.append(el('p','',!items.length?'Scan your last grocery bill and I will take it from there.':n?'Here is what to use up and what to pick up.':'Nothing to use up or buy in the next few days.'));
+    top.append(el('p','',!items.length?'Scan your last grocery bill and I will take it from there.':n?'Here is what to use up and what to pick up.':'Nothing to use up, and nothing on your list.'));
     hero.append(top);
     var trio=el('div','trio');[[items.length,'items','pantry'],[use.length,'use soon','today'],[buy.length,'to buy','list']].forEach(function(s){
       var b=el('button');b.type='button';b.append(el('b','',String(s[0])),el('span','',s[1]));b.onclick=function(){go(s[2])};trio.append(b)});
@@ -407,7 +410,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     if(!items.length){v.append(emptyCard('Pantry','Start with one photo','Photograph a receipt, a bathroom shelf or a cupboard, scan a barcode, or just say what you bought.','Add your first items',function(){$('capDlg').showModal()}));return}
     var ess=buy.filter(function(i){return i.essential});buy=buy.filter(function(i){return !i.essential});
     if(ess.length){var s0=el('div','sec');s0.append(el('h2','',"Don't run out"));var c0=el('div','card');
-      ess.forEach(function(it){var p=plan(it),x=itemRow(it,el('span','pill bad',it.qty<=0?'Out':p.days<=0?'Now':'By '+fmt(p.date)));
+      ess.forEach(function(it){var p=plan(it),x=itemRow(it,el('span','pill bad',it.qty<=0?'Out':it.low?'Low':'By '+fmt(p.date)));
         x.grow.append(el('div','sub',it.qty<=0?'An essential, and you have none':'An essential, running low'));c0.append(x.row)});
       s0.append(c0);v.append(s0)}
     if(use.length){var s1=el('div','sec');s1.append(el('h2','','Use soon'));var c1=el('div','card');
@@ -416,10 +419,13 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
       s1.append(c1);v.append(s1)}
     if(buy.length){var s2=el('div','sec'),h=el('div','sechead'),lk=el('button','link','Open list');lk.type='button';lk.onclick=function(){go('list')};
       h.append(el('h2','','Buy next'),lk);s2.append(h);var c2=el('div','card');
-      buy.slice(0,4).forEach(function(it){var p=plan(it),x=itemRow(it,el('span','pill '+(p.days<=0?'bad':'warn'),p.days<=0?'Now':'By '+fmt(p.date)));
-        x.grow.append(el('div','sub',it.qty<=0?"You're out":it.low?'Running low':'Runs out '+p.why));c2.append(x.row)});
+      buy.slice(0,4).forEach(function(it){var x=itemRow(it,el('span','pill '+(it.qty<=0?'bad':'warn'),it.qty<=0?'Out':'Low'));
+        x.grow.append(el('div','sub',it.qty<=0?"You're out":'Running low'));c2.append(x.row)});
       if(buy.length>4)c2.append(el('p','sub','and '+(buy.length-4)+' more on the list'));
       s2.append(c2);v.append(s2)}
+    var sug=items.filter(maybeLow).length;
+    if(sug){var sb=el('button','talk');sb.type='button';sb.append(icon('M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 8v5M12 16h.01'));
+      var st=el('span');st.append(el('b','',sug+(sug===1?' thing might be running low':' things might be running low')),el('span','sub','My guess. Tap to check them.'));sb.append(st);sb.onclick=function(){go('list')};v.append(sb)}
   }
 
   function renderPantry(){
@@ -447,7 +453,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
       else if(it.expiry&&it.expiry_est&&daysFrom(it.expiry)>365)a.textContent='Keeps a long time';
       else if(it.expiry){a.append(document.createTextNode('Best before '),el('b','',fmt(it.expiry)),document.createTextNode(it.expiry_est?' (est.)':''))}
       else a.textContent='No date recorded';
-      b.append(document.createTextNode(p.days<=0?'Buy ':'Buy by '),el('b','',p.days<=0?'now':fmt(p.date)));
+      if(needsBuy(it))b.append(el('b','','On your list'));else b.append(document.createTextNode('Should last until '),el('b','',fmt(p.date)));
       facts.append(a,b);li.append(facts);
       var acts=el('div','acts'),outB=el('button','mini',"We're out"),essB=el('button','mini',it.essential?'Essential':'Make essential');
       outB.type=essB.type='button';outB.disabled=it.qty<=0;essB.setAttribute('aria-pressed',it.essential?'true':'false');
@@ -478,7 +484,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
       try{await api('/api/extras',{method:'POST',body:JSON.stringify({text:t})});await refresh();var n=$('extraText');if(n)n.focus()}
       catch(er){if(er.code!=='locked')toast(er.code==='full'?'The list is full. Tick a few things off first.':'Could not add that. Check your connection.')}});
     v.append(f);
-    if(!count){v.append(emptyCard('Pantry','Nothing to buy','When something runs low it shows up here. You can also add anything yourself.'));return}
+    if(!count)v.append(emptyCard('Pantry','Nothing to buy','Things land here when you run out, say they are low, or add them yourself.'));
     function tick(label,fn){var ck=el('button','check');ck.type='button';ck.setAttribute('aria-label',label);ck.append(icon('M6 12l4 4 8-9'));ck.onclick=fn;return ck}
     if(extras.length){var se=el('div','sec'),ce=el('div','card');se.append(el('h2','','Added by hand'),ce);
       extras.forEach(function(x){var r=el('div','row'),g=el('div','grow');g.append(el('div','name',x.text));if(x.who)g.append(el('div','sub','Added by '+x.who));
@@ -488,14 +494,24 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     buy.sort(function(a,b){return order.indexOf(areaOf(a))-order.indexOf(areaOf(b))});
     buy.forEach(function(it){var p=plan(it);
       if(areaOf(it)!==lastArea){lastArea=areaOf(it);var sec=el('div','sec');c=el('div','card');sec.append(el('h2','',lastArea),c);v.append(sec)}
-      var r=el('div','row'),g=el('div','grow');g.append(el('div','name',it.name),el('div','sub',(it.qty<=0?"You're out":it.low?'Running low':p.days<=0?'Due now':'By '+fmt(p.date))+(it.essential?', essential':'')+(it.store?', usually from '+it.store:'')));
+      var r=el('div','row'),g=el('div','grow');g.append(el('div','name',it.name),el('div','sub',(it.qty<=0?"You're out":it.low?'Running low':'Essential, runs out about '+fmt(p.date))+(it.store?', usually from '+it.store:'')));
       r.append(tick('Mark '+it.name+' as bought',function(){restock(it)}),g,iconFor(it));c.append(r)});
-    v.append(el('p','sub','Tick something when you buy it. Tracked items are restocked at home.'));
+    if(count)v.append(el('p','sub','Tick something when you buy it. Tracked items are restocked at home.'));
     var cp=el('button','btn block','Copy shopping list');cp.type='button';cp.onclick=function(){
       var text='Shopping list\n'+extras.map(function(x){return '- '+x.text}).concat(buy.map(function(i){return '- '+i.name+(i.store?' ('+i.store+')':'')})).join('\n');
       try{navigator.clipboard.writeText(text).then(function(){toast('Shopping list copied.')},function(){toast(text.replace(/\n/g,'  '))})}catch(e){toast(text.replace(/\n/g,'  '))}};
-    v.append(cp);
-    var so=el('button','btn block','Order online');so.type='button';so.onclick=function(){openShop(extras.map(function(x){return x.text}).concat(buy.map(function(i){return i.name})))};v.append(so);
+    var so=el('button','btn block','Order online');so.type='button';so.onclick=function(){openShop(extras.map(function(x){return x.text}).concat(buy.map(function(i){return i.name})))};
+    if(count)v.append(cp,so);
+    var sug=items.filter(maybeLow).sort(function(a,b){return plan(a).days-plan(b).days});
+    if(sug.length){var ss=el('div','sec'),cs=el('div','card');ss.append(el('h2','','Might be running low'),el('p','sub','My guess from when you bought them. None of these are on your list unless you add them.'),cs);
+      sug.forEach(function(it){var wrap=el('div','sec'),r=el('div','row'),g=el('div','grow'),acts=el('div','acts'),ad=el('button','mini','Add to list'),no=el('button','mini','Still have it');
+        g.append(el('div','name',it.name),el('div','sub','Bought '+fmt(it.bought||it.added)+', usually lasts about '+it.finish_days+' days'));r.append(iconFor(it),g);
+        ad.type=no.type='button';
+        ad.onclick=async function(){it.low=1;render();try{await api('/api/items/'+it.id,{method:'PATCH',body:JSON.stringify({low:true})})}catch(er){if(er.code!=='locked')toast('Could not save that. Check your connection.')}};
+        no.onclick=async function(){var since=-daysFrom(it.bought||it.added),nf=since+Math.max(3,Math.ceil(it.finish_days*0.5));it.finish_days=nf;render();
+          try{await api('/api/items/'+it.id,{method:'PATCH',body:JSON.stringify({finishDays:nf})});toast('Got it. I will ask about '+it.name+' again later.')}catch(er){if(er.code!=='locked')toast('Could not save that. Check your connection.')}};
+        acts.append(ad,no);wrap.style.gap='8px';wrap.append(r,acts);cs.append(wrap)});
+      v.append(ss)}
   }
   var STORES={Amazon:'https://www.amazon.com/s?k=',Instacart:'https://www.instacart.com/store/s?k=',Walmart:'https://www.walmart.com/search?q='},store='Amazon';
   function openShop(names){
