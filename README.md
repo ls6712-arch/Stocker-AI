@@ -10,6 +10,7 @@ A household inventory agent that runs on Cloudflare Workers. You show it a groce
 | Structure | A language model turns what it read into "add" and "use" actions, with estimated shelf life and how long each item usually lasts. | Workers AI |
 | Apply | Changes are saved straight away and recorded in the activity log. | D1 |
 | Check | A short summary shows what changed. One tap takes back anything it got wrong, or undoes the lot. | Browser |
+| Picture | Each item gets one generated picture the first time it appears, kept in the database and reused. | Workers AI, D1 |
 | Advise | The briefing works out what to use soon and when to buy each item again. After you buy the same item twice it uses your own pace. | Browser |
 
 ## Deploy (about five minutes)

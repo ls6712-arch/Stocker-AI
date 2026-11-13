@@ -58,6 +58,30 @@ async function lookupBarcode(code) {
   return [p.brands, p.product_name].filter(Boolean).join(' ') + (p.quantity ? ', pack size ' + p.quantity : '');
 }
 
+// ---------- picture ----------
+// One generated picture per item name, made the first time it is asked for and kept in D1.
+async function picture(env, name) {
+  const key = keyOf(name).slice(0, 60);
+  if (!key) return null;
+  const hit = await env.DB.prepare('SELECT data FROM pics WHERE name_key = ?').bind(key).first();
+  if (hit && hit.data) return new Uint8Array(hit.data);
+  // Only draw things that are actually in the inventory, so the endpoint cannot be used as a free image generator.
+  const item = await env.DB.prepare('SELECT name FROM items WHERE name_key = ?').bind(key).first();
+  if (!item) return null;
+  const subject = item.name.replace(/[^\p{L}\p{N} '&-]/gu, ' ').replace(/\s+/g, ' ').trim().slice(0, 60);
+  const r = await env.AI.run(env.IMAGE_MODEL || '@cf/black-forest-labs/flux-1-schnell', {
+    prompt: 'A single ' + subject + ', household product, soft matte 3D clay render, centered, three-quarter view, plain very light warm grey background, soft studio lighting, gentle shadow, pastel colours, no text, no labels, no logos, no people, no hands',
+    steps: 4,
+    seed: 7,
+  });
+  if (!r || !r.image) return null;
+  const bytes = Uint8Array.from(atob(r.image), (c) => c.charCodeAt(0));
+  if (bytes.length < 2_000_000) {
+    await env.DB.prepare('INSERT OR REPLACE INTO pics (name_key, data, made) VALUES (?, ?, ?)').bind(key, bytes.buffer, new Date().toISOString()).run();
+  }
+  return bytes;
+}
+
 // ---------- structure ----------
 const ACTION_SCHEMA = {
   type: 'object',
@@ -232,6 +256,17 @@ async function api(request, env, url) {
   if (m && method === 'DELETE') {
     await env.DB.prepare('DELETE FROM items WHERE id = ?').bind(m[1]).run();
     return json({ ok: true });
+  }
+
+  if (path === '/api/pic' && method === 'GET') {
+    try {
+      const bytes = await picture(env, url.searchParams.get('name') || '');
+      if (!bytes) return json({ error: 'no_picture' }, 404);
+      return new Response(bytes, { headers: { 'content-type': 'image/jpeg', 'cache-control': 'private, max-age=2592000' } });
+    } catch (e) {
+      console.error('picture failed', String((e && e.message) || e));
+      return json({ error: 'no_picture' }, 404);
+    }
   }
 
   if (path === '/api/apply' && method === 'POST') {

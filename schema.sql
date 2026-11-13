@@ -27,3 +27,8 @@ CREATE TABLE IF NOT EXISTS log (
   source TEXT NOT NULL,
   summary TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS pics (
+  name_key TEXT PRIMARY KEY,
+  data BLOB NOT NULL,
+  made TEXT NOT NULL
+);

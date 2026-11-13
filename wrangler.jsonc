@@ -20,7 +20,8 @@
   "vars": {
     "VISION_MODEL": "@cf/meta/llama-3.2-11b-vision-instruct",
     "TEXT_MODEL": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
-    "SPEECH_MODEL": "@cf/openai/whisper-large-v3-turbo"
+    "SPEECH_MODEL": "@cf/openai/whisper-large-v3-turbo",
+    "IMAGE_MODEL": "@cf/black-forest-labs/flux-1-schnell"
   },
   "observability": { "enabled": true }
 }
