@@ -115,6 +115,17 @@ input[type=text],input[type=password],input[type=number],input[type=date],input[
 .hpill{align-self:flex-start;border:0;background:rgba(255,255,255,.16);color:var(--hero-fg);border-radius:999px;padding:6px 14px;font-weight:600;font-size:13.5px;min-height:38px;text-align:left}
 .tile[aria-pressed="true"]{border-color:var(--accent);box-shadow:inset 0 0 0 1.5px var(--accent)}
 .wrapchips{display:flex;flex-wrap:wrap;gap:8px}
+.chip.add{border-style:dashed;color:var(--accent);background:none}
+.addin{display:flex;gap:6px;flex:1 1 220px;min-width:0}.addin input{flex:1;min-width:0;min-height:40px;padding:6px 12px;border-radius:999px}
+#profDlg .tile,#profDlg .tile b{min-height:0}#profDlg .tile{padding:10px 12px;gap:2px;border-radius:14px}#profDlg .tile span{font-size:12px}
+.grp{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0}
+.who{display:flex;flex-direction:column;gap:8px}
+.who button.person{display:flex;justify-content:space-between;align-items:center;gap:10px;text-align:left;border:1px solid var(--line);background:var(--surface2);border-radius:14px;padding:10px 12px;min-height:48px}
+.who .person b{font-weight:600}.who .person span{font-size:13px;color:var(--muted)}
+details.more{border-top:1px solid var(--line);padding-top:12px}details.more summary{font-weight:700;font-family:var(--display);cursor:pointer;min-height:40px;display:flex;align-items:center;justify-content:space-between;list-style:none}
+details.more summary::-webkit-details-marker{display:none}details.more summary::after{content:"+";font-size:1.4rem;color:var(--accent)}details.more[open] summary::after{content:"\2212"}
+details.more .in{display:flex;flex-direction:column;gap:14px;padding-top:8px}
+.field{display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:var(--muted)}
 .people{display:flex;flex-wrap:wrap;gap:12px 24px}
 .people label{display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--muted)}
 .acts{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
@@ -341,33 +352,73 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
   </div>
 </dialog>
 
+<dialog class="sheet" id="memDlg" aria-labelledby="memH">
+  <div class="pad">
+    <div class="grab"></div>
+    <h2 id="memH">Add a person</h2>
+    <p class="sub">Only what is different about them. Dinner ideas and warnings will respect it.</p>
+    <label for="memName" class="field">Name<input type="text" id="memName" maxlength="20" placeholder="Maya"></label>
+    <h3>Who are they?</h3>
+    <div class="wrapchips" id="memKind" role="group" aria-label="Who are they"></div>
+    <label for="memWhen" class="field">Only here some of the time? Leave empty if they live here.<input type="text" id="memWhen" maxlength="40" placeholder="Weekends, or every other week"></label>
+    <h3>Allergies</h3>
+    <div class="wrapchips" id="memAll" role="group" aria-label="Their allergies"></div>
+    <h3>Health rules</h3>
+    <div class="wrapchips" id="memRules" role="group" aria-label="Their health rules"></div>
+    <h3>How they eat</h3>
+    <div class="wrapchips" id="memDiet" role="group" aria-label="Their diet"></div>
+    <h3>Will not eat</h3>
+    <div class="wrapchips" id="memAvoid" role="group" aria-label="Will not eat"></div>
+    <button type="button" class="btn primary block" id="memSave">Save person</button>
+    <button type="button" class="btn block" id="memDel">Remove</button>
+    <button type="button" class="btn block" data-close>Cancel</button>
+  </div>
+</dialog>
+
 <dialog class="sheet" id="profDlg" aria-labelledby="profH">
   <div class="pad">
     <div class="grab"></div>
     <h2 id="profH">Make Stocker yours</h2>
     <p class="sub">Tell me who is at home and I will tailor estimates, dinner ideas and suggestions. You can change this any time.</p>
-    <h3>Which sounds most like you?</h3>
-    <div class="tiles" id="profPersonas" role="group" aria-label="Household type"></div>
+    <h3>Which sound like you? <span class="sub" id="profPick" style="font-family:var(--body,inherit);font-weight:500">Pick up to three</span></h3>
+    <p class="grp">Your home</p>
+    <div class="tiles" id="profHome" role="group" aria-label="Your home"></div>
+    <p class="grp">Your style</p>
+    <div class="tiles" id="profStyle" role="group" aria-label="Your style"></div>
+    <p class="sub">This picks your starter list, your kits and how fast I expect things to run out.</p>
     <h3>Who lives here?</h3>
     <div class="people" id="profPeople"></div>
-    <h3>How you eat</h3>
-    <div class="wrapchips" id="profDiet" role="group" aria-label="Diet"></div>
+    <div class="who" id="profMembers"></div>
+    <p class="sub">Add a person when someone eats differently, has an allergy, or is only here some of the time.</p>
+    <div class="wrapchips" id="profPets" role="group" aria-label="Pets"></div>
     <h3>Allergies at home</h3>
     <div class="wrapchips" id="profAll" role="group" aria-label="Allergies"></div>
-    <p class="sub">I flag likely allergens from product names, and I can miss things. Always check the label yourself.</p>
-    <h3>Food you like most</h3>
-    <div class="wrapchips" id="profCui" role="group" aria-label="Favourite food"></div>
-    <h3>Weeknight cooking time</h3>
-    <div class="wrapchips" id="profCook" role="group" aria-label="Cooking time"></div>
-    <h3>Your shopping</h3>
-    <div class="wrapchips" id="profDay" role="group" aria-label="Usual shopping day"></div>
-    <div class="meta">
-      <label for="profStore">Where you usually shop<input type="text" id="profStore" maxlength="30" placeholder="Trader Joe's"></label>
-      <label for="profBudget">Monthly budget<input type="number" id="profBudget" min="0" step="10" placeholder="600"></label>
-    </div>
-    <h3>Anything else I should know?</h3>
-    <label for="profAbout" class="sub">Ages, dislikes, routines. I use this for dinner ideas and estimates.</label>
-    <textarea id="profAbout" rows="3" maxlength="240" placeholder="Kids are 3, 6 and 9. Nobody eats mushrooms. We do one big shop on Sundays."></textarea>
+    <p class="sub">Allergies are a hard rule: I keep them out of dinner ideas and starter lists, and flag products that look risky. I work from product names, so I can miss things. Always check the label yourself.</p>
+    <h3>Health rules</h3>
+    <div class="wrapchips" id="profRules" role="group" aria-label="Health rules"></div>
+    <h3>How you eat</h3>
+    <div class="wrapchips" id="profDiet" role="group" aria-label="Diet"></div>
+    <details class="more" id="profMore">
+      <summary>More ways to tailor it</summary>
+      <div class="in">
+        <h3>Things nobody eats</h3>
+        <div class="wrapchips" id="profAvoid" role="group" aria-label="Things nobody eats"></div>
+        <h3>What matters most</h3>
+        <div class="wrapchips" id="profGoal" role="group" aria-label="What matters most"></div>
+        <h3>Food you like most</h3>
+        <div class="wrapchips" id="profCui" role="group" aria-label="Favourite food"></div>
+        <h3>Weeknight cooking time</h3>
+        <div class="wrapchips" id="profCook" role="group" aria-label="Cooking time"></div>
+        <h3>Your shopping</h3>
+        <div class="wrapchips" id="profDay" role="group" aria-label="Usual shopping day"></div>
+        <p class="grp">Where you shop</p>
+        <div class="wrapchips" id="profStores" role="group" aria-label="Where you shop"></div>
+        <label for="profBudget" class="field">Monthly budget<input type="number" id="profBudget" min="0" step="10" placeholder="600"></label>
+        <h3>Anything else I should know?</h3>
+        <label for="profAbout" class="sub">Ages, routines, brands you always buy.</label>
+        <textarea id="profAbout" rows="3" maxlength="240" placeholder="Kids are 3, 6 and 9. We do one big shop on Sundays. Diapers are size 4."></textarea>
+      </div>
+    </details>
     <button type="button" class="btn primary block" id="profSave">Save</button>
     <button type="button" class="btn block" id="profSkip">Not now</button>
   </div>
@@ -434,10 +485,15 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
   function iconFor(o){var a=areaOf(o),c=a==='Kitchen'?(CAT[o.category]||CAT.Pantry):AREA[a],b=el('span','ico');b.style.setProperty('--h',c[0]);b.append(icon(c[1]));
     if(o.name){b.className='ico pic';picFor(b,o.name)}return b}
   /* household profiles: a persona sets sensible defaults, then people, diet and allergies refine it */
-  var PERSONA={mom:['Busy mom','Kids, school runs, no spare time',2,3,[]],dad:['Single dad','One adult running the whole house',1,2,[]],
-    family4:['Family of four','Two adults, two kids',2,2,[]],student:['College student','Small budget, small kitchen',1,0,[]],
-    gym:['Gym bro','Lifting, protein, repeat',1,0,['High protein']],fit:['Fitness freak','Training hard, eating clean',1,0,['High protein']],
-    vegan:['Vegan','A plant-based home',2,0,['Vegan']],other:['Something else','Set it up your own way',2,0,[]]};
+  var PERSONA={mom:['Busy mom','Kids, school runs, no spare time',2,3,[],'home'],dad:['Single dad','One adult running the whole house',1,2,[],'home'],
+    family4:['Family of four','Two adults, two kids',2,2,[],'home'],big:['Big family','Five or more at the table',2,4,[],'home'],
+    newparents:['New parents','A baby and no sleep',2,1,[],'home'],couple:['Couple','Two of you',2,0,[],'home'],
+    solo:['Living solo','Just you',1,0,[],'home'],roommates:['Roommates','Shared kitchen, shared staples',3,0,[],'home'],
+    empty:['Empty nesters','Kids grown, or retired',2,0,[],'home'],carer:['Caring for a parent','An older adult at home',2,0,[],'home'],
+    student:['College student','Small budget, small kitchen',0,0,[],'style'],pro:['Busy professional','No time to cook',0,0,[],'style'],
+    gym:['Gym bro','Lifting, protein, repeat',0,0,['High protein'],'style'],fit:['Fitness freak','Training hard, eating clean',0,0,['High protein'],'style'],
+    vegan:['Vegan','A plant-based home',0,0,['Vegan'],'style'],host:['Host','Loves to cook for people',0,0,[],'style'],
+    petparent:['Pet parent','Fur comes first',0,0,[],'style'],other:['Something else','Set it up your own way',0,0,[],'style']};
   var STARTER={mom:['Milk','Eggs','Bread','Fruit for lunchboxes','Lunchbox snacks','Yogurt','Diapers','Baby wipes','Kids fever medicine','Laundry detergent','Dish soap','Toilet paper'],
     dad:['Milk','Eggs','Bread','Cereal','Pasta','Pasta sauce','Chicken','Frozen vegetables','Lunchbox snacks','Laundry detergent','Dish soap','Toilet paper'],
     family4:['Milk','Eggs','Bread','Rice','Pasta','Chicken','Fruit','Vegetables','Cereal','Laundry detergent','Dish soap','Toilet paper'],
@@ -445,22 +501,48 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     gym:['Chicken breast','Eggs','Protein powder','Rice','Oats','Greek yogurt','Bananas','Peanut butter','Broccoli','Creatine','Tuna','Electrolytes'],
     fit:['Greek yogurt','Berries','Spinach','Salmon','Quinoa','Almonds','Eggs','Sweet potatoes','Oats','Avocados','Electrolytes','Olive oil'],
     vegan:['Tofu','Oat milk','Chickpeas','Lentils','Nutritional yeast','Spinach','Bananas','Peanut butter','Rice','Vitamin B12','Hummus','Olive oil'],
+    big:['Milk','Eggs','Bread','Rice','Pasta','Chicken','Ground beef','Cereal','Fruit','Frozen vegetables','Toilet paper','Laundry detergent','Trash bags'],
+    newparents:['Diapers','Baby wipes','Formula','Diaper cream','Baby wash','Coffee','Eggs','Bread','Frozen meals','Laundry detergent','Hand soap'],
+    couple:['Eggs','Bread','Coffee','Pasta','Chicken','Salad greens','Olive oil','Cheese','Fruit','Dish soap','Toilet paper'],
+    solo:['Eggs','Bread','Coffee','Rice','Frozen vegetables','Chicken','Bananas','Yogurt','Dish soap','Toilet paper'],
+    roommates:['Toilet paper','Dish soap','Trash bags','Cooking oil','Rice','Salt','Sponges','Paper towels','Laundry detergent','Milk'],
+    empty:['Milk','Eggs','Bread','Oats','Fruit','Vegetables','Fish','Tea','Soup','Dish soap','Toilet paper'],
+    carer:['Milk','Eggs','Oats','Soup','Bananas','Yogurt','Tea','Tissues','Hand soap','Pain reliever','Bandages'],
+    pro:['Coffee','Eggs','Frozen meals','Salad kits','Rotisserie chicken','Yogurt','Granola bars','Bananas','Dish soap','Toilet paper'],
+    host:['Olive oil','Butter','Garlic','Lemons','Pasta','Parmesan','Fresh herbs','Sparkling water','Coffee','Paper napkins','Dish soap'],
+    petparent:['Pet food','Pet treats','Paper towels','Trash bags','Lint roller'],
     other:['Milk','Eggs','Bread','Rice','Coffee','Fruit','Vegetables','Toilet paper','Dish soap','Laundry detergent']};
   var CUISINES=['Indian','Italian','Mexican','Chinese','Thai','Japanese','Mediterranean','American','Middle Eastern','Korean'],DAYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],DAYNAMES=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-  var DIETS=['Vegan','Vegetarian','Gluten-free','Dairy-free','High protein','Halal'],ALLERGENS=['Peanuts','Tree nuts','Milk','Eggs','Wheat','Soy','Fish','Shellfish','Sesame'];
+  var DIETS=['Vegetarian','Vegan','Pescatarian','Eggetarian','Halal','Kosher','Gluten-free','Dairy-free','High protein','Keto','Low carb','Paleo','Mediterranean','Jain','No onion or garlic','No beef','No pork','Low FODMAP'],ALLERGENS=['Peanuts','Tree nuts','Milk','Eggs','Wheat','Soy','Fish','Shellfish','Sesame','Mustard','Celery','Corn','Sulphites'];
+  var RULES=['Celiac','Lactose intolerant','Low salt','Low sugar'],AVOID=['Mushrooms','Onions','Cilantro','Spicy food','Seafood','Olives','Eggplant'],GOALS=[['waste','Waste less'],['spend','Spend less'],['healthy','Eat healthier'],['time','Save time'],['stock','Never run out']],
+    KINDS=[['adult','Adult'],['teen','Teenager'],['child','Child'],['toddler','Toddler'],['baby','Baby'],['older','Older adult'],['visitor','Visits often']];
   var PLANT=/peanut butter|almond butter|oat milk|almond milk|soy milk|coconut milk/i,DAIRY=/milk|yogurt|cheese|butter|cream|whey/i,MEAT=/chicken|beef|pork|turkey|salmon|tuna|fish|meat|hot dog|bacon|ham\b/i,WHEAT=/bread|pasta|noodle|cereal|flour|tortilla|pizza|cracker/i;
   var CLASH={Peanuts:/peanut/i,'Tree nuts':/almond|walnut|cashew|pecan|hazelnut|pistachio/i,Eggs:/\begg/i,Soy:/tofu|soy|edamame|tempeh/i,Fish:/salmon|tuna|fish/i,Shellfish:/shrimp|prawn|crab|lobster/i,Sesame:/sesame|tahini|hummus/i};
+  var FISHY=/salmon|tuna|fish|shrimp|prawn|crab|lobster/i,PORK=/pork|bacon|ham\b|hot dog/i;
+  function everyone(key){var out=profile[key].slice();(profile.members||[]).forEach(function(m){m[key].forEach(function(x){if(out.indexOf(x)<0)out.push(x)})});return out}
+  function mentions(name,list){var l=name.toLowerCase();return list.some(function(x){var w=x.toLowerCase().replace(/(es|s)$/,'');return w.length>2&&l.indexOf(w)>-1})}
+  /* shared lists respect every allergy and medical rule in the home, and the diet the whole home follows */
   function fits(name){
-    if(!profile)return true;var dairy=DAIRY.test(name)&&!PLANT.test(name),d=profile.diet,a=profile.allergies;
-    if(a.indexOf('Milk')>-1&&dairy)return false;if(a.indexOf('Wheat')>-1&&WHEAT.test(name))return false;
-    for(var k in CLASH)if(a.indexOf(k)>-1&&CLASH[k].test(name))return false;
-    if(d.indexOf('Vegan')>-1&&(dairy||MEAT.test(name)||/\begg|honey/i.test(name)))return false;
-    if(d.indexOf('Vegetarian')>-1&&MEAT.test(name))return false;
-    if(d.indexOf('Dairy-free')>-1&&dairy)return false;if(d.indexOf('Gluten-free')>-1&&WHEAT.test(name))return false;
+    if(!profile)return true;var dairy=DAIRY.test(name)&&!PLANT.test(name),d=profile.diet,a=everyone('allergies'),r=everyone('rules'),has=function(l,x){return l.indexOf(x)>-1};
+    if(has(a,'Milk')&&dairy)return false;if((has(a,'Wheat')||has(r,'Celiac'))&&(WHEAT.test(name)||/oats|barley|malt|granola/i.test(name)))return false;
+    for(var k in CLASH)if(has(a,k)&&CLASH[k].test(name))return false;
+    if(mentions(name,a.filter(function(x){return ALLERGENS.indexOf(x)<0}))||mentions(name,profile.avoid||[]))return false;
+    if(has(d,'Vegan')&&(dairy||MEAT.test(name)||/\begg|honey/i.test(name)))return false;
+    if((has(d,'Vegetarian')||has(d,'Eggetarian')||has(d,'Jain'))&&MEAT.test(name))return false;
+    if(has(d,'Pescatarian')&&MEAT.test(name)&&!FISHY.test(name))return false;
+    if((has(d,'Halal')||has(d,'Kosher')||has(d,'No pork'))&&PORK.test(name))return false;if(has(d,'No beef')&&/beef/i.test(name))return false;
+    if((has(d,'Jain')||has(d,'No onion or garlic'))&&/onion|garlic/i.test(name))return false;
+    if(has(d,'Dairy-free')&&dairy)return false;if(has(d,'Gluten-free')&&WHEAT.test(name))return false;
     return true;
   }
-  function profileLine(){if(!profile)return 'Make it yours';var n=profile.adults+profile.kids;
-    return PERSONA[profile.persona][0]+', '+n+(n===1?' person':' people')+(profile.diet.length?', '+profile.diet.join(', '):'')+(profile.allergies.length?', no '+profile.allergies.join(', ').toLowerCase():'')}
+  function pers(){return profile?(profile.personas||[profile.persona]):[]}
+  function persLabel(){var p=pers();return p.length===1?PERSONA[p[0]][0]:'your home'}
+  function starterList(){var lists=pers().map(function(k){return STARTER[k]}),out=[],extra=[];
+    (profile.pets||[]).forEach(function(p){if(p==='Dog')extra.push('Dog food','Poop bags');else if(p==='Cat')extra.push('Cat food','Cat litter');else extra.push(p+' food')});
+    if((profile.members||[]).some(function(m){return m.kind==='baby'}))extra.push('Diapers','Baby wipes');
+    if(extra.length)lists=lists.map(function(l){return l.filter(function(n){return n!=='Pet food'})});lists.unshift(extra);for(var i=0;i<14;i++)lists.forEach(function(l){if(l[i]&&out.indexOf(l[i])<0)out.push(l[i])});return out}
+  function profileLine(){if(!profile)return 'Make it yours';var n=profile.adults+profile.kids,a=everyone('allergies');
+    return pers().map(function(k){return PERSONA[k][0]}).join(' + ')+', '+n+(n===1?' person':' people')+(profile.diet.length?', '+profile.diet.join(', '):'')+(a.length?', no '+a.join(', ').toLowerCase():'')}
   var SVGNS='http://www.w3.org/2000/svg';
   var $=function(id){return document.getElementById(id)};
   function el(t,c,txt){var e=document.createElement(t);if(c)e.className=c;if(txt!=null)e.textContent=txt;return e}
@@ -532,10 +614,10 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
   function starterCard(v){
     var hide=false;try{hide=localStorage.getItem('stocker.starterHide')==='1'}catch(e){}
     if(profile&&!hide){var have=items.map(function(i){return i.name.toLowerCase()}).concat(extras.map(function(x){return x.text.toLowerCase()}));
-      var picks=STARTER[profile.persona].filter(function(n){var l=n.toLowerCase();return fits(n)&&!have.some(function(h){return h.indexOf(l)>-1||l.indexOf(h)>-1})}).slice(0,10);
+      var picks=starterList().filter(function(n){var l=n.toLowerCase();return fits(n)&&!have.some(function(h){return h.indexOf(l)>-1||l.indexOf(h)>-1})}).slice(0,10);
       if(picks.length){var sc=el('div','card'),sh=el('div','sechead'),hb=el('button','link','Hide');hb.type='button';hb.style.padding='0';
         hb.onclick=function(){try{localStorage.setItem('stocker.starterHide','1')}catch(e){}render()};
-        sh.append(el('h3','',PERSONA[profile.persona][0]+' staples'),hb);sc.append(sh,el('p','sub','A starter list picked for your kind of home. Tap what you want on your shopping list.'));
+        sh.append(el('h3','',pers().length===1?PERSONA[pers()[0]][0]+' staples':'Staples for your home'),hb);sc.append(sh,el('p','sub','A starter list picked for your kind of home. Tap what you want on your shopping list.'));
         var wc=el('div','wrapchips');picks.forEach(function(n){var b=el('button','mini','+ '+n);b.type='button';
           b.onclick=async function(){b.disabled=true;try{await api('/api/extras',{method:'POST',body:JSON.stringify({text:n})});await refresh();toast(n+' is on your shopping list.')}catch(er){b.disabled=false;if(er.code!=='locked')toast('Could not add that. Check your connection.')}};wc.append(b)});
         sc.append(wc);v.append(sc)}}
@@ -745,18 +827,23 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     barcode:['Barcode','M4 6v12M7 6v12M11 6v12M14 6v12M17 6v12M20 6v12',265],text:['Typed note','M4 20h4L19 9l-4-4L4 16z',35],hand:['By hand','M6 12l4 4 8-9',135]};
   /* curated kits: checklists for real situations, checked against what is already at home */
   var KITS=[
-    {t:'School lunchbox week',s:'Five days of lunches, sorted',p:['mom','dad','family4'],i:['Bread','Cheese slices','Yogurt','Apples','Carrots','Crackers','Granola bars','Juice boxes','Sandwich bags']},
-    {t:'New baby basics',s:'What you reach for ten times a day',p:['mom','dad'],i:['Diapers','Baby wipes','Diaper cream','Formula','Baby wash','Baby laundry detergent','Infant fever medicine']},
-    {t:'Meal-prep Sunday',s:'A week of high-protein meals',p:['gym','fit'],i:['Chicken breast','Rice','Broccoli','Sweet potatoes','Eggs','Oats','Greek yogurt','Frozen berries','Olive oil']},
+    {t:'School lunchbox week',s:'Five days of lunches, sorted',p:['mom','dad','family4','big'],i:['Bread','Cheese slices','Yogurt','Apples','Carrots','Crackers','Granola bars','Juice boxes','Sandwich bags']},
+    {t:'New baby basics',s:'What you reach for ten times a day',p:['mom','dad','newparents'],i:['Diapers','Baby wipes','Diaper cream','Formula','Baby wash','Baby laundry detergent','Infant fever medicine']},
+    {t:'Meal-prep Sunday',s:'A week of high-protein meals',p:['gym','fit','pro'],i:['Chicken breast','Rice','Broccoli','Sweet potatoes','Eggs','Oats','Greek yogurt','Frozen berries','Olive oil']},
     {t:'Dorm room starter',s:'Everything for a first week away',p:['student'],i:['Instant noodles','Cereal','Milk','Coffee','Snacks','Laundry pods','Dish soap','Toilet paper','Trash bags','Paper towels']},
     {t:'Plant-based pantry',s:'The staples a vegan kitchen runs on',p:['vegan'],i:['Tofu','Lentils','Chickpeas','Oat milk','Nutritional yeast','Quinoa','Peanut butter','Canned tomatoes','Vitamin B12']},
-    {t:'Friday taco night',s:'One dinner everyone agrees on',p:['mom','dad','family4'],i:['Taco shells','Ground beef','Salsa','Cheese','Lettuce','Tomatoes','Sour cream','Limes']},
+    {t:'Friday taco night',s:'One dinner everyone agrees on',p:['mom','dad','family4','big'],i:['Taco shells','Ground beef','Salsa','Cheese','Lettuce','Tomatoes','Sour cream','Limes']},
     {t:'Sick day kit',s:'So nobody goes out at 9pm',p:[],i:['Fever medicine','Cough syrup','Throat lozenges','Tissues','Electrolyte drink','Chicken soup','Honey','Tea']},
-    {t:'Guests this weekend',s:'Ready before the doorbell rings',p:[],i:['Coffee','Milk','Eggs','Bread','Fruit','Snacks','Sparkling water','Toilet paper','Hand soap','Paper towels']},
-    {t:'Easy breakfasts',s:'Mornings on autopilot',p:[],i:['Eggs','Bread','Oats','Bananas','Yogurt','Butter','Coffee','Orange juice']},
+    {t:'Guests this weekend',s:'Ready before the doorbell rings',p:['host','couple'],i:['Coffee','Milk','Eggs','Bread','Fruit','Snacks','Sparkling water','Toilet paper','Hand soap','Paper towels']},
+    {t:'Easy breakfasts',s:'Mornings on autopilot',p:['pro','solo'],i:['Eggs','Bread','Oats','Bananas','Yogurt','Butter','Coffee','Orange juice']},
     {t:'Deep clean day',s:'Every surface, one trip',p:[],i:['All-purpose cleaner','Dish soap','Sponges','Trash bags','Paper towels','Laundry detergent','Toilet cleaner','Glass cleaner']},
     {t:'Storm shelf',s:'Three days without the shops',p:[],i:['Bottled water','Canned soup','Pasta','Peanut butter','Crackers','Batteries','Candles','First aid supplies']},
-    {t:'Pet essentials',s:'For the family member who cannot ask',p:[],i:['Pet food','Pet treats','Poop bags','Cat litter','Flea treatment']}];
+    {t:'Pet essentials',s:'For the family member who cannot ask',p:['petparent'],i:['Pet food','Pet treats','Poop bags','Cat litter','Flea treatment']},
+    {t:'Flat share staples',s:'The things everyone uses and nobody buys',p:['roommates','student'],i:['Toilet paper','Dish soap','Trash bags','Cooking oil','Rice','Salt','Sponges','Paper towels','Laundry detergent']},
+    {t:'Medicine cabinet check',s:'In date and in stock before you need it',p:['empty','carer','newparents'],i:['Pain reliever','Antacid','Bandages','Antiseptic','Thermometer','Allergy tablets','Cough syrup','Electrolyte drink']},
+    {t:'Grandkids are coming',s:'Stocked before they arrive',p:['empty'],i:['Milk','Cereal','Juice boxes','Fruit','Snacks','Pasta','Ice cream','Cheese']},
+    {t:'Dinner for friends',s:'A proper meal without a second trip',p:['host','couple'],i:['Olive oil','Pasta','Parmesan','Garlic','Lemons','Butter','Fresh herbs','Sparkling water','Chocolate']},
+    {t:'Five-minute dinners',s:'For the nights cooking is not happening',p:['pro','solo','student'],i:['Eggs','Frozen meals','Instant noodles','Canned soup','Tortillas','Cheese','Salad kits','Frozen vegetables']}];
   function words(n){return n.toLowerCase().replace(/[^a-z0-9 ]/g,' ').split(/\s+/).filter(Boolean).map(function(w){return w.length>3?w.replace(/(es|s)$/,''):w})}
   function same(a,b){var x=words(a),y=words(b);if(x.length>y.length){var t=x;x=y;y=t}return x.length>0&&x.every(function(w){return y.indexOf(w)>-1})}
   function kitState(n){
@@ -782,13 +869,13 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
   }
   function renderLog(){
     var v=$('v-log');v.textContent='';
-    var per=profile?profile.persona:'',kits=KITS.filter(function(k){return kitItems(k).length>=3&&(!k.p.length||!per||k.p.indexOf(per)>-1||per==='other')})
-      .sort(function(a,b){return (b.p.indexOf(per)>-1)-(a.p.indexOf(per)>-1)});
-    var sk=el('div','sec'),hd=el('div','sechead');hd.append(el('h2','',profile?'Curated for a '+PERSONA[per][0].toLowerCase():'Curated kits'));
+    var ps=pers(),mine=function(k){return k.p.some(function(x){return ps.indexOf(x)>-1})},kits=KITS.filter(function(k){return kitItems(k).length>=3&&(!k.p.length||!ps.length||mine(k)||ps.indexOf('other')>-1)})
+      .sort(function(a,b){return mine(b)-mine(a)});
+    var sk=el('div','sec'),hd=el('div','sechead');hd.append(el('h2','',profile?(ps.length===1&&ps[0]!=='other'?'Curated for a '+PERSONA[ps[0]][0].toLowerCase():'Curated for your home'):'Curated kits'));
     if(!profile){var mk=el('button','link','Make it yours');mk.type='button';mk.onclick=openProfile;hd.append(mk)}
     sk.append(hd,el('p','sub','Checklists for real situations, checked against what you already have.'));
     var grid=el('div','tiles');kits.forEach(function(k){var list=kitItems(k),have=list.filter(function(n){return kitState(n)!=='need'}).length,b=el('button','tile');b.type='button';b.style.minHeight='0';
-      if(k.p.indexOf(per)>-1)b.append(el('span','pill ok','For you'));
+      if(mine(k))b.append(el('span','pill ok','For you'));
       b.append(el('b','',k.t),el('span','',k.s));var bar=el('div','bar'),fill=el('i');bar.style.width='100%';fill.style.width=Math.round(have/list.length*100)+'%';bar.append(fill);
       b.append(bar,el('span','',have===list.length?'All set':'Have '+have+' of '+list.length));b.onclick=function(){openKit(k)};grid.append(b)});
     sk.append(grid);v.append(sk);
@@ -819,33 +906,74 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
   document.querySelectorAll('[data-close]').forEach(function(b){b.onclick=function(){b.closest('dialog').close()}});
   document.querySelectorAll('dialog.sheet').forEach(function(d){d.addEventListener('click',function(ev){if(ev.target===d)d.close()})});
   $('fab').onclick=function(){if(!busy)$('capDlg').showModal()};
-  var draft=null;
+  var draft=null,mem=null,memAt=-1,ui={more:{},adding:''};
+  function redraw(){drawProfile();if(mem)drawMember()}
+  /* a chip group: suggested options, anything the household added, and a plus chip to add their own */
+  function chipBox(box,all,obj,key,o){o=o||{};box.textContent='';var id=box.id,sel=obj[key],low=function(x){return x.toLowerCase()};
+    var shown=o.show&&!ui.more[id]?all.filter(function(n,i){return i<o.show||sel.indexOf(n)>-1}):all;
+    shown.concat(sel.filter(function(n){return all.indexOf(n)<0})).forEach(function(n){var on=sel.indexOf(n)>-1,b=el('button','chip',n);b.type='button';b.setAttribute('aria-pressed',on?'true':'false');
+      b.onclick=function(){obj[key]=on?sel.filter(function(x){return x!==n}):sel.concat([n]);redraw()};box.append(b)});
+    if(shown.length<all.length){var m=el('button','chip add','More');m.type='button';m.onclick=function(){ui.more[id]=1;redraw()};box.append(m)}
+    if(ui.adding===id){var w=el('span','addin'),inp=el('input'),ok=el('button','mini','Add');inp.type='text';inp.maxLength=24;inp.placeholder=o.ph||'Type it here';inp.setAttribute('aria-label',o.add||'Add your own');ok.type='button';
+      var done=function(){var v=inp.value.replace(/\s+/g,' ').trim();ui.adding='';if(v){var k=all.filter(function(x){return low(x)===low(v)})[0]||v;if(!obj[key].some(function(x){return low(x)===low(k)}))obj[key]=obj[key].concat([k])}redraw()};
+      ok.onclick=done;inp.onkeydown=function(ev){if(ev.key==='Enter'){ev.preventDefault();done()}else if(ev.key==='Escape'){ev.preventDefault();ui.adding='';redraw()}};
+      w.append(inp,ok);box.append(w);setTimeout(function(){inp.focus()},0)}
+    else{var a=el('button','chip add','+ '+(o.add||'Add your own'));a.type='button';a.onclick=function(){ui.adding=id;redraw()};box.append(a)}}
+  function oneOf(box,pairs,obj,key,clear){box.textContent='';pairs.forEach(function(pr){var b=el('button','chip',pr[1]);b.type='button';b.setAttribute('aria-pressed',obj[key]===pr[0]?'true':'false');
+    b.onclick=function(){obj[key]=clear&&obj[key]===pr[0]?'':pr[0];redraw()};box.append(b)})}
+  function memLine(m){var k=KINDS.filter(function(x){return x[0]===m.kind})[0][1];return [k].concat(m.when?['here '+m.when]:[],m.allergies.map(function(a){return 'no '+a.toLowerCase()}),m.rules,m.diet,m.avoid.map(function(a){return 'no '+a.toLowerCase()})).join(', ')}
   function drawProfile(){
-    var pp=$('profPersonas');pp.textContent='';Object.keys(PERSONA).forEach(function(k){var P=PERSONA[k],b=el('button','tile');b.type='button';b.style.minHeight='0';
-      b.setAttribute('aria-pressed',draft.persona===k?'true':'false');b.append(el('b','',P[0]),el('span','',P[1]));
-      b.onclick=function(){draft.persona=k;draft.adults=P[2];draft.kids=P[3];P[4].forEach(function(d){if(draft.diet.indexOf(d)<0)draft.diet.push(d)});drawProfile()};pp.append(b)});
+    [['profHome','home'],['profStyle','style']].forEach(function(g){var pp=$(g[0]);pp.textContent='';Object.keys(PERSONA).filter(function(k){return PERSONA[k][5]===g[1]}).forEach(function(k){var P=PERSONA[k],b=el('button','tile'),on=draft.personas.indexOf(k)>-1;b.type='button';
+      b.setAttribute('aria-pressed',on?'true':'false');b.append(el('b','',P[0]),el('span','',P[1]));
+      b.onclick=function(){if(on)draft.personas=draft.personas.filter(function(x){return x!==k});
+        else{if(draft.personas.length>=3){$('profPick').textContent='Three picked. Tap one to swap it.';$('profPick').style.color='var(--accent)';return}
+          draft.personas.push(k);if(P[2]){draft.adults=P[2];draft.kids=P[3]}P[4].forEach(function(d){if(draft.diet.indexOf(d)<0)draft.diet.push(d)})}
+        drawProfile()};pp.append(b)})});
+    $('profPick').textContent=draft.personas.length?draft.personas.length+' of 3 picked':'Pick up to three';$('profPick').style.color='';
     var pe=$('profPeople');pe.textContent='';[['adults','Adults',1],['kids','Children',0]].forEach(function(f){var l=el('label','',f[1]),q=el('span','qty'),m=el('button','','\u2212'),pl=el('button','','+');
       m.type=pl.type='button';m.setAttribute('aria-label','Fewer '+f[1].toLowerCase());pl.setAttribute('aria-label','More '+f[1].toLowerCase());
       m.onclick=function(){draft[f[0]]=Math.max(f[2],draft[f[0]]-1);drawProfile()};pl.onclick=function(){draft[f[0]]=Math.min(10,draft[f[0]]+1);drawProfile()};
       q.append(m,el('span','',String(draft[f[0]])),pl);l.append(q);pe.append(l)});
-    function chips(box,all,key){box.textContent='';all.forEach(function(n){var b=el('button','chip',n),on=draft[key].indexOf(n)>-1;b.type='button';b.setAttribute('aria-pressed',on?'true':'false');
-      b.onclick=function(){if(on)draft[key]=draft[key].filter(function(x){return x!==n});else draft[key].push(n);drawProfile()};box.append(b)})}
-    chips($('profDiet'),DIETS,'diet');chips($('profAll'),ALLERGENS,'allergies');chips($('profCui'),CUISINES,'cuisines');
-    function one(box,pairs,key){box.textContent='';pairs.forEach(function(pr){var b=el('button','chip',pr[1]);b.type='button';b.setAttribute('aria-pressed',draft[key]===pr[0]?'true':'false');
-      b.onclick=function(){draft[key]=pr[0];drawProfile()};box.append(b)})}
-    one($('profCook'),[['quick','20 minutes or less'],['medium','About half an hour'],['any','No rush']],'cook');
-    one($('profDay'),[['','No fixed day']].concat(DAYS.map(function(d,i){return [d,DAYNAMES[i]]})),'shopDay');
-    $('profSave').disabled=!draft.persona;
+    var pm=$('profMembers');pm.textContent='';draft.members.forEach(function(m,i){var b=el('button','person'),g=el('span');b.type='button';g.style.display='flex';g.style.flexDirection='column';
+      g.append(el('b','',m.name),el('span','',memLine(m)));b.append(g,el('span','','Edit'));b.onclick=function(){openMember(i)};pm.append(b)});
+    if(draft.members.length<8){var ap=el('button','chip add','+ Add a person');ap.type='button';ap.style.alignSelf='flex-start';ap.onclick=function(){openMember(-1)};pm.append(ap)}
+    chipBox($('profPets'),['Dog','Cat'],draft,'pets',{add:'Add a pet',ph:'Rabbit, fish, bird'});
+    chipBox($('profAll'),ALLERGENS,draft,'allergies',{show:9,add:'Add an allergy',ph:'Kiwi, strawberries'});
+    chipBox($('profRules'),RULES,draft,'rules',{add:'Add a rule',ph:'Low cholesterol'});
+    chipBox($('profDiet'),DIETS,draft,'diet',{show:9,add:'Add your own',ph:'Whole30, no red meat'});
+    chipBox($('profAvoid'),AVOID,draft,'avoid',{add:'Add your own',ph:'Bell peppers'});
+    oneOf($('profGoal'),GOALS,draft,'goal',true);
+    chipBox($('profCui'),CUISINES,draft,'cuisines',{add:'Add your own',ph:'Ethiopian, Filipino'});
+    oneOf($('profCook'),[['quick','20 minutes or less'],['medium','About half an hour'],['any','No rush']],draft,'cook');
+    oneOf($('profDay'),[['','No fixed day']].concat(DAYS.map(function(d,i){return [d,DAYNAMES[i]]})),draft,'shopDay');
+    chipBox($('profStores'),[],draft,'stores',{add:'Add a store',ph:'Costco'});
+    $('profSave').disabled=!draft.personas.length;
   }
-  function openProfile(){document.querySelectorAll('dialog[open]').forEach(function(d){d.close()});
-    draft=profile?{persona:profile.persona,adults:profile.adults,kids:profile.kids,diet:profile.diet.slice(),allergies:profile.allergies.slice(),cuisines:(profile.cuisines||[]).slice(),cook:profile.cook||'any',shopDay:profile.shopDay||''}:
-      {persona:'',adults:2,kids:0,diet:[],allergies:[],cuisines:[],cook:'any',shopDay:''};
-    $('profStore').value=profile&&profile.store||'';$('profBudget').value=profile&&profile.budget?profile.budget:'';$('profAbout').value=profile&&profile.about||'';
+  function drawMember(){
+    oneOf($('memKind'),KINDS,mem,'kind');
+    chipBox($('memAll'),ALLERGENS,mem,'allergies',{show:9,add:'Add an allergy',ph:'Kiwi, strawberries'});
+    chipBox($('memRules'),RULES,mem,'rules',{add:'Add a rule',ph:'Low cholesterol'});
+    chipBox($('memDiet'),DIETS,mem,'diet',{show:9,add:'Add your own',ph:'No red meat'});
+    chipBox($('memAvoid'),AVOID,mem,'avoid',{add:'Add your own',ph:'Bell peppers'});
+  }
+  function openMember(i){memAt=i;var m=i>-1?draft.members[i]:null;ui.adding='';
+    mem=m?{name:m.name,kind:m.kind,when:m.when,diet:m.diet.slice(),allergies:m.allergies.slice(),rules:m.rules.slice(),avoid:m.avoid.slice()}:{name:'',kind:'adult',when:'',diet:[],allergies:[],rules:[],avoid:[]};
+    $('memH').textContent=m?'Edit '+m.name:'Add a person';$('memName').value=mem.name;$('memName').setCustomValidity('');$('memName').oninput=function(){$('memName').setCustomValidity('')};$('memWhen').value=mem.when;$('memDel').hidden=!m;drawMember();$('memDlg').showModal()}
+  $('memDlg').addEventListener('close',function(){mem=null;ui.adding='';if(draft)drawProfile()});
+  $('memSave').onclick=function(){var n=$('memName').value.replace(/\s+/g,' ').trim();if(!n){$('memName').setCustomValidity('Give them a name first.');$('memName').reportValidity();return}
+    mem.name=n;mem.when=$('memWhen').value.replace(/\s+/g,' ').trim();if(memAt>-1)draft.members[memAt]=mem;else draft.members.push(mem);$('memDlg').close()};
+  $('memDel').onclick=function(){if(memAt>-1)draft.members.splice(memAt,1);$('memDlg').close()};
+  function openProfile(){document.querySelectorAll('dialog[open]').forEach(function(d){d.close()});var p=profile,cp=function(a){return (a||[]).slice()};ui={more:{},adding:''};
+    draft=p?{personas:cp(p.personas||[p.persona]),adults:p.adults,kids:p.kids,members:(p.members||[]).map(function(m){return {name:m.name,kind:m.kind,when:m.when,diet:cp(m.diet),allergies:cp(m.allergies),rules:cp(m.rules),avoid:cp(m.avoid)}}),
+        pets:cp(p.pets),diet:cp(p.diet),allergies:cp(p.allergies),rules:cp(p.rules),avoid:cp(p.avoid),cuisines:cp(p.cuisines),goal:p.goal||'',cook:p.cook||'any',shopDay:p.shopDay||'',stores:cp(p.stores)}:
+      {personas:[],adults:2,kids:0,members:[],pets:[],diet:[],allergies:[],rules:[],avoid:[],cuisines:[],goal:'',cook:'any',shopDay:'',stores:[]};
+    $('profBudget').value=p&&p.budget?p.budget:'';$('profAbout').value=p&&p.about||'';
+    $('profMore').open=!!(p&&(p.avoid&&p.avoid.length||p.goal||p.cuisines&&p.cuisines.length||p.cook!=='any'||p.shopDay||p.stores&&p.stores.length||p.budget||p.about));
     drawProfile();$('profDlg').showModal()}
   $('profSkip').onclick=function(){try{localStorage.setItem('stocker.profSkip','1')}catch(e){}$('profDlg').close()};
-  $('profSave').onclick=async function(){if(!draft.persona)return;$('profSave').disabled=true;
-    draft.store=$('profStore').value;draft.budget=Number($('profBudget').value)||0;draft.about=$('profAbout').value;
-    try{var r=await api('/api/profile',{method:'POST',body:JSON.stringify(draft)});profile=r.profile;try{localStorage.removeItem('stocker.starterHide')}catch(e){}$('profDlg').close();render();toast('Saved. Stocker is set up for a '+PERSONA[profile.persona][0].toLowerCase()+'.')}
+  $('profSave').onclick=async function(){if(!draft.personas.length)return;$('profSave').disabled=true;
+    draft.budget=Number($('profBudget').value)||0;draft.about=$('profAbout').value;
+    try{var r=await api('/api/profile',{method:'POST',body:JSON.stringify(draft)});profile=r.profile;try{localStorage.removeItem('stocker.starterHide')}catch(e){}$('profDlg').close();render();toast('Saved. Stocker is set up for '+(pers().length===1&&pers()[0]!=='other'?'a '+PERSONA[pers()[0]][0].toLowerCase():'your home')+'.')}
     catch(e){if(e.code!=='locked')toast('Could not save that. Check your connection.')}finally{$('profSave').disabled=false}};
   $('shareProf').onclick=openProfile;
   $('shareBtn').onclick=function(){$('shareLink').textContent=location.origin;$('shareMe').textContent=me?'You are signed in as '+me+'.':'';$('shareDlg').showModal()};
