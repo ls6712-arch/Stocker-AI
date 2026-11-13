@@ -156,7 +156,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
 <div class="gate" id="gate" hidden>
   <div class="logo"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 9h10l-1 11H8zM9.500 9c0-3 1-5 2.500-5s2.500 2 2.500 5M10 14l1.500 1.500L14 13"/></svg></div>
   <h1>Stocker AI</h1>
-  <p class="sub" id="gateMsg" style="font-size:15px">Enter your passcode to open the pantry.</p>
+  <p class="sub" id="gateMsg" style="font-size:15px">Enter your passcode to open Stocker.</p>
   <form id="gateForm" style="display:flex;flex-direction:column;gap:12px">
     <label for="pin" class="sub">Passcode</label>
     <input type="password" id="pin" autocomplete="current-password" required>
@@ -167,13 +167,13 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
 <div class="shell" id="app" hidden>
   <header class="appbar">
     <div><p class="sub" id="barDate"></p><h1 id="barTitle">Today</h1></div>
-    <button type="button" class="iconbtn" id="lockBtn" aria-label="Lock the pantry"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></button>
+    <button type="button" class="iconbtn" id="lockBtn" aria-label="Lock Stocker"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></button>
   </header>
   <main>
     <div class="view" id="v-today"></div>
     <div class="view" id="v-pantry" hidden>
-      <input type="search" id="search" placeholder="Search your pantry" aria-label="Search your pantry">
-      <div class="chips" id="chips" role="group" aria-label="Filter by category"></div>
+      <input type="search" id="search" placeholder="Search your things" aria-label="Search your things">
+      <div class="chips" id="chips" role="group" aria-label="Filter by area of the home"></div>
       <ul class="list" id="pantryList"></ul>
     </div>
     <div class="view" id="v-list" hidden></div>
@@ -184,8 +184,8 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
 <nav class="tabbar" id="tabbar" aria-label="Sections" hidden>
   <div class="in">
     <button type="button" class="tab" data-tab="today" aria-current="page"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11l8-7 8 7v9h-5v-6H9v6H4z"/></svg>Today</button>
-    <button type="button" class="tab" data-tab="pantry"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14v16H5zM5 10h14M5 15h14"/></svg>Pantry</button>
-    <button type="button" class="fab" id="fab" aria-label="Add to the pantry"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+    <button type="button" class="tab" data-tab="pantry"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14v16H5zM5 10h14M5 15h14"/></svg>At home</button>
+    <button type="button" class="fab" id="fab" aria-label="Add to your home"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
     <button type="button" class="tab" data-tab="list"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h2l2 10h9l2-7H8M10 20h.01M17 20h.01"/></svg>List<span class="badge" id="listBadge" hidden></span></button>
     <button type="button" class="tab" data-tab="log"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg>Activity</button>
   </div>
@@ -194,10 +194,10 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
 <dialog class="sheet" id="capDlg" aria-labelledby="capH">
   <div class="pad">
     <div class="grab"></div>
-    <h2 id="capH">Add to the pantry</h2>
+    <h2 id="capH">Add to your home</h2>
     <div class="tiles">
       <label class="tile"><span class="ico" style="--h:165"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6"/></svg></span><b>Scan a bill</b><span>Photo of a receipt</span><input type="file" id="billFile" accept="image/*" title="" aria-label="Photograph a bill"></label>
-      <label class="tile"><span class="ico" style="--h:205"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h3l2-3h6l2 3h3v13H4z"/><circle cx="12" cy="13" r="3.500"/></svg></span><b>Scan a shelf</b><span>Photo of what you have</span><input type="file" id="shelfFile" accept="image/*" title="" aria-label="Photograph a shelf"></label>
+      <label class="tile"><span class="ico" style="--h:205"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h3l2-3h6l2 3h3v13H4z"/><circle cx="12" cy="13" r="3.500"/></svg></span><b>Scan a shelf</b><span>Kitchen, bathroom, any cupboard</span><input type="file" id="shelfFile" accept="image/*" title="" aria-label="Photograph a shelf"></label>
       <button type="button" class="tile" id="capVoice"><span class="ico" style="--h:355"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></span><b>Voice note</b><span>Say what you bought or used</span></button>
       <button type="button" class="tile" id="capCode"><span class="ico" style="--h:265"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6v12M7 6v12M11 6v12M14 6v12M17 6v12M20 6v12"/></svg></span><b>Barcode</b><span>Scan a product</span></button>
       <button type="button" class="tile wide" id="capType"><span class="ico" style="--h:35"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16zM13 7l4 4"/></svg></span><span style="display:flex;flex-direction:column;color:inherit"><b>Type or paste</b><span>A note, or an emailed receipt</span></span></button>
@@ -278,6 +278,11 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     Frozen:[190,'M12 3v18M4 7l16 10M20 7L4 17'],Pantry:[45,'M8 3h8v3H8zM7 6h10l1 3v10a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V9z'],Drinks:[265,'M7 4h10l-1 16H8zM7 9h10'],
     Snacks:[20,'M12 3a9 9 0 1 0 9 9 4 4 0 0 1-4-4 4 4 0 0 1-5-5zM9 12h.01M13 16h.01M9 16h.01'],Household:[230,'M12 3c4 5 6 8 6 11a6 6 0 0 1-12 0c0-3 2-6 6-11z'],
     Other:[160,'M4 8l8-4 8 4v8l-8 4-8-4zM4 8l8 4 8-4M12 12v8']};
+  var AREA={Kitchen:[45,CAT.Pantry[1]],Bathroom:[200,'M12 3c4 5 6 8 6 11a6 6 0 0 1-12 0c0-3 2-6 6-11z'],Cleaning:[230,'M9 9h5v12H9zM9 9V6h4l3-2M16 7h2'],
+    Kids:[330,'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM9 10h.01M15 10h.01M8.5 14.5a4 4 0 0 0 7 0'],Pets:[25,'M12 13c-2.5 0-4.5 2-4.5 4.2 0 1.3 1 2.3 2.3 2.3.8 0 1.5-.5 2.2-.5s1.4.5 2.2.5c1.3 0 2.3-1 2.3-2.3C16.5 15 14.5 13 12 13zM7 9.5h.01M10 6h.01M14 6h.01M17 9.5h.01'],
+    Health:[355,'M9 4h6v5h5v6h-5v5H9v-5H4V9h5z'],Home:[160,'M4 11l8-7 8 7v9H4z']};
+  function areaOf(o){return AREA[o.area]?o.area:'Kitchen'}
+  function iconFor(o){var a=areaOf(o),c=a==='Kitchen'?(CAT[o.category]||CAT.Pantry):AREA[a],b=el('span','ico');b.style.setProperty('--h',c[0]);b.append(icon(c[1]));return b}
   var SVGNS='http://www.w3.org/2000/svg';
   var $=function(id){return document.getElementById(id)};
   function el(t,c,txt){var e=document.createElement(t);if(c)e.className=c;if(txt!=null)e.textContent=txt;return e}
@@ -309,9 +314,9 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
   }
   function showGate(msg){document.querySelectorAll('dialog[open]').forEach(function(d){d.close()});$('app').hidden=true;$('tabbar').hidden=true;$('gate').hidden=false;if(msg)$('gateMsg').textContent=msg}
   $('gateForm').addEventListener('submit',async function(ev){ev.preventDefault();
-    try{await api('/api/login',{method:'POST',body:JSON.stringify({pin:$('pin').value})});$('pin').value='';$('gateMsg').textContent='Enter your passcode to open the pantry.';start()}
-    catch(e){$('gateMsg').textContent=e.code==='wrong_pin'?"That passcode isn't right. Try again.":e.code==='setup'?'This pantry has no passcode yet. Set one in the Worker settings as a secret named APP_PIN.':'Could not reach the pantry. Check your connection.'}});
-  $('lockBtn').onclick=async function(){try{await api('/api/logout',{method:'POST'})}catch(e){}showGate('Locked. Enter your passcode to open the pantry.')};
+    try{await api('/api/login',{method:'POST',body:JSON.stringify({pin:$('pin').value})});$('pin').value='';$('gateMsg').textContent='Enter your passcode to open Stocker.';start()}
+    catch(e){$('gateMsg').textContent=e.code==='wrong_pin'?"That passcode isn't right. Try again.":e.code==='setup'?'There is no passcode yet. Set one in the Worker settings as a secret named APP_PIN.':'Could not reach Stocker. Check your connection.'}});
+  $('lockBtn').onclick=async function(){try{await api('/api/logout',{method:'POST'})}catch(e){}showGate('Locked. Enter your passcode to open Stocker.')};
 
   /* ---- the agent's rules ---- */
   function plan(it){
@@ -332,7 +337,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
   function fresh(it){var s=parse(it.bought||it.added),e=parse(it.expiry);if(!s||!e||e<=s||it.qty<=0)return null;return Math.max(0,Math.min(1,(today()-s)/(e-s)))}
 
   /* ---- views ---- */
-  function itemRow(it,right){var r=el('div','row'),g=el('div','grow');r.append(catIcon(it.category));g.append(el('div','name',it.name));r.append(g);if(right)r.append(right);return {row:r,grow:g}}
+  function itemRow(it,right){var r=el('div','row'),g=el('div','grow');r.append(iconFor(it));g.append(el('div','name',it.name));r.append(g);if(right)r.append(right);return {row:r,grow:g}}
   function emptyCard(cat,title,text,btn,fn){var c=el('div','empty');c.append(catIcon(cat),el('h2','',title),el('p','sub',text));
     if(btn){var b=el('button','btn primary',btn);b.type='button';b.onclick=fn;c.append(b)}return c}
 
@@ -341,13 +346,13 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     var use=items.filter(needsUse).sort(function(a,b){return expiry(a).d-expiry(b).d}),buy=items.filter(needsBuy).sort(function(a,b){return plan(a).days-plan(b).days});
     var n=use.length+buy.length,hero=el('div','hero'),top=el('div');
     top.append(el('p','day',today().toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric'})));
-    top.append(el('h2','',!items.length?'Your pantry is empty':n?n+(n===1?' thing needs you':' things need you'):"You're all set"));
+    top.append(el('h2','',!items.length?'Nothing tracked yet':n?n+(n===1?' thing needs you':' things need you'):"You're all set"));
     top.append(el('p','',!items.length?'Scan your last grocery bill and I will take it from there.':n?'Here is what to use up and what to pick up.':'Nothing to use up or buy in the next few days.'));
     hero.append(top);
     var trio=el('div','trio');[[items.length,'items','pantry'],[use.length,'use soon','today'],[buy.length,'to buy','list']].forEach(function(s){
       var b=el('button');b.type='button';b.append(el('b','',String(s[0])),el('span','',s[1]));b.onclick=function(){go(s[2])};trio.append(b)});
     hero.append(trio);v.append(hero);
-    if(!items.length){v.append(emptyCard('Pantry','Start with one photo','Photograph a receipt, scan a barcode, or just say what you bought.','Add your first items',function(){$('capDlg').showModal()}));return}
+    if(!items.length){v.append(emptyCard('Pantry','Start with one photo','Photograph a receipt, a bathroom shelf or a cupboard, scan a barcode, or just say what you bought.','Add your first items',function(){$('capDlg').showModal()}));return}
     if(use.length){var s1=el('div','sec');s1.append(el('h2','','Use soon'));var c1=el('div','card');
       use.forEach(function(it){var e=expiry(it),x=itemRow(it,el('span','pill '+e.cls,e.text));
         x.grow.append(el('div','sub',e.d<0?'Went past its date '+(-e.d)+(e.d===-1?' day ago':' days ago'):'Good until '+fmt(it.expiry)));c1.append(x.row)});
@@ -362,11 +367,11 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
 
   function renderPantry(){
     var chips=$('chips');chips.textContent='';
-    var cats=['All'].concat(Object.keys(CAT).filter(function(c){return items.some(function(i){return (i.category||'Other')===c})}));
+    var cats=['All'].concat(Object.keys(AREA).filter(function(c){return items.some(function(i){return areaOf(i)===c})}));
     if(cats.indexOf(cat)<0)cat='All';
     cats.forEach(function(c){var b=el('button','chip',c);b.type='button';b.setAttribute('aria-pressed',c===cat?'true':'false');b.onclick=function(){cat=c;renderPantry()};chips.append(b)});
     var ul=$('pantryList');ul.textContent='';
-    var q=query.toLowerCase(),shown=items.filter(function(it){return (cat==='All'||(it.category||'Other')===cat)&&(!q||it.name.toLowerCase().indexOf(q)>-1)})
+    var q=query.toLowerCase(),shown=items.filter(function(it){return (cat==='All'||areaOf(it)===cat)&&(!q||it.name.toLowerCase().indexOf(q)>-1)})
       .sort(function(a,b){return plan(a).days-plan(b).days});
     if(!shown.length){var li0=el('li');li0.append(emptyCard('Other',items.length?'Nothing matches':'Nothing here yet',items.length?'Try a different search or category.':'Tap the plus button to add your first items.'));ul.append(li0);return}
     shown.forEach(function(it){
@@ -376,12 +381,13 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
       var step=it.qty>=100?50:(it.unit==='kg'||it.unit==='L'||it.unit==='lb')?0.5:1;
       minus.onclick=function(){setQty(it,Math.max(0,it.qty-step))};plus.onclick=function(){setQty(it,it.qty+step)};
       q2.append(minus,el('span','',qtyText(it.qty)+' '+it.unit),plus);
-      var x=itemRow(it,q2);x.grow.append(el('div','sub',(it.category||'Other')+(it.store?' · '+it.store:'')));li.append(x.row);
+      var x=itemRow(it,q2);x.grow.append(el('div','sub',(areaOf(it)==='Kitchen'&&it.category&&it.category!=='Other'?'Kitchen · '+it.category:areaOf(it))+(it.store?' · '+it.store:'')));li.append(x.row);
       if(f!=null){var bar=el('div','bar'),fill=el('i',e&&e.cls?e.cls:'');fill.style.width=Math.max(4,Math.round((1-f)*100))+'%';bar.append(fill);bar.setAttribute('role','img');
         bar.setAttribute('aria-label',Math.round((1-f)*100)+' percent of shelf life left');li.append(bar)}
       var facts=el('div','facts'),a=el('span'),b=el('span');
       if(it.qty<=0)a.append(el('span','pill bad','Out'));
       else if(e&&e.cls)a.append(el('span','pill '+e.cls,e.text));
+      else if(it.expiry&&it.expiry_est&&daysFrom(it.expiry)>365)a.textContent='Keeps a long time';
       else if(it.expiry){a.append(document.createTextNode('Best before '),el('b','',fmt(it.expiry)),document.createTextNode(it.expiry_est?' (est.)':''))}
       else a.textContent='No date recorded';
       b.append(document.createTextNode(p.days<=0?'Buy ':'Buy by '),el('b','',p.days<=0?'now':fmt(p.date)));
@@ -402,13 +408,15 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     var v=$('v-list');v.textContent='';
     var buy=items.filter(needsBuy).sort(function(a,b){return plan(a).days-plan(b).days});
     var badge=$('listBadge');badge.hidden=!buy.length;badge.textContent=String(buy.length);
-    if(!buy.length){v.append(emptyCard('Produce','Nothing to buy','When something runs low or is about to expire, it shows up here.'));return}
-    var c=el('div','card');
-    buy.forEach(function(it){var p=plan(it),ck=el('button','check');ck.type='button';ck.setAttribute('aria-label','Mark '+it.name+' as bought');ck.append(icon('M6 12l4 4 8-9'));
+    if(!buy.length){v.append(emptyCard('Pantry','Nothing to buy','When something runs low or is about to expire, it shows up here.'));return}
+    var c=null,lastArea=null,order=Object.keys(AREA);
+    buy.sort(function(a,b){return order.indexOf(areaOf(a))-order.indexOf(areaOf(b))});
+    buy.forEach(function(it){var p=plan(it),ck=el('button','check');
+      if(areaOf(it)!==lastArea){lastArea=areaOf(it);var sec=el('div','sec');c=el('div','card');sec.append(el('h2','',lastArea),c);v.append(sec)}ck.type='button';ck.setAttribute('aria-label','Mark '+it.name+' as bought');ck.append(icon('M6 12l4 4 8-9'));
       ck.onclick=function(){restock(it)};
       var r=el('div','row'),g=el('div','grow');g.append(el('div','name',it.name),el('div','sub',(it.qty<=0?"You're out":p.days<=0?'Due now':'By '+fmt(p.date))+(it.store?' · usually from '+it.store:'')));
-      r.append(ck,g,catIcon(it.category));c.append(r)});
-    v.append(c,el('p','sub','Tick an item when you buy it and I will restock it in the pantry.'));
+      r.append(ck,g,iconFor(it));c.append(r)});
+    v.append(el('p','sub','Tick an item when you buy it and I will restock it at home.'));
     var cp=el('button','btn block','Copy shopping list');cp.type='button';cp.onclick=function(){
       var text='Shopping list\n'+buy.map(function(i){return '- '+i.name+(i.store?' ('+i.store+')':'')}).join('\n');
       try{navigator.clipboard.writeText(text).then(function(){toast('Shopping list copied.')},function(){toast(text.replace(/\n/g,'  '))})}catch(e){toast(text.replace(/\n/g,'  '))}};
@@ -418,8 +426,8 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     var s=parse(it.bought||it.added),e=parse(it.expiry),shelf=s&&e&&e>s?Math.round((e-s)/DAY):0;
     var q=it.unit==='g'||it.unit==='ml'?500:it.unit==='oz'?16:1;
     try{await api('/api/apply',{method:'POST',body:JSON.stringify({source:'hand',store:it.store||'',bought:iso(today()),
-      actions:[{action:'add',name:it.name,quantity:q,unit:it.unit,category:it.category,expiry:'',shelfLifeDays:shelf,finishDays:it.finish_days}]})});
-      await refresh();toast('Restocked '+it.name+' with '+q+' '+it.unit+'. Adjust the amount in Pantry if needed.')}
+      actions:[{action:'add',name:it.name,quantity:q,unit:it.unit,category:it.category,area:areaOf(it),expiry:'',shelfLifeDays:shelf,finishDays:it.finish_days}]})});
+      await refresh();toast('Restocked '+it.name+' with '+q+' '+it.unit+'. Adjust the amount under At home if needed.')}
     catch(er){if(er.code!=='locked')toast('Could not save that. Check your connection.')}
   }
 
@@ -434,7 +442,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
       li.append(ic,g);ul.append(li)});
     c.append(ul);v.append(c);
   }
-  var TITLES={today:'Today',pantry:'Pantry',list:'Shopping list',log:'Activity'};
+  var TITLES={today:'Today',pantry:'At home',list:'Shopping list',log:'Activity'};
   function render(){renderToday();renderPantry();renderList();renderLog();
     $('barDate').textContent=tab==='today'?'Stocker AI':today().toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});$('barTitle').textContent=TITLES[tab]}
   function go(t){tab=t;['today','pantry','list','log'].forEach(function(k){$('v-'+k).hidden=k!==t});
@@ -540,31 +548,31 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
       x.onclick=async function(){x.disabled=true;try{await takeBack(c);done=done.filter(function(k){return k!==c});await refresh();
         if(done.length)drawDone();else{$('doneDlg').close();toast('Taken back. Nothing was changed.')}}
         catch(e){x.disabled=false;if(e.code!=='locked')toast('Could not undo that. Try again.')}};
-      li.append(catIcon(c.category),g,x);ul.append(li)});
+      li.append(iconFor(c),g,x);ul.append(li)});
   }
   function showResult(d,r){
     if(!r||!r.changes||!r.changes.length){
-      toast(r&&r.missed&&r.missed.length?"I couldn't find "+r.missed.join(', ')+' in your pantry.':
+      toast(r&&r.missed&&r.missed.length?"I couldn't find "+r.missed.join(', ')+' in your things.':
         d&&d.kind==='voice'&&d.heard?'I heard \u201c'+d.heard+'\u201d but found nothing to add or use.':"I couldn't find any items in that. Try a clearer photo, or tell me instead.");return}
     done=r.changes.slice();
     var parts=[];if(r.added)parts.push('Added '+r.added+(r.added===1?' item':' items'));if(r.used)parts.push((r.added?'updated ':'Updated ')+r.used);
     $('doneTitle').textContent=parts.join(', ');
-    $('doneSub').textContent=(d.store?'From '+d.store+'. ':'')+'Saved to your pantry. Tap the cross on anything I got wrong.'+(r.missed&&r.missed.length?" I couldn't find "+r.missed.join(', ')+'.':'');
+    $('doneSub').textContent=(d.store?'From '+d.store+'. ':'')+'Saved. Tap the cross on anything I got wrong.'+(r.missed&&r.missed.length?" I couldn't find "+r.missed.join(', ')+'.':'');
     $('doneHeard').hidden=!d.heard;$('doneHeard').textContent=d.heard?'\u201c'+d.heard+'\u201d':'';
     drawDone();$('doneDlg').showModal();
   }
   $('doneOk').onclick=function(){$('doneDlg').close()};
   $('doneUndo').onclick=async function(){
     $('doneUndo').disabled=true;
-    try{for(var i=0;i<done.length;i++)await takeBack(done[i]);done=[];await refresh();$('doneDlg').close();toast('Undone. Your pantry is back to how it was.')}
-    catch(e){if(e.code!=='locked')toast('Could not undo everything. Check the Pantry tab.');try{await refresh()}catch(er){}}
+    try{for(var i=0;i<done.length;i++)await takeBack(done[i]);done=[];await refresh();$('doneDlg').close();toast('Undone. Everything is back to how it was.')}
+    catch(e){if(e.code!=='locked')toast('Could not undo everything. Check the At home tab.');try{await refresh()}catch(er){}}
     finally{$('doneUndo').disabled=false}
   };
 
   async function start(){
     try{await refresh();$('gate').hidden=true;$('app').hidden=false;$('tabbar').hidden=false;go(tab)}
-    catch(e){if(e.code==='setup')showGate('This pantry has no passcode yet. Set one in the Worker settings as a secret named APP_PIN.');
-      else if(e.code==='locked')showGate();else showGate('Could not reach the pantry. Check your connection and reload.')}
+    catch(e){if(e.code==='setup')showGate('There is no passcode yet. Set one in the Worker settings as a secret named APP_PIN.');
+      else if(e.code==='locked')showGate();else showGate('Could not reach Stocker. Check your connection and reload.')}
   }
   start();
 })();

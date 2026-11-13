@@ -12,7 +12,8 @@ CREATE TABLE IF NOT EXISTS items (
   expiry_est INTEGER NOT NULL DEFAULT 0,
   finish_days INTEGER NOT NULL DEFAULT 14,
   learned INTEGER NOT NULL DEFAULT 0,
-  source TEXT
+  source TEXT,
+  area TEXT
 );
 CREATE UNIQUE INDEX IF NOT EXISTS items_name_key ON items(name_key);
 CREATE TABLE IF NOT EXISTS purchases (
