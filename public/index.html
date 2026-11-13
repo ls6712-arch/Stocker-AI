@@ -129,7 +129,7 @@ html.big{zoom:1.16}
 .msg.me{align-self:flex-end;background:var(--accent);color:#fff;border-bottom-right-radius:4px}
 .msg.bot{align-self:flex-start;background:var(--surface2);border:1px solid var(--line);border-bottom-left-radius:4px}
 .msg .chg{display:flex;justify-content:space-between;gap:10px;align-items:center;font-size:13.5px;border-top:1px solid var(--line);padding-top:6px;margin-top:6px}
-.msg .chg s{color:var(--muted)}.msg .chg button{min-height:36px;padding:4px 12px}
+.msg .chg s{color:var(--muted)}.msg .chg button{min-height:36px;padding:4px 12px;flex:none;white-space:nowrap}.msg .chg span{min-width:0}
 .chatbar{display:flex;gap:8px;align-items:center}.chatbar input{flex:1;min-width:0}
 .chatbar .micb{flex:none;width:48px;height:48px;border-radius:50%;border:1px solid var(--line);background:var(--surface2);display:grid;place-items:center;color:var(--accent)}
 .latest{border:0;background:none;text-align:left;padding:0 4px;font-size:13px;color:var(--muted)}
@@ -604,7 +604,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
   function addDays(s,n){var d=parse(s)||today();d.setDate(d.getDate()+n);return iso(d)}
   function fmt(s){var d=parse(s);if(!d)return '—';var o={month:'short',day:'numeric'};if(d.getFullYear()!==today().getFullYear())o.year='numeric';return d.toLocaleDateString(undefined,o)}
   function qtyText(q){return String(Math.round(q*100)/100)}
-  function amount(q,u){var n=qtyText(q);return u==='pcs'?n:u==='pack'?n+(q===1?' pack':' packs'):n+' '+u}
+  function amount(q,u){var n=qtyText(q);return u==='pcs'?n:u==='pack'?n+(q<=1?' pack':' packs'):n+' '+u}
   function amt(it){return it.qty<=0?'Out':amount(it.qty,it.unit)}
 
   var items=[],log=[],extras=[],waste=0,spend=null,profile=null,me='',tab='today',cat='All',query='',open={},busy=false,pending=null,toastTimer=null;
@@ -1184,6 +1184,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     return r;
   }
   async function takeBack(c){
+    if(c.action==='list'){if(c.created)await api('/api/extras/'+c.id,{method:'DELETE'});return}
     if(c.created)await api('/api/items/'+c.id+'?undo=1',{method:'DELETE'});
     else if(c.action==='low')await api('/api/items/'+c.id,{method:'PATCH',body:JSON.stringify({low:!!c.prevLow})});
     else await api('/api/items/'+c.id,{method:'PATCH',body:JSON.stringify(c.action==='add'?{qty:c.prevQty,undo:true}:{qty:c.prevQty})});
@@ -1191,6 +1192,10 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
   /* conversation: say what happened in plain words; changes are applied straight away and each can be undone */
   var chatHist=[],chatBusy=false;
   function bubble(cls,text){var m=el('div','msg '+cls,text);$('chatLog').append(m);$('chatLog').scrollTop=$('chatLog').scrollHeight;return m}
+  function chatChanges(host,changes){changes.forEach(function(c){var row=el('div','chg'),t=el('span','',c.action==='list'?'On your list: '+c.name+(c.note?' ('+c.note+')':''):c.name+': '+(c.action==='low'?'running low':amount(c.prevQty,c.unit)+' \u2192 '+(c.qty<=0?'none':amount(c.qty,c.unit)))),u=el('button','mini','Undo');u.type='button';
+      u.setAttribute('aria-label','Undo the change to '+c.name);if(c.action==='list'&&!c.created){t.textContent='Already on your list: '+c.name;row.append(t);host.append(row);return}
+      u.onclick=async function(){u.disabled=true;try{await takeBack(c);await refresh();var st=el('s','',t.textContent);t.textContent='';t.append(st);u.textContent='Undone'}catch(er){u.disabled=false;if(er.code!=='locked')toast('Could not undo that. Check your connection.')}};
+      row.append(t,u);host.append(row)})}
   function chatTips(){var box=$('chatTips');box.textContent='';var k=items.filter(function(i){return areaOf(i)==='Kitchen'&&i.qty>0}),tips=["I'm cooking pasta tonight",'What should I use up first?'];
     if(k.length)tips.push('Do we have '+k[0].name.toLowerCase()+'?','We ran out of '+k[k.length-1].name.toLowerCase());else tips.push('I bought milk, eggs and bread');
     tips.forEach(function(t){var b=el('button','mini',t);b.type='button';b.onclick=function(){chatSend({text:t},t)};box.append(b)})}
@@ -1205,10 +1210,17 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     var mine=bubble('me',label),wait=bubble('bot','Thinking\u2026');payload.history=chatHist.slice(-4);if(window.Tote)Tote.talk(true);
     try{var r=await api('/api/chat',{method:'POST',body:JSON.stringify(payload)});
       if(r.heard)mine.textContent=r.heard;wait.textContent=r.reply;if(window.Tote)Tote.mood(r.blocked?'oops':'happy');
-      (r.changes||[]).forEach(function(c){var row=el('div','chg'),t=el('span','',c.name+': '+(c.action==='low'?'running low':amount(c.prevQty,c.unit)+' \u2192 '+(c.qty<=0?'none':amount(c.qty,c.unit)))),u=el('button','mini','Undo');u.type='button';
-        u.setAttribute('aria-label','Undo the change to '+c.name);
-        u.onclick=async function(){u.disabled=true;try{await takeBack(c);await refresh();var st=el('s','',t.textContent);t.textContent='';t.append(st);u.textContent='Undone'}catch(er){u.disabled=false;if(er.code!=='locked')toast('Could not undo that. Check your connection.')}};
-        row.append(t,u);wait.append(row)});
+      chatChanges(wait,r.changes||[]);
+      if(r.proposal&&r.proposal.length){var pr=r.proposal.slice(),box=el('div');wait.append(box);
+        var drawP=function(){box.textContent='';pr.forEach(function(a){var row=el('div','chg'),t=el('span','',a.name+': '+amount(a.quantity,a.unit)),x=el('button','mini','Not this');x.type='button';x.setAttribute('aria-label','I did not use '+a.name);
+            x.onclick=function(){pr=pr.filter(function(k){return k!==a});drawP()};row.append(t,x);box.append(row)});
+          var bar=el('div','chg'),yes=el('button','mini',pr.length?'Yes, update':'None of these'),no=el('button','mini','No');yes.type=no.type='button';
+          yes.onclick=async function(){yes.disabled=no.disabled=true;if(!pr.length){box.textContent='';bubble('bot','No problem. Tell me what you used and I will take it off.');return}
+            try{var res=await api('/api/apply',{method:'POST',body:JSON.stringify({source:'voice',actions:pr.map(function(a){return {action:'use',name:a.name,quantity:a.quantity,unit:a.unit}})})});
+              box.textContent='';var done=bubble('bot','Done. I took those off.');chatChanges(done,res.changes||[]);if(window.Tote)Tote.hop();await refresh()}
+            catch(er){yes.disabled=no.disabled=false;if(er.code!=='locked')toast('Could not save that. Check your connection.')}};
+          no.onclick=function(){box.textContent='';bubble('bot','No problem, I have not changed anything. Tell me what you used and I will take it off.');$('chatText').focus()};
+          if(pr.length)bar.append(yes,no);else bar.append(yes);box.append(bar)};drawP()}
       chatHist.push({role:'user',text:r.heard||payload.text||''},{role:'assistant',text:r.reply});
       if(r.changes&&r.changes.length){if(window.Tote)Tote.hop();await refresh()}
     }catch(e){if(window.Tote)Tote.mood('oops');wait.textContent=e.code==='slow_down'?COPY.slow_down:e.code==='silent'?"I couldn't hear anything in that. Try again a little closer to the phone.":e.code==='offline'?'You seem to be offline. Nothing was changed.':e.code==='locked'?'':'I could not work that out just now. Nothing was changed. Try again in a moment.'}
@@ -1243,7 +1255,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     done.forEach(function(c){
       var li=el('li','row'),g=el('div','grow'),x=el('button','iconbtn');
       g.append(el('div','name',c.name));if(c.warn)g.append(el('span','pill bad','Check label: '+c.warn));
-      g.append(el('div','sub',c.action==='low'?'Marked as running low, added to your list':c.action==='use'?(c.qty<=0?'Marked as finished':'Now '+amount(c.qty,c.unit)+' left'):
+      g.append(el('div','sub',c.action==='list'?(c.kept?'Already on your shopping list':'Added to your shopping list'+(c.note?', note: '+c.note:'')):c.action==='low'?'Marked as running low, added to your list':c.action==='use'?(c.qty<=0?'Marked as finished':'Now '+amount(c.qty,c.unit)+' left'):
         (c.unsure?'I could not count these. How many?':amount(c.added,c.unit))+(c.expiry?' \u00b7 best before '+(c.est?'about ':'')+fmt(c.expiry):'')));
       if(c.unsure&&c.created)g.append(howMany(c.id,c.name,function(n){c.unsure=false;c.added=c.qty=n;refresh().then(drawDone,drawDone)}));
       x.type='button';x.setAttribute('aria-label',"That's wrong, take back "+c.name);x.append(icon('M6 6l12 12M18 6L6 18'));

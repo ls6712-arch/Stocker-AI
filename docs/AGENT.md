@@ -27,6 +27,20 @@ The same voice is used in the chat prompt (`VOICE` and `LIMITS` in `src/index.js
 | Oops | Something failed, or a request was refused | Looks down, small frown; nothing is changed |
 | Celebrating | First items added, list finished, profile set up | Hops with arms up and a little confetti |
 
+## How a turn works
+
+1. **Read.** A message is cleaned of private details and any greeting or misheard name.
+2. **Decide.** A fixed gate sorts it: a question goes to the answering model and can change nothing; a statement goes to the structuring model.
+3. **Propose.** The model returns proposed actions in a fixed shape: add, use, running low, or put on the shopping list (with an optional note).
+4. **Check.** Code validates every field, applies the guardrails, and separates what the person said outright from what the model inferred.
+5. **Act or ask.** Stated changes are applied and reported from the database result, each with Undo. Inferred changes (ingredients guessed from a dish) are shown as a question and applied only after a tap.
+
+The model never writes to the database. It proposes; code decides. This is the same separation larger agents use between the model and a permission layer.
+
+### What Tote deliberately cannot do
+
+Tote holds household data and reads untrusted content (receipts, product databases, typed text), so it is given no way to send data anywhere: no email, no messages, no purchases, no web requests chosen by the model. The only outbound call is a barcode lookup made by code with the barcode alone. Keep it that way; any future feature that sends something out (ordering, sharing, reminders by email) must go through an explicit tap by the person, outside the chat.
+
 ## Guardrails
 
 | Risk | Guardrail | Where |

@@ -19,7 +19,10 @@ h2{font-size:1.05rem;margin:22px 0 4px}
   var $=function(i){return document.getElementById(i)},el=function(t,c,x){var e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e};
   var rx=function(p){return new RegExp(p,'iu')},nm=function(a,p){return rx(p).test(a.name||'')};
   function match(a,w){return (!w.action||rx('^('+w.action+')$').test(a.action))&&(!w.name||nm(a,w.name))&&(!w.area||a.area===w.area)&&(!w.category||a.category===w.category)}
-  function check(c,r){var A=r.actions||[],reply=r.reply||'',k=Object.keys(c)[0],v=c[k];
+  function check(c,r){var P=r.proposed||[],A=(r.actions||[]).concat(P),reply=r.reply||'',k=Object.keys(c)[0],v=c[k];
+    if(k==='appliedCount')return [(r.actions||[]).length>=v[0]&&(r.actions||[]).length<=v[1],'applies between '+v[0]+' and '+v[1]+' changes without asking (got '+(r.actions||[]).length+')'];
+    if(k==='confirm')return [(P.length>0)===v,v?'asks before applying a guess':'applies without asking'];
+    if(k==='noteHas')return [A.some(function(a){return rx(v).test(a.note||'')}),'keeps a note about /'+v+'/'];
     if(k==='has')return [A.some(function(a){return match(a,v)}),'has '+JSON.stringify(v)];
     if(k==='hasNot')return [!A.some(function(a){return match(a,v)}),'has no '+JSON.stringify(v)];
     if(k==='count')return [A.length>=v[0]&&A.length<=v[1],'between '+v[0]+' and '+v[1]+' actions (got '+A.length+')'];
@@ -44,7 +47,7 @@ h2{font-size:1.05rem;margin:22px 0 4px}
       var checks=err?[[false,err]]:c.checks.map(function(k){return check(k,r)}),ok=checks.every(function(x){return x[0]});
       if(c.stretch){ok?sp++:sf++}else{ok?pass++:fail++}
       var g=groups[c.group]=groups[c.group]||{p:0,n:0};if(!c.stretch){g.n++;if(ok)g.p++}
-      results.push({id:c.id,group:c.group,ok:ok,stretch:!!c.stretch,failed:checks.filter(function(x){return !x[0]}).map(function(x){return x[1]}),actions:(r.actions||[]).map(function(a){return a.action+' '+a.quantity+' '+a.unit+' '+a.name+(a.warn?' ['+a.warn+']':'')}),reply:r.reply||'',blocked:!!r.blocked});
+      results.push({id:c.id,group:c.group,ok:ok,stretch:!!c.stretch,failed:checks.filter(function(x){return !x[0]}).map(function(x){return x[1]}),actions:(r.actions||[]).map(function(a){return a.action+' '+a.quantity+' '+a.unit+' '+a.name+(a.note?' {'+a.note+'}':'')+(a.warn?' ['+a.warn+']':'')}).concat((r.proposed||[]).map(function(a){return 'PROPOSED use '+a.quantity+' '+a.unit+' '+a.name})),reply:r.reply||'',blocked:!!r.blocked});
       var box=el('div','case'),h=el('h3');h.append(el('span','',c.group+': '+c.id),el('span','pill '+(ok?'pass':c.stretch?'stretch':'fail'),ok?'Pass':c.stretch?'Stretch, not counted':'Fail'));box.append(h,el('div','q',c.text));
       var ul=el('ul');checks.forEach(function(x){ul.append(el('li',x[0]?'':'fail',(x[0]?'Pass: ':'Fail: ')+x[1]))});box.append(ul);
       if(!err)box.append(el('pre','',(r.blocked?'BLOCKED\n':'')+(results[i].actions.length?results[i].actions.join('\n'):'(no actions)')+(r.reply?'\nreply: '+r.reply:'')));
