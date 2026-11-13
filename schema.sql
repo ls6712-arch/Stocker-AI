@@ -13,7 +13,8 @@ CREATE TABLE IF NOT EXISTS items (
   finish_days INTEGER NOT NULL DEFAULT 14,
   learned INTEGER NOT NULL DEFAULT 0,
   source TEXT,
-  area TEXT
+  area TEXT,
+  essential INTEGER NOT NULL DEFAULT 0
 );
 CREATE UNIQUE INDEX IF NOT EXISTS items_name_key ON items(name_key);
 CREATE TABLE IF NOT EXISTS purchases (
@@ -25,7 +26,14 @@ CREATE TABLE IF NOT EXISTS log (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   at TEXT NOT NULL,
   source TEXT NOT NULL,
-  summary TEXT NOT NULL
+  summary TEXT NOT NULL,
+  who TEXT
+);
+CREATE TABLE IF NOT EXISTS extras (
+  id TEXT PRIMARY KEY,
+  text TEXT NOT NULL,
+  who TEXT,
+  added TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS pics (
   name_key TEXT PRIMARY KEY,

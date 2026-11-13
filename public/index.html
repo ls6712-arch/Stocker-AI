@@ -91,6 +91,10 @@ input[type=text],input[type=password],input[type=number],input[type=date],input[
 .facts b{color:var(--fg);font-weight:600}
 .more{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between;border-top:1px solid var(--line);padding-top:10px;font-size:13px;color:var(--muted)}
 .danger{border:0;background:none;color:var(--bad);font-weight:600;padding:8px 0}
+.acts{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.mini{border:1px solid var(--line);background:var(--surface2);border-radius:999px;padding:8px 14px;font-weight:600;font-size:13.5px;min-height:40px}
+.mini[aria-pressed="true"]{background:var(--warn-bg);color:var(--warn);border-color:transparent}
+.mini[disabled]{opacity:.45}
 .chips{display:flex;gap:8px;overflow-x:auto;padding:2px 0 4px;scrollbar-width:none}
 .chips::-webkit-scrollbar{display:none}
 .chip{flex:none;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:8px 14px;font-weight:600;font-size:14px;min-height:40px}
@@ -147,7 +151,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
 .doc{width:72px;height:88px;border-radius:10px;border:2px solid var(--accent);position:relative;overflow:hidden}
 .scanline{position:absolute;left:0;right:0;top:6px;height:3px;background:var(--accent)}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(104px + env(safe-area-inset-bottom,0px));z-index:15;background:var(--fg);color:var(--bg);
-  border-radius:14px;padding:12px 16px;max-width:min(92vw,520px);font-size:14.5px;display:flex;gap:12px;align-items:center;box-shadow:var(--shadow)}
+  border-radius:14px;padding:12px 16px;width:max-content;max-width:min(92vw,520px);font-size:14.5px;display:flex;gap:12px;align-items:center;box-shadow:var(--shadow)}
 .toast button{border:0;background:none;color:var(--bg);font-weight:700;text-decoration:underline;padding:4px}
 .gate{min-height:100%;max-width:380px;margin:0 auto;display:flex;flex-direction:column;justify-content:center;gap:16px;padding:24px}
 .logo{width:72px;height:72px;border-radius:22px;background:var(--accent);color:var(--accent-fg);display:grid;place-items:center}
@@ -161,6 +165,8 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
   <h1>Stocker AI</h1>
   <p class="sub" id="gateMsg" style="font-size:15px">Enter your passcode to open Stocker.</p>
   <form id="gateForm" style="display:flex;flex-direction:column;gap:12px">
+    <label for="who" class="sub">Your name</label>
+    <input type="text" id="who" maxlength="20" autocomplete="given-name" required>
     <label for="pin" class="sub">Passcode</label>
     <input type="password" id="pin" autocomplete="current-password" required>
     <button type="submit" class="btn primary block">Open</button>
@@ -170,7 +176,8 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
 <div class="shell" id="app" hidden>
   <header class="appbar">
     <div><p class="sub" id="barDate"></p><h1 id="barTitle">Today</h1></div>
-    <button type="button" class="iconbtn" id="lockBtn" aria-label="Lock Stocker"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></button>
+    <div style="display:flex;gap:8px"><button type="button" class="iconbtn" id="shareBtn" aria-label="Share with your household"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.300 2.700-6 6-6s6 2.700 6 6M16 5.200a3.200 3.200 0 0 1 0 5.600M17.500 14.300c2 .900 3.500 3 3.500 5.700"/></svg></button>
+    <button type="button" class="iconbtn" id="lockBtn" aria-label="Lock Stocker"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></button></div>
   </header>
   <main>
     <div class="view" id="v-today"></div>
@@ -257,6 +264,18 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
   </div>
 </dialog>
 
+<dialog class="sheet" id="shareDlg" aria-labelledby="shareH">
+  <div class="pad">
+    <div class="grab"></div>
+    <h2 id="shareH">Share with your household</h2>
+    <p class="sub" style="font-size:15px">Send this link to anyone at home, and tell them the passcode. Each person types their own name, so the activity shows who did what. Everyone sees the same list.</p>
+    <p class="heard" id="shareLink" style="font-style:normal;user-select:all;overflow-wrap:anywhere"></p>
+    <button type="button" class="btn primary block" id="shareCopy">Copy link</button>
+    <p class="sub" id="shareMe"></p>
+    <button type="button" class="btn block" data-close>Close</button>
+  </div>
+</dialog>
+
 <dialog class="sheet" id="doneDlg" aria-labelledby="doneTitle">
   <div class="pad">
     <div class="grab"></div>
@@ -311,7 +330,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
   function fmt(s){var d=parse(s);if(!d)return '—';var o={month:'short',day:'numeric'};if(d.getFullYear()!==today().getFullYear())o.year='numeric';return d.toLocaleDateString(undefined,o)}
   function qtyText(q){return String(Math.round(q*100)/100)}
 
-  var items=[],log=[],tab='today',cat='All',query='',open={},busy=false,pending=null,toastTimer=null;
+  var items=[],log=[],extras=[],me='',tab='today',cat='All',query='',open={},busy=false,pending=null,toastTimer=null;
 
   function toast(msg,label,fn){clearTimeout(toastTimer);$('toastMsg').textContent=msg;var b=$('toastBtn');b.hidden=!label;if(label){b.textContent=label;b.onclick=function(){$('toast').hidden=true;fn()}}
     $('toast').hidden=false;toastTimer=setTimeout(function(){$('toast').hidden=true},label?12000:5000)}
@@ -327,7 +346,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
   }
   function showGate(msg){document.querySelectorAll('dialog[open]').forEach(function(d){d.close()});$('app').hidden=true;$('tabbar').hidden=true;$('gate').hidden=false;if(msg)$('gateMsg').textContent=msg}
   $('gateForm').addEventListener('submit',async function(ev){ev.preventDefault();
-    try{await api('/api/login',{method:'POST',body:JSON.stringify({pin:$('pin').value})});$('pin').value='';$('gateMsg').textContent='Enter your passcode to open Stocker.';start()}
+    try{await api('/api/login',{method:'POST',body:JSON.stringify({pin:$('pin').value,name:$('who').value})});try{localStorage.setItem('stocker.who',$('who').value.trim())}catch(e2){}$('pin').value='';$('gateMsg').textContent='Enter your passcode to open Stocker.';start()}
     catch(e){$('gateMsg').textContent=e.code==='wrong_pin'?"That passcode isn't right. Try again.":e.code==='setup'?'There is no passcode yet. Set one in the Worker settings as a secret named APP_PIN.':'Could not reach Stocker. Check your connection.'}});
   $('lockBtn').onclick=async function(){try{await api('/api/logout',{method:'POST'})}catch(e){}showGate('Locked. Enter your passcode to open Stocker.')};
 
@@ -346,7 +365,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     return {cls:'',text:'',d:d};
   }
   function needsUse(it){var e=expiry(it);return !!e&&e.d<=3}
-  function needsBuy(it){return plan(it).days<=4}
+  function needsBuy(it){return plan(it).days<=(it.essential?7:4)}
   function fresh(it){var s=parse(it.bought||it.added),e=parse(it.expiry);if(!s||!e||e<=s||it.qty<=0)return null;return Math.max(0,Math.min(1,(today()-s)/(e-s)))}
 
   /* ---- views ---- */
@@ -366,6 +385,11 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
       var b=el('button');b.type='button';b.append(el('b','',String(s[0])),el('span','',s[1]));b.onclick=function(){go(s[2])};trio.append(b)});
     hero.append(trio);v.append(hero);
     if(!items.length){v.append(emptyCard('Pantry','Start with one photo','Photograph a receipt, a bathroom shelf or a cupboard, scan a barcode, or just say what you bought.','Add your first items',function(){$('capDlg').showModal()}));return}
+    var ess=buy.filter(function(i){return i.essential});buy=buy.filter(function(i){return !i.essential});
+    if(ess.length){var s0=el('div','sec');s0.append(el('h2','',"Don't run out"));var c0=el('div','card');
+      ess.forEach(function(it){var p=plan(it),x=itemRow(it,el('span','pill bad',it.qty<=0?'Out':p.days<=0?'Now':'By '+fmt(p.date)));
+        x.grow.append(el('div','sub',it.qty<=0?'An essential, and you have none':'An essential, running low'));c0.append(x.row)});
+      s0.append(c0);v.append(s0)}
     if(use.length){var s1=el('div','sec');s1.append(el('h2','','Use soon'));var c1=el('div','card');
       use.forEach(function(it){var e=expiry(it),x=itemRow(it,el('span','pill '+e.cls,e.text));
         x.grow.append(el('div','sub',e.d<0?'Went past its date '+(-e.d)+(e.d===-1?' day ago':' days ago'):'Good until '+fmt(it.expiry)));c1.append(x.row)});
@@ -405,6 +429,12 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
       else a.textContent='No date recorded';
       b.append(document.createTextNode(p.days<=0?'Buy ':'Buy by '),el('b','',p.days<=0?'now':fmt(p.date)));
       facts.append(a,b);li.append(facts);
+      var acts=el('div','acts'),outB=el('button','mini',"We're out"),essB=el('button','mini',it.essential?'Essential':'Make essential');
+      outB.type=essB.type='button';outB.disabled=it.qty<=0;essB.setAttribute('aria-pressed',it.essential?'true':'false');
+      outB.onclick=async function(){it.qty=0;render();try{await api('/api/items/'+it.id,{method:'PATCH',body:JSON.stringify({qty:0,out:true})});await refresh();toast(it.name+' is on your shopping list.')}catch(er){if(er.code!=='locked')toast('Could not save that. Check your connection.')}};
+      essB.onclick=async function(){it.essential=it.essential?0:1;render();try{await api('/api/items/'+it.id,{method:'PATCH',body:JSON.stringify({essential:!!it.essential})});
+        toast(it.essential?it.name+' is an essential. I will warn you earlier.':it.name+' is no longer an essential.')}catch(er){if(er.code!=='locked')toast('Could not save that. Check your connection.')}};
+      acts.append(outB,essB);li.append(acts);
       var tg=el('button','link',open[it.id]?'Hide details':'Details');tg.type='button';tg.style.padding='0';tg.style.textAlign='left';tg.setAttribute('aria-expanded',open[it.id]?'true':'false');
       tg.onclick=function(){open[it.id]=!open[it.id];renderPantry()};li.append(tg);
       if(open[it.id]){var m=el('div','more'),txt=el('span');
@@ -420,18 +450,29 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
   function renderList(){
     var v=$('v-list');v.textContent='';
     var buy=items.filter(needsBuy).sort(function(a,b){return plan(a).days-plan(b).days});
-    var badge=$('listBadge');badge.hidden=!buy.length;badge.textContent=String(buy.length);
-    if(!buy.length){v.append(emptyCard('Pantry','Nothing to buy','When something runs low or is about to expire, it shows up here.'));return}
+    var badge=$('listBadge'),count=buy.length+extras.length;badge.hidden=!count;badge.textContent=String(count);
+    var f=el('form','row'),inp=el('input'),add=el('button','btn primary','Add');
+    inp.type='text';inp.id='extraText';inp.maxLength=80;inp.style.flex='1';inp.placeholder='Add anything, like birthday candles';inp.setAttribute('aria-label','Add something to the list');
+    add.type='submit';f.append(inp,add);
+    f.addEventListener('submit',async function(ev){ev.preventDefault();var t=inp.value.trim();if(!t)return;
+      try{await api('/api/extras',{method:'POST',body:JSON.stringify({text:t})});await refresh();var n=$('extraText');if(n)n.focus()}
+      catch(er){if(er.code!=='locked')toast(er.code==='full'?'The list is full. Tick a few things off first.':'Could not add that. Check your connection.')}});
+    v.append(f);
+    if(!count){v.append(emptyCard('Pantry','Nothing to buy','When something runs low it shows up here. You can also add anything yourself.'));return}
+    function tick(label,fn){var ck=el('button','check');ck.type='button';ck.setAttribute('aria-label',label);ck.append(icon('M6 12l4 4 8-9'));ck.onclick=fn;return ck}
+    if(extras.length){var se=el('div','sec'),ce=el('div','card');se.append(el('h2','','Added by hand'),ce);
+      extras.forEach(function(x){var r=el('div','row'),g=el('div','grow');g.append(el('div','name',x.text));if(x.who)g.append(el('div','sub','Added by '+x.who));
+        r.append(tick('Mark '+x.text+' as bought',async function(){try{await api('/api/extras/'+x.id,{method:'DELETE'});await refresh()}catch(er){if(er.code!=='locked')toast('Could not save that. Check your connection.')}}),g);ce.append(r)});
+      v.append(se)}
     var c=null,lastArea=null,order=Object.keys(AREA);
     buy.sort(function(a,b){return order.indexOf(areaOf(a))-order.indexOf(areaOf(b))});
-    buy.forEach(function(it){var p=plan(it),ck=el('button','check');
-      if(areaOf(it)!==lastArea){lastArea=areaOf(it);var sec=el('div','sec');c=el('div','card');sec.append(el('h2','',lastArea),c);v.append(sec)}ck.type='button';ck.setAttribute('aria-label','Mark '+it.name+' as bought');ck.append(icon('M6 12l4 4 8-9'));
-      ck.onclick=function(){restock(it)};
-      var r=el('div','row'),g=el('div','grow');g.append(el('div','name',it.name),el('div','sub',(it.qty<=0?"You're out":p.days<=0?'Due now':'By '+fmt(p.date))+(it.store?' · usually from '+it.store:'')));
-      r.append(ck,g,iconFor(it));c.append(r)});
-    v.append(el('p','sub','Tick an item when you buy it and I will restock it at home.'));
+    buy.forEach(function(it){var p=plan(it);
+      if(areaOf(it)!==lastArea){lastArea=areaOf(it);var sec=el('div','sec');c=el('div','card');sec.append(el('h2','',lastArea),c);v.append(sec)}
+      var r=el('div','row'),g=el('div','grow');g.append(el('div','name',it.name),el('div','sub',(it.qty<=0?"You're out":p.days<=0?'Due now':'By '+fmt(p.date))+(it.essential?', essential':'')+(it.store?', usually from '+it.store:'')));
+      r.append(tick('Mark '+it.name+' as bought',function(){restock(it)}),g,iconFor(it));c.append(r)});
+    v.append(el('p','sub','Tick something when you buy it. Tracked items are restocked at home.'));
     var cp=el('button','btn block','Copy shopping list');cp.type='button';cp.onclick=function(){
-      var text='Shopping list\n'+buy.map(function(i){return '- '+i.name+(i.store?' ('+i.store+')':'')}).join('\n');
+      var text='Shopping list\n'+extras.map(function(x){return '- '+x.text}).concat(buy.map(function(i){return '- '+i.name+(i.store?' ('+i.store+')':'')})).join('\n');
       try{navigator.clipboard.writeText(text).then(function(){toast('Shopping list copied.')},function(){toast(text.replace(/\n/g,'  '))})}catch(e){toast(text.replace(/\n/g,'  '))}};
     v.append(cp);
   }
@@ -448,10 +489,11 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     barcode:['Barcode','M4 6v12M7 6v12M11 6v12M14 6v12M17 6v12M20 6v12',265],text:['Typed note','M4 20h4L19 9l-4-4L4 16z',35],hand:['By hand','M6 12l4 4 8-9',135]};
   function renderLog(){
     var v=$('v-log');v.textContent='';
-    if(!log.length){v.append(emptyCard('Other','No activity yet','Every change I apply is recorded here, so you can see what I did and when.'));return}
+    if(!log.length){v.append(emptyCard('Other','No activity yet','Every change is recorded here, with who made it and when.'));return}
     var c=el('div','card'),ul=el('ul','tl');
     log.forEach(function(l){var s=SRC[l.source]||SRC.hand,li=el('li'),ic=el('span','ico'),g=el('div'),d=new Date(l.at);ic.style.setProperty('--h',s[2]);ic.append(icon(s[1]));
-      g.append(el('div','name',l.summary.charAt(0).toUpperCase()+l.summary.slice(1)+'.'),el('div','sub',s[0]+(isNaN(d)?'':' · '+d.toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}))));
+      g.append(el('div','name',(l.who?l.who+' ':'')+(l.who?l.summary:l.summary.charAt(0).toUpperCase()+l.summary.slice(1))+'.'),
+        el('div','sub',s[0]+(isNaN(d)?'':', '+d.toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}))));
       li.append(ic,g);ul.append(li)});
     c.append(ul);v.append(c);
   }
@@ -466,12 +508,15 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
   var qtyTimer={};
   function setQty(it,q){it.qty=q;render();clearTimeout(qtyTimer[it.id]);
     qtyTimer[it.id]=setTimeout(function(){api('/api/items/'+it.id,{method:'PATCH',body:JSON.stringify({qty:q})}).catch(function(e){if(e.code!=='locked')toast('Could not save that change. Check your connection.')})},500)}
-  async function refresh(){var d=await api('/api/items');items=d.items||[];log=d.log||[];render()}
+  async function refresh(){var d=await api('/api/items');items=d.items||[];log=d.log||[];extras=d.extras||[];me=d.me||'';render()}
 
   /* ---- capture ---- */
   document.querySelectorAll('[data-close]').forEach(function(b){b.onclick=function(){b.closest('dialog').close()}});
   document.querySelectorAll('dialog.sheet').forEach(function(d){d.addEventListener('click',function(ev){if(ev.target===d)d.close()})});
   $('fab').onclick=function(){if(!busy)$('capDlg').showModal()};
+  $('shareBtn').onclick=function(){$('shareLink').textContent=location.origin;$('shareMe').textContent=me?'You are signed in as '+me+'.':'';$('shareDlg').showModal()};
+  $('shareCopy').onclick=function(){try{navigator.clipboard.writeText(location.origin).then(function(){toast('Link copied.')},function(){toast('Select the link and copy it.')})}catch(e){toast('Select the link and copy it.')}};
+  try{$('who').value=localStorage.getItem('stocker.who')||''}catch(e){}
   var COPY={licence:'The vision model needs its licence accepted once before it can read photos.',
     ai_failed:'The model could not process that. Try again in a moment.',bad_image:'That photo could not be used. Try another.',
     bad_audio:'That recording was too long. Keep voice notes under a minute.',silent:"I couldn't hear anything in that recording. Try again closer to the mic.",

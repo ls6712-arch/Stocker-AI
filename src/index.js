@@ -13,6 +13,7 @@ const isDate = (s) => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s) && 
 const addDays = (s, n) => new Date(Date.parse(s + 'T00:00:00Z') + n * DAY).toISOString().slice(0, 10);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const num = (v, d) => (Number.isFinite(Number(v)) && v !== null && v !== '' ? Number(v) : d);
+const cleanName = (s) => String(s || '').replace(/[^\p{L}\p{N} .'-]/gu, '').replace(/\s+/g, ' ').trim().slice(0, 20);
 const keyOf = (name) => name.toLowerCase().replace(/\s+/g, ' ').trim();
 
 async function sha(s) {
@@ -170,7 +171,7 @@ function sanitize(raw, kind) {
 }
 
 // ---------- apply ----------
-async function apply(env, body, today, source) {
+async function apply(env, body, today, source, who) {
   const store = String(body.store || '').trim().slice(0, 40);
   const bought = isDate(body.bought) ? body.bought : '';
   const clean = sanitize({ actions: (body.actions || []).map((a) => ({ ...a, expiryDate: a.expiry, daysToFinish: a.finishDays })) }, 'apply').actions;
@@ -207,8 +208,8 @@ async function apply(env, body, today, source) {
       changes.push({ id: row.id, name: row.name, action: 'add', created: false, prevQty: row.qty, qty: row.qty + a.quantity, added: a.quantity, unit: a.unit, category: row.category, area: row.area, expiry, est });
     } else {
       const id = crypto.randomUUID();
-      await env.DB.prepare('INSERT INTO items (id, name, name_key, qty, unit, category, bought, added, store, expiry, expiry_est, finish_days, learned, source, area) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
-        .bind(id, a.name, key, a.quantity, a.unit, a.category, bought || null, today, store || null, expiry, est, finish, learned, source, a.area).run();
+      await env.DB.prepare('INSERT INTO items (id, name, name_key, qty, unit, category, bought, added, store, expiry, expiry_est, finish_days, learned, source, area, essential) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+        .bind(id, a.name, key, a.quantity, a.unit, a.category, bought || null, today, store || null, expiry, est, finish, learned, source, a.area, a.area === 'Kids' || a.area === 'Health' ? 1 : 0).run();
       changes.push({ id, name: a.name, action: 'add', created: true, prevQty: 0, qty: a.quantity, added: a.quantity, unit: a.unit, category: a.category, area: a.area, expiry, est });
     }
     added++;
@@ -218,7 +219,7 @@ async function apply(env, body, today, source) {
   if (used) parts.push('marked ' + used + ' as used');
   if (missed.length) parts.push("couldn't find " + missed.join(', '));
   const summary = parts.length ? parts.join('; ') : 'nothing changed';
-  if (added || used) await env.DB.prepare('INSERT INTO log (at, source, summary) VALUES (?, ?, ?)').bind(new Date().toISOString(), source, summary).run();
+  if (added || used) await env.DB.prepare('INSERT INTO log (at, source, summary, who) VALUES (?, ?, ?, ?)').bind(new Date().toISOString(), source, summary, who || null).run();
   return { added, used, missed, summary, changes };
 }
 
@@ -234,27 +235,53 @@ async function api(request, env, url) {
       await new Promise((r) => setTimeout(r, 600));
       return json({ error: 'wrong_pin' }, 401);
     }
-    return json({ ok: true }, 200, { 'set-cookie': 'pk=' + (await sessionToken(env)) + '; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=2592000' });
+    const h = new Headers({ 'content-type': 'application/json', 'cache-control': 'no-store' });
+    const opts = '; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=2592000';
+    h.append('set-cookie', 'pk=' + (await sessionToken(env)) + opts);
+    h.append('set-cookie', 'who=' + encodeURIComponent(cleanName(body.name)) + opts);
+    return new Response(JSON.stringify({ ok: true }), { status: 200, headers: h });
   }
   if (cookie(request, 'pk') !== (await sessionToken(env))) return json({ error: 'locked' }, 401);
   if (path === '/api/logout' && method === 'POST') return json({ ok: true }, 200, { 'set-cookie': 'pk=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0' });
 
+  let me = '';
+  try { me = cleanName(decodeURIComponent(cookie(request, 'who') || '')); } catch (e) {}
   const hdr = request.headers.get('x-today');
   const today = isDate(hdr) ? hdr : new Date().toISOString().slice(0, 10);
 
   if (path === '/api/items' && method === 'GET') {
     const items = (await env.DB.prepare('SELECT * FROM items ORDER BY name').all()).results;
-    const log = (await env.DB.prepare('SELECT at, source, summary FROM log ORDER BY id DESC LIMIT 8').all()).results;
-    return json({ items, log });
+    const log = (await env.DB.prepare('SELECT at, source, summary, who FROM log ORDER BY id DESC LIMIT 12').all()).results;
+    const extras = (await env.DB.prepare('SELECT id, text, who FROM extras ORDER BY added').all()).results;
+    return json({ items, log, extras, me });
   }
   const m = path.match(/^\/api\/items\/([0-9a-f-]{36})$/);
   if (m && method === 'PATCH') {
     const body = await request.json().catch(() => ({}));
-    await env.DB.prepare('UPDATE items SET qty = ? WHERE id = ?').bind(Math.max(0, num(body.qty, 0)), m[1]).run();
+    if (body.qty !== undefined) await env.DB.prepare('UPDATE items SET qty = ? WHERE id = ?').bind(Math.max(0, num(body.qty, 0)), m[1]).run();
+    if (body.essential !== undefined) await env.DB.prepare('UPDATE items SET essential = ? WHERE id = ?').bind(body.essential ? 1 : 0, m[1]).run();
+    if (body.out) {
+      const row = await env.DB.prepare('SELECT name FROM items WHERE id = ?').bind(m[1]).first();
+      if (row) await env.DB.prepare('INSERT INTO log (at, source, summary, who) VALUES (?, ?, ?, ?)').bind(new Date().toISOString(), 'hand', 'marked ' + row.name + ' as out', me || null).run();
+    }
     return json({ ok: true });
   }
   if (m && method === 'DELETE') {
     await env.DB.prepare('DELETE FROM items WHERE id = ?').bind(m[1]).run();
+    return json({ ok: true });
+  }
+
+  if (path === '/api/extras' && method === 'POST') {
+    const text = String((await request.json().catch(() => ({}))).text || '').replace(/\s+/g, ' ').trim().slice(0, 80);
+    if (!text) return json({ error: 'empty' }, 400);
+    const n = await env.DB.prepare('SELECT COUNT(*) AS n FROM extras').first();
+    if (n && n.n >= 100) return json({ error: 'full' }, 400);
+    await env.DB.prepare('INSERT INTO extras (id, text, who, added) VALUES (?, ?, ?, ?)').bind(crypto.randomUUID(), text, me || null, new Date().toISOString()).run();
+    return json({ ok: true });
+  }
+  const x = path.match(/^\/api\/extras\/([0-9a-f-]{36})$/);
+  if (x && method === 'DELETE') {
+    await env.DB.prepare('DELETE FROM extras WHERE id = ?').bind(x[1]).run();
     return json({ ok: true });
   }
 
@@ -271,7 +298,7 @@ async function api(request, env, url) {
 
   if (path === '/api/apply' && method === 'POST') {
     const body = await request.json().catch(() => ({}));
-    return json(await apply(env, body, today, SOURCES.includes(body.source) ? body.source : 'hand'));
+    return json(await apply(env, body, today, SOURCES.includes(body.source) ? body.source : 'hand', me));
   }
 
   if (path === '/api/agree' && method === 'POST') {

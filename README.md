@@ -45,4 +45,5 @@ Model names are plain variables in `wrangler.jsonc` (`VISION_MODEL`, `TEXT_MODEL
 - Photos and audio are sent to the models and not stored. Only the item list and activity log are kept.
 - The passcode is a single shared secret. Use a long one, and do not put anything sensitive in the pantry.
 - Barcode lookup covers food products in Open Food Facts; unknown products fall back to typing or voice.
+- Everyone in a household shares one passcode and one list; names are for the activity log, not separate accounts.
 - It does not send notifications. The briefing updates whenever you open it.
