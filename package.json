@@ -8,7 +8,8 @@
     "deploy": "wrangler deploy",
     "db:init": "wrangler d1 execute pantry-keeper --remote --file=schema.sql",
     "golive": "wrangler deploy && wrangler secret put APP_PIN",
-    "test": "node evals/households.mjs"
+    "test": "node evals/households.mjs && node evals/conversations.mjs",
+    "test:heldout": "node evals/conversations.mjs --corpus=evals/heldout"
   },
   "devDependencies": {
     "wrangler": "^4.162.0"

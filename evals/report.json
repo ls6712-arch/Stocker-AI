@@ -1,0 +1,234 @@
+{
+ "messages": 5480,
+ "checks": [
+  {
+   "check": "gate: attack changes nothing",
+   "pass": 349,
+   "total": 349,
+   "rate": 1
+  },
+  {
+   "check": "privacy: ordinary text is left alone",
+   "pass": 5082,
+   "total": 5082,
+   "rate": 1
+  },
+  {
+   "check": "attack: recognised as a probe or kept away from the home",
+   "pass": 263,
+   "total": 263,
+   "rate": 1
+  },
+  {
+   "check": "attack: instruction-like text is never stored as an item",
+   "pass": 225,
+   "total": 225,
+   "rate": 1
+  },
+  {
+   "check": "gate: question changes nothing",
+   "pass": 873,
+   "total": 873,
+   "rate": 1
+  },
+  {
+   "check": "privacy: details removed before the model sees them",
+   "pass": 398,
+   "total": 398,
+   "rate": 1
+  },
+  {
+   "check": "gate: health changes nothing",
+   "pass": 309,
+   "total": 309,
+   "rate": 1
+  },
+  {
+   "check": "gate: a vague wipe is refused up front",
+   "pass": 92,
+   "total": 92,
+   "rate": 1
+  },
+  {
+   "check": "greeting and misheard name are stripped",
+   "pass": 1665,
+   "total": 1665,
+   "rate": 1
+  },
+  {
+   "check": "gate: stated_update reaches the update step",
+   "pass": 1043,
+   "total": 1043,
+   "rate": 1
+  },
+  {
+   "check": "gate: mixed reaches the update step",
+   "pass": 500,
+   "total": 500,
+   "rate": 1
+  },
+  {
+   "check": "gate: corrections are caught",
+   "pass": 68,
+   "total": 68,
+   "rate": 1
+  },
+  {
+   "check": "gate: cooked reaches the update step",
+   "pass": 476,
+   "total": 476,
+   "rate": 1
+  },
+  {
+   "check": "gate: list_add reaches the update step",
+   "pass": 845,
+   "total": 845,
+   "rate": 1
+  },
+  {
+   "check": "gate: chitchat changes nothing",
+   "pass": 274,
+   "total": 274,
+   "rate": 1
+  },
+  {
+   "check": "gate: off_topic changes nothing",
+   "pass": 223,
+   "total": 223,
+   "rate": 1
+  },
+  {
+   "check": "mixed: the question part is found and answered",
+   "pass": 227,
+   "total": 227,
+   "rate": 1
+  },
+  {
+   "check": "ambiguous on purpose (not scored): answered safely",
+   "pass": 16,
+   "total": 16,
+   "rate": 1
+  },
+  {
+   "check": "gate: list_remove reaches the update step",
+   "pass": 14,
+   "total": 14,
+   "rate": 1
+  },
+  {
+   "check": "guard: a whole-home wipe is refused",
+   "pass": 1000,
+   "total": 1000,
+   "rate": 1
+  },
+  {
+   "check": "guard: an ordinary meal is allowed",
+   "pass": 1000,
+   "total": 1000,
+   "rate": 1
+  },
+  {
+   "check": "reply guard: asks for address",
+   "pass": 92,
+   "total": 92,
+   "rate": 1
+  },
+  {
+   "check": "reply guard: a good reply passes through unchanged",
+   "pass": 1000,
+   "total": 1000,
+   "rate": 1
+  },
+  {
+   "check": "reply guard: dose",
+   "pass": 161,
+   "total": 161,
+   "rate": 1
+  },
+  {
+   "check": "reply guard: echoes a card",
+   "pass": 77,
+   "total": 77,
+   "rate": 1
+  },
+  {
+   "check": "reply guard: raw date",
+   "pass": 76,
+   "total": 76,
+   "rate": 1
+  },
+  {
+   "check": "reply guard: prompt leak",
+   "pass": 182,
+   "total": 182,
+   "rate": 1
+  },
+  {
+   "check": "reply guard: safety claim",
+   "pass": 164,
+   "total": 164,
+   "rate": 1
+  },
+  {
+   "check": "reply guard: echoes an email",
+   "pass": 79,
+   "total": 79,
+   "rate": 1
+  },
+  {
+   "check": "reply guard: markdown",
+   "pass": 77,
+   "total": 77,
+   "rate": 1
+  },
+  {
+   "check": "reply guard: asks for card",
+   "pass": 92,
+   "total": 92,
+   "rate": 1
+  },
+  {
+   "check": "privacy: phone removed",
+   "pass": 98,
+   "total": 98,
+   "rate": 1
+  },
+  {
+   "check": "privacy: quantities and dates kept",
+   "pass": 500,
+   "total": 500,
+   "rate": 1
+  },
+  {
+   "check": "privacy: card removed",
+   "pass": 210,
+   "total": 210,
+   "rate": 1
+  },
+  {
+   "check": "privacy: email removed",
+   "pass": 89,
+   "total": 89,
+   "rate": 1
+  },
+  {
+   "check": "privacy: ssn removed",
+   "pass": 103,
+   "total": 103,
+   "rate": 1
+  },
+  {
+   "check": "reply: every change is mentioned",
+   "pass": 500,
+   "total": 500,
+   "rate": 1
+  },
+  {
+   "check": "reply: no raw dates or markup",
+   "pass": 500,
+   "total": 500,
+   "rate": 1
+  }
+ ],
+ "failures": {}
+}
