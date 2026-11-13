@@ -578,7 +578,7 @@ function route(raw, name) {
   // spoken fillers anywhere in the sentence ("put um some um tablets on the um list") carry no meaning
   const clean = fixTypos(String(raw)).replace(/(^|\s)(um+|uh+|erm+|er|hmm+|uhm)(?=[\s,.!?]|$)[,]?/gi, ' ').replace(/\s+/g, ' ').trim();
   const t = unhail(clean, name), all = clean;
-  if (PROBE.test(all)) return 'refuse';
+  if (PROBE.test(all) || PROBE.test(fixTypos(String(raw)))) return 'refuse'; // the original too: cleaning folds line breaks that can hide a fake "SYSTEM:" line
   if (WIPE.test(t)) return 'wipe';
   if (CORRECT.test(t) && !CORRECT_NM.test(t)) return 'correct';
   if (!t) return 'answer';
