@@ -15,7 +15,8 @@ CREATE TABLE IF NOT EXISTS items (
   source TEXT,
   area TEXT,
   essential INTEGER NOT NULL DEFAULT 0,
-  low INTEGER NOT NULL DEFAULT 0
+  low INTEGER NOT NULL DEFAULT 0,
+  warn TEXT
 );
 CREATE UNIQUE INDEX IF NOT EXISTS items_name_key ON items(name_key);
 CREATE TABLE IF NOT EXISTS purchases (
@@ -48,4 +49,8 @@ CREATE TABLE IF NOT EXISTS spend (
   area TEXT,
   amount REAL NOT NULL,
   currency TEXT
+);
+CREATE TABLE IF NOT EXISTS settings (
+  k TEXT PRIMARY KEY,
+  v TEXT NOT NULL
 );

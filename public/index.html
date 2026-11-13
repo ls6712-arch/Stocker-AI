@@ -104,6 +104,11 @@ input[type=text],input[type=password],input[type=number],input[type=date],input[
 .ihead[aria-expanded="true"]>svg{transform:rotate(180deg)}
 .ipanel{display:flex;flex-direction:column;gap:12px;padding:2px 0 16px}
 .ipanel .qty{align-self:flex-start}
+.hpill{align-self:flex-start;border:0;background:rgba(255,255,255,.16);color:var(--hero-fg);border-radius:999px;padding:6px 14px;font-weight:600;font-size:13.5px;min-height:38px;text-align:left}
+.tile[aria-pressed="true"]{border-color:var(--accent);box-shadow:inset 0 0 0 1.5px var(--accent)}
+.wrapchips{display:flex;flex-wrap:wrap;gap:8px}
+.people{display:flex;flex-wrap:wrap;gap:12px 24px}
+.people label{display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--muted)}
 .acts{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .mini{border:1px solid var(--line);background:var(--surface2);border-radius:999px;padding:8px 14px;font-weight:600;font-size:13.5px;min-height:40px}
 .mini[aria-pressed="true"]{background:var(--warn-bg);color:var(--warn);border-color:transparent}
@@ -291,7 +296,27 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     <p class="heard" id="shareLink" style="font-style:normal;user-select:all;overflow-wrap:anywhere"></p>
     <button type="button" class="btn primary block" id="shareCopy">Copy link</button>
     <p class="sub" id="shareMe"></p>
+    <button type="button" class="btn block" id="shareProf">Change your home profile</button>
     <button type="button" class="btn block" data-close>Close</button>
+  </div>
+</dialog>
+
+<dialog class="sheet" id="profDlg" aria-labelledby="profH">
+  <div class="pad">
+    <div class="grab"></div>
+    <h2 id="profH">Make Stocker yours</h2>
+    <p class="sub">Tell me who is at home and I will tailor estimates, dinner ideas and suggestions. You can change this any time.</p>
+    <h3>Which sounds most like you?</h3>
+    <div class="tiles" id="profPersonas" role="group" aria-label="Household type"></div>
+    <h3>Who lives here?</h3>
+    <div class="people" id="profPeople"></div>
+    <h3>How you eat</h3>
+    <div class="wrapchips" id="profDiet" role="group" aria-label="Diet"></div>
+    <h3>Allergies at home</h3>
+    <div class="wrapchips" id="profAll" role="group" aria-label="Allergies"></div>
+    <p class="sub">I flag likely allergens from product names, and I can miss things. Always check the label yourself.</p>
+    <button type="button" class="btn primary block" id="profSave">Save</button>
+    <button type="button" class="btn block" id="profSkip">Not now</button>
   </div>
 </dialog>
 
@@ -355,6 +380,33 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
   }
   function iconFor(o){var a=areaOf(o),c=a==='Kitchen'?(CAT[o.category]||CAT.Pantry):AREA[a],b=el('span','ico');b.style.setProperty('--h',c[0]);b.append(icon(c[1]));
     if(o.name){b.className='ico pic';picFor(b,o.name)}return b}
+  /* household profiles: a persona sets sensible defaults, then people, diet and allergies refine it */
+  var PERSONA={mom:['Busy mom','Kids, school runs, no spare time',2,3,[]],dad:['Single dad','One adult running the whole house',1,2,[]],
+    family4:['Family of four','Two adults, two kids',2,2,[]],student:['College student','Small budget, small kitchen',1,0,[]],
+    gym:['Gym bro','Lifting, protein, repeat',1,0,['High protein']],fit:['Fitness freak','Training hard, eating clean',1,0,['High protein']],
+    vegan:['Vegan','A plant-based home',2,0,['Vegan']],other:['Something else','Set it up your own way',2,0,[]]};
+  var STARTER={mom:['Milk','Eggs','Bread','Fruit for lunchboxes','Lunchbox snacks','Yogurt','Diapers','Baby wipes','Kids fever medicine','Laundry detergent','Dish soap','Toilet paper'],
+    dad:['Milk','Eggs','Bread','Cereal','Pasta','Pasta sauce','Chicken','Frozen vegetables','Lunchbox snacks','Laundry detergent','Dish soap','Toilet paper'],
+    family4:['Milk','Eggs','Bread','Rice','Pasta','Chicken','Fruit','Vegetables','Cereal','Laundry detergent','Dish soap','Toilet paper'],
+    student:['Instant noodles','Eggs','Rice','Pasta','Coffee','Peanut butter','Bread','Frozen pizza','Bananas','Toilet paper','Laundry pods','Dish soap'],
+    gym:['Chicken breast','Eggs','Protein powder','Rice','Oats','Greek yogurt','Bananas','Peanut butter','Broccoli','Creatine','Tuna','Electrolytes'],
+    fit:['Greek yogurt','Berries','Spinach','Salmon','Quinoa','Almonds','Eggs','Sweet potatoes','Oats','Avocados','Electrolytes','Olive oil'],
+    vegan:['Tofu','Oat milk','Chickpeas','Lentils','Nutritional yeast','Spinach','Bananas','Peanut butter','Rice','Vitamin B12','Hummus','Olive oil'],
+    other:['Milk','Eggs','Bread','Rice','Coffee','Fruit','Vegetables','Toilet paper','Dish soap','Laundry detergent']};
+  var DIETS=['Vegan','Vegetarian','Gluten-free','Dairy-free','High protein','Halal'],ALLERGENS=['Peanuts','Tree nuts','Milk','Eggs','Wheat','Soy','Fish','Shellfish','Sesame'];
+  var PLANT=/peanut butter|almond butter|oat milk|almond milk|soy milk|coconut milk/i,DAIRY=/milk|yogurt|cheese|butter|cream|whey/i,MEAT=/chicken|beef|pork|turkey|salmon|tuna|fish|meat|hot dog|bacon|ham\b/i,WHEAT=/bread|pasta|noodle|cereal|flour|tortilla|pizza|cracker/i;
+  var CLASH={Peanuts:/peanut/i,'Tree nuts':/almond|walnut|cashew|pecan|hazelnut|pistachio/i,Eggs:/\begg/i,Soy:/tofu|soy|edamame|tempeh/i,Fish:/salmon|tuna|fish/i,Shellfish:/shrimp|prawn|crab|lobster/i,Sesame:/sesame|tahini|hummus/i};
+  function fits(name){
+    if(!profile)return true;var dairy=DAIRY.test(name)&&!PLANT.test(name),d=profile.diet,a=profile.allergies;
+    if(a.indexOf('Milk')>-1&&dairy)return false;if(a.indexOf('Wheat')>-1&&WHEAT.test(name))return false;
+    for(var k in CLASH)if(a.indexOf(k)>-1&&CLASH[k].test(name))return false;
+    if(d.indexOf('Vegan')>-1&&(dairy||MEAT.test(name)||/\begg|honey/i.test(name)))return false;
+    if(d.indexOf('Vegetarian')>-1&&MEAT.test(name))return false;
+    if(d.indexOf('Dairy-free')>-1&&dairy)return false;if(d.indexOf('Gluten-free')>-1&&WHEAT.test(name))return false;
+    return true;
+  }
+  function profileLine(){if(!profile)return 'Make it yours';var n=profile.adults+profile.kids;
+    return PERSONA[profile.persona][0]+', '+n+(n===1?' person':' people')+(profile.diet.length?', '+profile.diet.join(', '):'')+(profile.allergies.length?', no '+profile.allergies.join(', ').toLowerCase():'')}
   var SVGNS='http://www.w3.org/2000/svg';
   var $=function(id){return document.getElementById(id)};
   function el(t,c,txt){var e=document.createElement(t);if(c)e.className=c;if(txt!=null)e.textContent=txt;return e}
@@ -370,7 +422,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
   function fmt(s){var d=parse(s);if(!d)return '—';var o={month:'short',day:'numeric'};if(d.getFullYear()!==today().getFullYear())o.year='numeric';return d.toLocaleDateString(undefined,o)}
   function qtyText(q){return String(Math.round(q*100)/100)}
 
-  var items=[],log=[],extras=[],spend=null,me='',tab='today',cat='All',query='',open={},busy=false,pending=null,toastTimer=null;
+  var items=[],log=[],extras=[],spend=null,profile=null,me='',tab='today',cat='All',query='',open={},busy=false,pending=null,toastTimer=null;
 
   function toast(msg,label,fn){clearTimeout(toastTimer);$('toastMsg').textContent=msg;var b=$('toastBtn');b.hidden=!label;if(label){b.textContent=label;b.onclick=function(){$('toast').hidden=true;fn()}}
     $('toast').hidden=false;toastTimer=setTimeout(function(){$('toast').hidden=true},label?12000:5000)}
@@ -417,15 +469,27 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
   function emptyCard(cat,title,text,btn,fn){var c=el('div','empty');c.append(catIcon(cat),el('h2','',title),el('p','sub',text));
     if(btn){var b=el('button','btn primary',btn);b.type='button';b.onclick=fn;c.append(b)}return c}
 
+  function starterCard(v){
+    var hide=false;try{hide=localStorage.getItem('stocker.starterHide')==='1'}catch(e){}
+    if(profile&&!hide){var have=items.map(function(i){return i.name.toLowerCase()}).concat(extras.map(function(x){return x.text.toLowerCase()}));
+      var picks=STARTER[profile.persona].filter(function(n){var l=n.toLowerCase();return fits(n)&&!have.some(function(h){return h.indexOf(l)>-1||l.indexOf(h)>-1})}).slice(0,10);
+      if(picks.length){var sc=el('div','card'),sh=el('div','sechead'),hb=el('button','link','Hide');hb.type='button';hb.style.padding='0';
+        hb.onclick=function(){try{localStorage.setItem('stocker.starterHide','1')}catch(e){}render()};
+        sh.append(el('h3','',PERSONA[profile.persona][0]+' staples'),hb);sc.append(sh,el('p','sub','A starter list picked for your kind of home. Tap what you want on your shopping list.'));
+        var wc=el('div','wrapchips');picks.forEach(function(n){var b=el('button','mini','+ '+n);b.type='button';
+          b.onclick=async function(){b.disabled=true;try{await api('/api/extras',{method:'POST',body:JSON.stringify({text:n})});await refresh();toast(n+' is on your shopping list.')}catch(er){b.disabled=false;if(er.code!=='locked')toast('Could not add that. Check your connection.')}};wc.append(b)});
+        sc.append(wc);v.append(sc)}}
+  }
   function renderToday(){
     var v=$('v-today');v.textContent='';
     var use=items.filter(needsUse).sort(function(a,b){return expiry(a).d-expiry(b).d}),buy=items.filter(needsBuy).sort(function(a,b){return plan(a).days-plan(b).days});
     var n=use.length+buy.length,hero=el('div','hero'),top=el('div');
     top.append(el('p','day',today().toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric'})));
+    var hp=el('button','hpill',profileLine());hp.type='button';hp.setAttribute('aria-label','Your home profile: '+profileLine());hp.onclick=openProfile;
     top.append(el('h2','',!items.length?'Nothing tracked yet':n?n+(n===1?' thing needs you':' things need you'):"You're all set"));
     top.append(el('p','',!items.length?'Scan your last grocery bill and I will take it from there.':n?'Here is what to use up and what to pick up.':'Nothing to use up, and nothing on your list.'));
-    hero.append(top);
-    var trio=el('div','trio');[[items.length,'items','pantry'],[use.length,'use soon','today'],[buy.length,'to buy','list']].forEach(function(s){
+    hero.append(hp,top);
+    var trio=el('div','trio');[[items.length,'items','pantry'],[use.length,'use soon','today'],[buy.length+extras.length,'to buy','list']].forEach(function(s){
       var b=el('button');b.type='button';b.append(el('b','',String(s[0])),el('span','',s[1]));b.onclick=function(){go(s[2])};trio.append(b)});
     hero.append(trio);v.append(hero);
     var talk=el('button','talk');talk.type='button';talk.append(icon('M9 3h6v11H9zM5 11a7 7 0 0 0 14 0M12 18v3'));
@@ -434,6 +498,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     if(items.filter(function(i){return areaOf(i)==='Kitchen'&&i.qty>0}).length>=2){
       var ck=el('button','talk');ck.type='button';ck.append(icon(POT));var ct=el('span');
       ct.append(el('b','','What can I cook tonight?'),el('span','sub','Dinner ideas that use up what goes off soonest'));ck.append(ct);ck.onclick=cookIdeas;v.append(ck)}
+    if(!items.length)starterCard(v);
     if(!items.length){v.append(emptyCard('Pantry','Start with one photo','Photograph a receipt, a bathroom shelf or a cupboard, scan a barcode, or just say what you bought.','Add your first items',function(){$('capDlg').showModal()}));return}
     var ess=buy.filter(function(i){return i.essential});buy=buy.filter(function(i){return !i.essential});
     if(ess.length){var s0=el('div','sec');s0.append(el('h2','',"Don't run out"));var c0=el('div','card');
@@ -450,6 +515,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
         x.grow.append(el('div','sub',it.qty<=0?"You're out":'Running low'));c2.append(x.row)});
       if(buy.length>4)c2.append(el('p','sub','and '+(buy.length-4)+' more on the list'));
       s2.append(c2);v.append(s2)}
+    starterCard(v);
     if(spend&&spend.total>0){var sp=el('div','card'),money=function(n){try{return new Intl.NumberFormat(undefined,{style:'currency',currency:spend.currency||'USD',maximumFractionDigits:0}).format(n)}catch(e){return String(Math.round(n))}};
       var row=el('div','row'),gg=el('div','grow');gg.append(el('div','sub','Spent this month'),el('div','name',money(spend.total)));gg.lastChild.style.fontFamily='var(--display)';gg.lastChild.style.fontSize='1.6rem';row.append(gg);sp.append(row);
       var fx=el('div','facts');spend.byArea.forEach(function(a){var t=el('span');t.append(document.createTextNode(a.area+' '),el('b','',money(a.amount)));fx.append(t)});sp.append(fx,el('p','sub','From the prices on bills you scanned.'));v.append(sp)}
@@ -466,6 +532,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     else if(it.low)sub.append(el('span','pill warn','Running low'));
     else if(e&&e.cls)sub.append(el('span','pill '+e.cls,e.text));
     else if(it.expiry)sub.append(document.createTextNode(it.expiry_est&&daysFrom(it.expiry)>365?'Keeps a long time':'Fresh until '+fmt(it.expiry)));
+    if(it.warn)sub.append(el('span','pill bad','Check label: '+it.warn));
     if(it.essential)sub.append(el('span','pill plain','Essential'));
     g.append(el('span','name',it.name),sub);
     head.append(iconFor(it),g,el('span','q',qtyText(it.qty)+' '+it.unit),icon('M6 9l6 6 6-6'));
@@ -601,12 +668,34 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
   var qtyTimer={};
   function setQty(it,q){it.qty=q;render();clearTimeout(qtyTimer[it.id]);
     qtyTimer[it.id]=setTimeout(function(){api('/api/items/'+it.id,{method:'PATCH',body:JSON.stringify({qty:q})}).catch(function(e){if(e.code!=='locked')toast('Could not save that change. Check your connection.')})},500)}
-  async function refresh(){var d=await api('/api/items');items=d.items||[];log=d.log||[];extras=d.extras||[];spend=d.spend||null;me=d.me||'';render()}
+  async function refresh(){var d=await api('/api/items');items=d.items||[];log=d.log||[];extras=d.extras||[];spend=d.spend||null;profile=d.profile||null;me=d.me||'';render()}
 
   /* ---- capture ---- */
   document.querySelectorAll('[data-close]').forEach(function(b){b.onclick=function(){b.closest('dialog').close()}});
   document.querySelectorAll('dialog.sheet').forEach(function(d){d.addEventListener('click',function(ev){if(ev.target===d)d.close()})});
   $('fab').onclick=function(){if(!busy)$('capDlg').showModal()};
+  var draft=null;
+  function drawProfile(){
+    var pp=$('profPersonas');pp.textContent='';Object.keys(PERSONA).forEach(function(k){var P=PERSONA[k],b=el('button','tile');b.type='button';b.style.minHeight='0';
+      b.setAttribute('aria-pressed',draft.persona===k?'true':'false');b.append(el('b','',P[0]),el('span','',P[1]));
+      b.onclick=function(){draft.persona=k;draft.adults=P[2];draft.kids=P[3];P[4].forEach(function(d){if(draft.diet.indexOf(d)<0)draft.diet.push(d)});drawProfile()};pp.append(b)});
+    var pe=$('profPeople');pe.textContent='';[['adults','Adults',1],['kids','Children',0]].forEach(function(f){var l=el('label','',f[1]),q=el('span','qty'),m=el('button','','\u2212'),pl=el('button','','+');
+      m.type=pl.type='button';m.setAttribute('aria-label','Fewer '+f[1].toLowerCase());pl.setAttribute('aria-label','More '+f[1].toLowerCase());
+      m.onclick=function(){draft[f[0]]=Math.max(f[2],draft[f[0]]-1);drawProfile()};pl.onclick=function(){draft[f[0]]=Math.min(10,draft[f[0]]+1);drawProfile()};
+      q.append(m,el('span','',String(draft[f[0]])),pl);l.append(q);pe.append(l)});
+    function chips(box,all,key){box.textContent='';all.forEach(function(n){var b=el('button','chip',n),on=draft[key].indexOf(n)>-1;b.type='button';b.setAttribute('aria-pressed',on?'true':'false');
+      b.onclick=function(){if(on)draft[key]=draft[key].filter(function(x){return x!==n});else draft[key].push(n);drawProfile()};box.append(b)})}
+    chips($('profDiet'),DIETS,'diet');chips($('profAll'),ALLERGENS,'allergies');
+    $('profSave').disabled=!draft.persona;
+  }
+  function openProfile(){document.querySelectorAll('dialog[open]').forEach(function(d){d.close()});
+    draft=profile?{persona:profile.persona,adults:profile.adults,kids:profile.kids,diet:profile.diet.slice(),allergies:profile.allergies.slice()}:{persona:'',adults:2,kids:0,diet:[],allergies:[]};
+    drawProfile();$('profDlg').showModal()}
+  $('profSkip').onclick=function(){try{localStorage.setItem('stocker.profSkip','1')}catch(e){}$('profDlg').close()};
+  $('profSave').onclick=async function(){if(!draft.persona)return;$('profSave').disabled=true;
+    try{var r=await api('/api/profile',{method:'POST',body:JSON.stringify(draft)});profile=r.profile;try{localStorage.removeItem('stocker.starterHide')}catch(e){}$('profDlg').close();render();toast('Saved. Stocker is set up for a '+PERSONA[profile.persona][0].toLowerCase()+'.')}
+    catch(e){if(e.code!=='locked')toast('Could not save that. Check your connection.')}finally{$('profSave').disabled=false}};
+  $('shareProf').onclick=openProfile;
   $('shareBtn').onclick=function(){$('shareLink').textContent=location.origin;$('shareMe').textContent=me?'You are signed in as '+me+'.':'';$('shareDlg').showModal()};
   $('shareCopy').onclick=function(){try{navigator.clipboard.writeText(location.origin).then(function(){toast('Link copied.')},function(){toast('Select the link and copy it.')})}catch(e){toast('Select the link and copy it.')}};
   try{$('who').value=localStorage.getItem('stocker.who')||''}catch(e){}
@@ -716,7 +805,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     var ul=$('doneList');ul.textContent='';
     done.forEach(function(c){
       var li=el('li','row'),g=el('div','grow'),x=el('button','iconbtn');
-      g.append(el('div','name',c.name));
+      g.append(el('div','name',c.name));if(c.warn)g.append(el('span','pill bad','Check label: '+c.warn));
       g.append(el('div','sub',c.action==='low'?'Marked as running low, added to your list':c.action==='use'?(c.qty<=0?'Marked as finished':'Now '+qtyText(c.qty)+' '+c.unit+' left'):
         qtyText(c.added)+' '+c.unit+(c.expiry?' \u00b7 good until '+(c.est?'about ':'')+fmt(c.expiry):'')));
       x.type='button';x.setAttribute('aria-label',"That's wrong, take back "+c.name);x.append(icon('M6 6l12 12M18 6L6 18'));
@@ -745,7 +834,8 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
   };
 
   async function start(){
-    try{await refresh();$('gate').hidden=true;$('app').hidden=false;$('tabbar').hidden=false;go(tab)}
+    try{await refresh();$('gate').hidden=true;$('app').hidden=false;$('tabbar').hidden=false;go(tab);
+      var skip=false;try{skip=localStorage.getItem('stocker.profSkip')==='1'}catch(e){}if(!profile&&!skip)openProfile()}
     catch(e){if(e.code==='setup')showGate('There is no passcode yet. Set one in the Worker settings as a secret named APP_PIN.');
       else if(e.code==='locked')showGate();else showGate('Could not reach Stocker. Check your connection and reload.')}
   }

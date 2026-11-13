@@ -11,6 +11,7 @@ A household inventory agent that runs on Cloudflare Workers. You show it a groce
 | Apply | Changes are saved straight away and recorded in the activity log. | D1 |
 | Check | A short summary shows what changed. One tap takes back anything it got wrong, or undoes the lot. | Browser |
 | Picture | Each item gets one generated picture the first time it appears, kept in the database and reused. | Workers AI, D1 |
+| Profile | A household type (busy mom, college student, gym bro and so on), headcount, diet and allergies tailor estimates, dinner ideas, a starter list and allergen flags. | D1, Workers AI |
 | Cook | Suggests three dinners from what is at home, favouring what expires first; "I cooked this" deducts the ingredients. | Workers AI |
 | Spend | Prices read from bills are totalled by month and area. | D1 |
 | Advise | The briefing works out what to use soon and when to buy each item again. After you buy the same item twice it uses your own pace. | Browser |
@@ -48,4 +49,5 @@ Model names are plain variables in `wrangler.jsonc` (`VISION_MODEL`, `TEXT_MODEL
 - The passcode is a single shared secret. Use a long one, and do not put anything sensitive in the pantry.
 - Barcode lookup covers food products in Open Food Facts; unknown products fall back to typing or voice.
 - Everyone in a household shares one passcode and one list; names are for the activity log, not separate accounts.
+- Allergen flags are guesses from product names. They can miss things and are no substitute for reading the label.
 - It does not send notifications. The briefing updates whenever you open it.
