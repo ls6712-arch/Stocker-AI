@@ -217,6 +217,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
       <div class="chips" id="chips2" role="group" aria-label="Kinds of things in this room" hidden></div>
       <div class="chips" id="chips" role="group" aria-label="Filter by what needs attention"></div>
       <p class="sub" id="pantryCount"></p>
+      <button type="button" class="btn block" id="addHere">+ Add something</button>
       <ul class="list" id="pantryList"></ul>
     </div>
     <div class="view" id="v-list" hidden></div>
@@ -310,6 +311,25 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
   </div>
 </dialog>
 
+<dialog class="sheet" id="addDlg" aria-labelledby="addH">
+  <form class="pad" id="addForm">
+    <div class="grab"></div>
+    <h2 id="addH">Add something</h2>
+    <p class="sub">For a whole shop, scan the bill with the plus button. This is for one thing at a time.</p>
+    <label for="addName" class="sub">What is it?</label>
+    <input type="text" id="addName" maxlength="60" required placeholder="Toothpaste">
+    <div class="meta">
+      <label for="addQty">How much<input type="number" id="addQty" min="0" step="any" value="1"></label>
+      <label for="addUnit">Unit<select id="addUnit"></select></label>
+      <label for="addRoom">Room<select id="addRoom"></select></label>
+      <label for="addKind">Kind<select id="addKind"></select></label>
+    </div>
+    <label class="row" for="addEss" style="gap:10px"><input type="checkbox" id="addEss" style="width:22px;height:22px;accent-color:var(--accent)"><span>This is an essential, warn me before it runs out</span></label>
+    <button type="submit" class="btn primary block" id="addGo">Add</button>
+    <button type="button" class="btn block" data-close>Done</button>
+  </form>
+</dialog>
+
 <dialog class="sheet" id="kitDlg" aria-labelledby="kitH">
   <div class="pad">
     <div class="grab"></div>
@@ -335,6 +355,19 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     <h3>Allergies at home</h3>
     <div class="wrapchips" id="profAll" role="group" aria-label="Allergies"></div>
     <p class="sub">I flag likely allergens from product names, and I can miss things. Always check the label yourself.</p>
+    <h3>Food you like most</h3>
+    <div class="wrapchips" id="profCui" role="group" aria-label="Favourite food"></div>
+    <h3>Weeknight cooking time</h3>
+    <div class="wrapchips" id="profCook" role="group" aria-label="Cooking time"></div>
+    <h3>Your shopping</h3>
+    <div class="wrapchips" id="profDay" role="group" aria-label="Usual shopping day"></div>
+    <div class="meta">
+      <label for="profStore">Where you usually shop<input type="text" id="profStore" maxlength="30" placeholder="Trader Joe's"></label>
+      <label for="profBudget">Monthly budget<input type="number" id="profBudget" min="0" step="10" placeholder="600"></label>
+    </div>
+    <h3>Anything else I should know?</h3>
+    <label for="profAbout" class="sub">Ages, dislikes, routines. I use this for dinner ideas and estimates.</label>
+    <textarea id="profAbout" rows="3" maxlength="240" placeholder="Kids are 3, 6 and 9. Nobody eats mushrooms. We do one big shop on Sundays."></textarea>
     <button type="button" class="btn primary block" id="profSave">Save</button>
     <button type="button" class="btn block" id="profSkip">Not now</button>
   </div>
@@ -413,6 +446,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     fit:['Greek yogurt','Berries','Spinach','Salmon','Quinoa','Almonds','Eggs','Sweet potatoes','Oats','Avocados','Electrolytes','Olive oil'],
     vegan:['Tofu','Oat milk','Chickpeas','Lentils','Nutritional yeast','Spinach','Bananas','Peanut butter','Rice','Vitamin B12','Hummus','Olive oil'],
     other:['Milk','Eggs','Bread','Rice','Coffee','Fruit','Vegetables','Toilet paper','Dish soap','Laundry detergent']};
+  var CUISINES=['Indian','Italian','Mexican','Chinese','Thai','Japanese','Mediterranean','American','Middle Eastern','Korean'],DAYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],DAYNAMES=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
   var DIETS=['Vegan','Vegetarian','Gluten-free','Dairy-free','High protein','Halal'],ALLERGENS=['Peanuts','Tree nuts','Milk','Eggs','Wheat','Soy','Fish','Shellfish','Sesame'];
   var PLANT=/peanut butter|almond butter|oat milk|almond milk|soy milk|coconut milk/i,DAIRY=/milk|yogurt|cheese|butter|cream|whey/i,MEAT=/chicken|beef|pork|turkey|salmon|tuna|fish|meat|hot dog|bacon|ham\b/i,WHEAT=/bread|pasta|noodle|cereal|flour|tortilla|pizza|cracker/i;
   var CLASH={Peanuts:/peanut/i,'Tree nuts':/almond|walnut|cashew|pecan|hazelnut|pistachio/i,Eggs:/\begg/i,Soy:/tofu|soy|edamame|tempeh/i,Fish:/salmon|tuna|fish/i,Shellfish:/shrimp|prawn|crab|lobster/i,Sesame:/sesame|tahini|hummus/i};
@@ -491,7 +525,8 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
 
   function spendCard(v){
     if(spend&&spend.total>0){var sp=el('div','card'),money=function(n){try{return new Intl.NumberFormat(undefined,{style:'currency',currency:spend.currency||'USD',maximumFractionDigits:0}).format(n)}catch(e){return String(Math.round(n))}};
-      var row=el('div','row'),gg=el('div','grow');gg.append(el('div','sub','Spent this month'),el('div','name',money(spend.total)));gg.lastChild.style.fontFamily='var(--display)';gg.lastChild.style.fontSize='1.6rem';row.append(gg);sp.append(row);
+      var row=el('div','row'),gg=el('div','grow');gg.append(el('div','sub','Spent this month'+(profile&&profile.budget?' of your '+money(profile.budget)+' budget':'')),el('div','name',money(spend.total)));gg.lastChild.style.fontFamily='var(--display)';gg.lastChild.style.fontSize='1.6rem';row.append(gg);sp.append(row);
+      if(profile&&profile.budget){var bb=el('div','bar'),bf=el('i',spend.total>profile.budget?'bad':spend.total>profile.budget*0.8?'warn':'');bf.style.width=Math.min(100,Math.round(spend.total/profile.budget*100))+'%';bb.append(bf);sp.append(bb)}
       var fx=el('div','facts');spend.byArea.forEach(function(a){var t=el('span');t.append(document.createTextNode(a.area+' '),el('b','',money(a.amount)));fx.append(t)});sp.append(fx,el('p','sub','From the prices on bills you scanned.'));v.append(sp)}
   }
   function starterCard(v){
@@ -512,7 +547,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     top.append(el('p','day',today().toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric'})));
     var hp=el('button','hpill',profileLine());hp.type='button';hp.setAttribute('aria-label','Your home profile: '+profileLine());hp.onclick=openProfile;
     top.append(el('h2','',!items.length?'Nothing tracked yet':n?n+(n===1?' thing needs you':' things need you'):"You're all set"));
-    top.append(el('p','',!items.length?'Scan your last grocery bill and I will take it from there.':n?'Here is what to use up and what to pick up.':'Nothing to use up, and nothing on your list.'));
+    top.append(el('p','',!items.length?'Scan your last grocery bill and I will take it from there.':profile&&profile.shopDay===DAYS[today().getDay()]?"It's your shopping day"+(profile.store?' at '+profile.store:'')+'. '+(buy.length+extras.length)+' on your list.':n?'Here is what to use up and what to pick up.':'Nothing to use up, and nothing on your list.'));
     hero.append(hp,top);
     var trio=el('div','trio');[[items.length,'items','pantry'],[use.length,'use soon','today'],[buy.length+extras.length,'to buy','list']].forEach(function(s){
       var b=el('button');b.type='button';b.append(el('b','',String(s[0])),el('span','',s[1]));b.onclick=function(){go(s[2])};trio.append(b)});
@@ -590,6 +625,21 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
   function roomLabel(a){return a==='Home'?'General':a}
   function kindOf(it){return ROOM_CATS[areaOf(it)].indexOf(it.category)>-1?it.category:'Other'}
   function kindLabel(k){return k==='Pantry'?'Cupboard staples':k}
+  function fillKinds(room,kind){var k=$('addKind');k.textContent='';ROOM_CATS[room].concat(['Other']).forEach(function(c){k.append(new Option(kindLabel(c),c))});
+    k.value=ROOM_CATS[room].indexOf(kind)>-1?kind:(room==='Kitchen'?'Pantry':'Other')}
+  function openAdd(room,kind){
+    var r=$('addRoom'),u=$('addUnit');if(!r.options.length){Object.keys(AREA).forEach(function(a){r.append(new Option(roomLabel(a),a))});UNITS.forEach(function(x){u.append(new Option(x,x))});
+      r.onchange=function(){fillKinds(r.value,'')}}
+    r.value=AREA[room]?room:'Kitchen';fillKinds(r.value,kind);$('addName').value='';$('addQty').value='1';$('addEss').checked=false;
+    $('addH').textContent='Add to '+ROOM_IN[r.value];$('addDlg').showModal();$('addName').focus();
+  }
+  $('addForm').addEventListener('submit',async function(ev){ev.preventDefault();
+    var name=$('addName').value.trim(),room=$('addRoom').value;if(!name)return;$('addGo').disabled=true;
+    try{var res=await api('/api/apply',{method:'POST',body:JSON.stringify({source:'hand',bought:iso(today()),actions:[{action:'add',name:name,quantity:Number($('addQty').value)||1,unit:$('addUnit').value,
+        area:room,category:$('addKind').value,expiry:'',shelfLifeDays:0,finishDays:room==='Kitchen'?10:45}]})});
+      if($('addEss').checked&&res.changes&&res.changes[0])await api('/api/items/'+res.changes[0].id,{method:'PATCH',body:JSON.stringify({essential:true})});
+      await refresh();toast('Added '+name+' to '+ROOM_IN[room]+'. Add another, or tap Done.');$('addName').value='';$('addEss').checked=false;$('addName').focus()}
+    catch(e){if(e.code!=='locked')toast('Could not add that. Check your connection.')}finally{$('addGo').disabled=false}});
   function renderPantry(){
     var rooms=$('rooms');rooms.textContent='';
     [['All','Whole home',[160,'M4 11l8-7 8 7v9h-5v-6H9v6H4z']]].concat(Object.keys(AREA).map(function(a){return [a,roomLabel(a),AREA[a]]})).forEach(function(r){
@@ -610,6 +660,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
       var b=el('button','chip',c[1]+(c[2]===''?'':' '+c[2]));b.type='button';b.setAttribute('aria-pressed',stat===c[0]?'true':'false');b.onclick=function(){stat=c[0];renderPantry()};chips.append(b)});
     var q=query.toLowerCase(),shown=scope.filter(function(it){return (sub==='All'||kindOf(it)===sub)&&(!q||it.name.toLowerCase().indexOf(q)>-1)&&
       (stat==='all'||(stat==='use'?needsUse(it):stat==='buy'?needsBuy(it):!!it.essential))});
+    $('addHere').textContent=cat==='All'?'+ Add something':'+ Add to '+ROOM_IN[cat];$('addHere').onclick=function(){openAdd(cat==='All'?'Kitchen':cat,sub==='All'?'':sub)};
     $('pantryCount').textContent=scope.length?shown.length+(shown.length===1?' thing':' things')+(shown.length!==scope.length?' of '+scope.length:'')+(cat==='All'?' at home':' in '+ROOM_IN[cat]):'';
     var ul=$('pantryList');ul.textContent='';
     if(!scope.length){var li0=el('li');li0.append(cat==='All'?emptyCard('Pantry','Nothing here yet','Tap the plus button to add your first items.'):
@@ -624,7 +675,8 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     var card=null,last=null;
     shown.forEach(function(it){var gn=gkey(it);
       if(gn!==last){last=gn;var li=el('li','sec'),hd=el('div','sechead'),n=shown.filter(function(x){return gkey(x)===gn}).length;
-        hd.append(el('h2','',gn),el('span','sub',String(n)));card=el('div','card tight');li.append(hd,card);ul.append(li)}
+        var ab=el('button','link','+ Add'),hr=el('span','row');ab.type='button';ab.style.padding='0';ab.setAttribute('aria-label','Add to '+gn);hr.style.gap='14px';
+        (function(a,k){ab.onclick=function(){openAdd(a,k)}})(areaOf(it),kindOf(it));hr.append(el('span','sub',String(n)),ab);hd.append(el('h2','',gn),hr);card=el('div','card tight');li.append(hd,card);ul.append(li)}
       card.append(itemBlock(it))});
   }
 
@@ -778,14 +830,21 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
       q.append(m,el('span','',String(draft[f[0]])),pl);l.append(q);pe.append(l)});
     function chips(box,all,key){box.textContent='';all.forEach(function(n){var b=el('button','chip',n),on=draft[key].indexOf(n)>-1;b.type='button';b.setAttribute('aria-pressed',on?'true':'false');
       b.onclick=function(){if(on)draft[key]=draft[key].filter(function(x){return x!==n});else draft[key].push(n);drawProfile()};box.append(b)})}
-    chips($('profDiet'),DIETS,'diet');chips($('profAll'),ALLERGENS,'allergies');
+    chips($('profDiet'),DIETS,'diet');chips($('profAll'),ALLERGENS,'allergies');chips($('profCui'),CUISINES,'cuisines');
+    function one(box,pairs,key){box.textContent='';pairs.forEach(function(pr){var b=el('button','chip',pr[1]);b.type='button';b.setAttribute('aria-pressed',draft[key]===pr[0]?'true':'false');
+      b.onclick=function(){draft[key]=pr[0];drawProfile()};box.append(b)})}
+    one($('profCook'),[['quick','20 minutes or less'],['medium','About half an hour'],['any','No rush']],'cook');
+    one($('profDay'),[['','No fixed day']].concat(DAYS.map(function(d,i){return [d,DAYNAMES[i]]})),'shopDay');
     $('profSave').disabled=!draft.persona;
   }
   function openProfile(){document.querySelectorAll('dialog[open]').forEach(function(d){d.close()});
-    draft=profile?{persona:profile.persona,adults:profile.adults,kids:profile.kids,diet:profile.diet.slice(),allergies:profile.allergies.slice()}:{persona:'',adults:2,kids:0,diet:[],allergies:[]};
+    draft=profile?{persona:profile.persona,adults:profile.adults,kids:profile.kids,diet:profile.diet.slice(),allergies:profile.allergies.slice(),cuisines:(profile.cuisines||[]).slice(),cook:profile.cook||'any',shopDay:profile.shopDay||''}:
+      {persona:'',adults:2,kids:0,diet:[],allergies:[],cuisines:[],cook:'any',shopDay:''};
+    $('profStore').value=profile&&profile.store||'';$('profBudget').value=profile&&profile.budget?profile.budget:'';$('profAbout').value=profile&&profile.about||'';
     drawProfile();$('profDlg').showModal()}
   $('profSkip').onclick=function(){try{localStorage.setItem('stocker.profSkip','1')}catch(e){}$('profDlg').close()};
   $('profSave').onclick=async function(){if(!draft.persona)return;$('profSave').disabled=true;
+    draft.store=$('profStore').value;draft.budget=Number($('profBudget').value)||0;draft.about=$('profAbout').value;
     try{var r=await api('/api/profile',{method:'POST',body:JSON.stringify(draft)});profile=r.profile;try{localStorage.removeItem('stocker.starterHide')}catch(e){}$('profDlg').close();render();toast('Saved. Stocker is set up for a '+PERSONA[profile.persona][0].toLowerCase()+'.')}
     catch(e){if(e.code!=='locked')toast('Could not save that. Check your connection.')}finally{$('profSave').disabled=false}};
   $('shareProf').onclick=openProfile;
