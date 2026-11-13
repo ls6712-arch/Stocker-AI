@@ -115,6 +115,9 @@ input[type=text],input[type=password],input[type=number],input[type=date],input[
 .hpill{align-self:flex-start;border:0;background:rgba(255,255,255,.16);color:var(--hero-fg);border-radius:999px;padding:6px 14px;font-weight:600;font-size:13.5px;min-height:38px;text-align:left}
 .tile[aria-pressed="true"]{border-color:var(--accent);box-shadow:inset 0 0 0 1.5px var(--accent)}
 .wrapchips{display:flex;flex-wrap:wrap;gap:8px}
+#profH:focus{outline:0}
+html.big{zoom:1.16}
+.latest{border:0;background:none;text-align:left;padding:0 4px;font-size:13px;color:var(--muted)}
 .chip.add{border-style:dashed;color:var(--accent);background:none}
 .addin{display:flex;gap:6px;flex:1 1 220px;min-width:0}.addin input{flex:1;min-width:0;min-height:40px;padding:6px 12px;border-radius:999px}
 #profDlg .tile,#profDlg .tile b{min-height:0}#profDlg .tile{padding:10px 12px;gap:2px;border-radius:14px}#profDlg .tile span{font-size:12px}
@@ -122,9 +125,9 @@ input[type=text],input[type=password],input[type=number],input[type=date],input[
 .who{display:flex;flex-direction:column;gap:8px}
 .who button.person{display:flex;justify-content:space-between;align-items:center;gap:10px;text-align:left;border:1px solid var(--line);background:var(--surface2);border-radius:14px;padding:10px 12px;min-height:48px}
 .who .person b{font-weight:600}.who .person span{font-size:13px;color:var(--muted)}
-details.more{border-top:1px solid var(--line);padding-top:12px}details.more summary{font-weight:700;font-family:var(--display);cursor:pointer;min-height:40px;display:flex;align-items:center;justify-content:space-between;list-style:none}
-details.more summary::-webkit-details-marker{display:none}details.more summary::after{content:"+";font-size:1.4rem;color:var(--accent)}details.more[open] summary::after{content:"\2212"}
-details.more .in{display:flex;flex-direction:column;gap:14px;padding-top:8px}
+details.fold{border-top:1px solid var(--line);padding-top:12px}details.fold summary{font-weight:700;font-family:var(--display);cursor:pointer;min-height:40px;display:flex;align-items:center;justify-content:space-between;list-style:none}
+details.fold summary::-webkit-details-marker{display:none}details.fold summary::after{content:"+";font-size:1.4rem;color:var(--accent)}details.fold[open] summary::after{content:"\2212"}
+details.fold .in{display:flex;flex-direction:column;gap:14px;padding-top:8px}
 .field{display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:var(--muted)}
 .people{display:flex;flex-wrap:wrap;gap:12px 24px}
 .people label{display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--muted)}
@@ -138,7 +141,7 @@ details.more .in{display:flex;flex-direction:column;gap:14px;padding-top:8px}
 .talk b{font-weight:600;font-size:1.05rem}
 .chips{display:flex;gap:8px;overflow-x:auto;padding:2px 0 4px;scrollbar-width:none}
 .chips::-webkit-scrollbar{display:none}
-.chip{flex:none;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:8px 14px;font-weight:600;font-size:14px;min-height:40px}
+.chip{flex:none;max-width:100%;overflow-wrap:anywhere;text-align:left;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:8px 14px;font-weight:600;font-size:14px;min-height:40px}
 .chip[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
 .check{flex:none;width:44px;height:44px;border-radius:50%;border:2px solid var(--line);background:var(--surface2);display:grid;place-items:center;color:var(--accent)}
 .empty{background:var(--surface);border-radius:20px;padding:26px 20px;display:flex;flex-direction:column;gap:12px;align-items:flex-start;box-shadow:var(--shadow)}
@@ -251,7 +254,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     <div class="grab"></div>
     <h2 id="capH">Add to your home</h2>
     <div class="tiles">
-      <label class="tile"><span class="ico" style="--h:165"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6"/></svg></span><b>Scan a bill</b><span>Photo of a receipt</span><input type="file" id="billFile" accept="image/*" title="" aria-label="Photograph a bill"></label>
+      <label class="tile"><span class="ico" style="--h:165"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6"/></svg></span><b>Scan a receipt</b><span>Photo of a receipt</span><input type="file" id="billFile" accept="image/*" title="" aria-label="Photograph a receipt"></label>
       <label class="tile"><span class="ico" style="--h:205"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h3l2-3h6l2 3h3v13H4z"/><circle cx="12" cy="13" r="3.500"/></svg></span><b>Scan a shelf</b><span>Kitchen, bathroom, any cupboard</span><input type="file" id="shelfFile" accept="image/*" title="" aria-label="Photograph a shelf"></label>
       <button type="button" class="tile" id="capVoice"><span class="ico" style="--h:355"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></span><b>Voice note</b><span>Bought, cooked or running low</span></button>
       <button type="button" class="tile" id="capCode"><span class="ico" style="--h:265"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6v12M7 6v12M11 6v12M14 6v12M17 6v12M20 6v12"/></svg></span><b>Barcode</b><span>Scan a product</span></button>
@@ -318,6 +321,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     <button type="button" class="btn primary block" id="shareCopy">Copy link</button>
     <p class="sub" id="shareMe"></p>
     <button type="button" class="btn block" id="shareProf">Change your home profile</button>
+    <button type="button" class="btn block" id="bigText" aria-pressed="false">Larger text</button>
     <button type="button" class="btn block" data-close>Close</button>
   </div>
 </dialog>
@@ -326,7 +330,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
   <form class="pad" id="addForm">
     <div class="grab"></div>
     <h2 id="addH">Add something</h2>
-    <p class="sub">For a whole shop, scan the bill with the plus button. This is for one thing at a time.</p>
+    <p class="sub">For a whole shop, scan the receipt with the plus button. This is for one thing at a time.</p>
     <label for="addName" class="sub">What is it?</label>
     <input type="text" id="addName" maxlength="60" required placeholder="Toothpaste">
     <div class="meta">
@@ -336,7 +340,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
       <label for="addKind">Kind<select id="addKind"></select></label>
     </div>
     <div class="meta">
-      <label for="addNote">Size or brand<input type="text" id="addNote" maxlength="40" placeholder="Size 4"></label>
+      <label for="addNote">Size or brand<input type="text" id="addNote" maxlength="40" placeholder="Optional"></label>
       <label for="addOwner" id="addOwnerL">Whose is it<select id="addOwner"></select></label>
     </div>
     <label class="row" for="addEss" style="gap:10px"><input type="checkbox" id="addEss" style="width:22px;height:22px;accent-color:var(--accent)"><span>This is an essential, warn me before it runs out</span></label>
@@ -402,7 +406,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     <div class="wrapchips" id="profRules" role="group" aria-label="Health rules"></div>
     <h3>How you eat</h3>
     <div class="wrapchips" id="profDiet" role="group" aria-label="Diet"></div>
-    <details class="more" id="profMore">
+    <details class="fold" id="profMore">
       <summary>More ways to tailor it</summary>
       <div class="in">
         <h3>Things nobody eats</h3>
@@ -413,6 +417,8 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
         <div class="wrapchips" id="profCui" role="group" aria-label="Favourite food"></div>
         <h3>Weeknight cooking time</h3>
         <div class="wrapchips" id="profCook" role="group" aria-label="Cooking time"></div>
+        <h3>Nights you eat out or order in each week</h3>
+        <div class="people" id="profOut"></div>
         <h3>Your shopping</h3>
         <div class="wrapchips" id="profDay" role="group" aria-label="Usual shopping day"></div>
         <p class="grp">Where you shop</p>
@@ -489,7 +495,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
   function iconFor(o){var a=areaOf(o),c=a==='Kitchen'?(CAT[o.category]||CAT.Pantry):AREA[a],b=el('span','ico');b.style.setProperty('--h',c[0]);b.append(icon(c[1]));
     if(o.name){b.className='ico pic';picFor(b,o.name)}return b}
   /* household profiles: a persona sets sensible defaults, then people, diet and allergies refine it */
-  var PERSONA={mom:['Busy mom','Kids, school runs, no spare time',2,3,[],'home'],dad:['Single dad','One adult running the whole house',1,2,[],'home'],
+  var PERSONA={mom:['Busy mom','Kids, school runs, no spare time',2,3,[],'home'],dadbusy:['Busy dad','Kids, school runs, no spare time',2,3,[],'home'],dad:['Single dad','One adult running the whole house',1,2,[],'home'],momsolo:['Single mom','One adult running the whole house',1,2,[],'home'],
     family4:['Family of four','Two adults, two kids',2,2,[],'home'],big:['Big family','Five or more at the table',2,4,[],'home'],
     newparents:['New parents','A baby and no sleep',2,1,[],'home'],couple:['Couple','Two of you',2,0,[],'home'],
     solo:['Living solo','Just you',1,0,[],'home'],roommates:['Roommates','Shared kitchen, shared staples',3,0,[],'home'],
@@ -518,16 +524,17 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     other:['Milk','Eggs','Bread','Rice','Coffee','Fruit','Vegetables','Toilet paper','Dish soap','Laundry detergent']};
   var CUISINES=['Indian','Italian','Mexican','Chinese','Thai','Japanese','Mediterranean','American','Middle Eastern','Korean'],DAYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],DAYNAMES=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
   var DIETS=['Vegetarian','Vegan','Pescatarian','Eggetarian','Halal','Kosher','Gluten-free','Dairy-free','High protein','Keto','Low carb','Paleo','Mediterranean','Jain','No onion or garlic','No beef','No pork','Low FODMAP'],ALLERGENS=['Peanuts','Tree nuts','Milk','Eggs','Wheat','Soy','Fish','Shellfish','Sesame','Mustard','Celery','Corn','Sulphites'];
-  var RULES=['Celiac','Lactose intolerant','Low salt','Low sugar'],AVOID=['Mushrooms','Onions','Cilantro','Spicy food','Seafood','Olives','Eggplant'],GOALS=[['waste','Waste less'],['spend','Spend less'],['healthy','Eat healthier'],['time','Save time'],['stock','Never run out']],
+  var RULES=['Celiac','Lactose intolerant','Low salt','Low sugar','Diabetic'],AVOID=['Mushrooms','Onions','Cilantro','Spicy food','Seafood','Olives','Eggplant'],GOALS=[['waste','Waste less'],['spend','Spend less'],['healthy','Eat healthier'],['time','Save time'],['stock','Never run out']],
     KINDS=[['adult','Adult'],['teen','Teenager'],['child','Child'],['toddler','Toddler'],['baby','Baby'],['older','Older adult'],['visitor','Visits often']];
-  var PLANT=/peanut butter|almond butter|oat milk|almond milk|soy milk|coconut milk/i,DAIRY=/milk|yogurt|cheese|butter|cream|whey/i,MEAT=/chicken|beef|pork|turkey|salmon|tuna|fish|meat|hot dog|bacon|ham\b/i,WHEAT=/bread|pasta|noodle|cereal|flour|tortilla|pizza|cracker/i;
+  var PLANT=/peanut butter|almond butter|oat milk|almond milk|soy milk|coconut milk/i,DAIRY=/milk|yogurt|cheese|butter|cream|whey|parmesan|mozzarella|cheddar|paneer|ghee|custard/i,MEAT=/chicken|beef|pork|turkey|salmon|tuna|fish|meat|hot dog|bacon|ham\b/i,WHEAT=/bread|pasta|noodle|cereal|flour|tortilla|pizza|cracker/i;
   var CLASH={Peanuts:/peanut/i,'Tree nuts':/almond|walnut|cashew|pecan|hazelnut|pistachio/i,Eggs:/\begg/i,Soy:/tofu|soy|edamame|tempeh/i,Fish:/salmon|tuna|fish/i,Shellfish:/shrimp|prawn|crab|lobster/i,Sesame:/sesame|tahini|hummus/i};
   var FISHY=/salmon|tuna|fish|shrimp|prawn|crab|lobster/i,PORK=/pork|bacon|ham\b|hot dog/i;
   function everyone(key){var out=profile[key].slice();(profile.members||[]).forEach(function(m){m[key].forEach(function(x){if(out.indexOf(x)<0)out.push(x)})});return out}
-  function mentions(name,list){var l=name.toLowerCase();return list.some(function(x){var w=x.toLowerCase().replace(/(es|s)$/,'');return w.length>2&&l.indexOf(w)>-1})}
+  function mentions(name,list){var l=' '+name.toLowerCase();return list.some(function(x){var w=x.toLowerCase().replace(/(es|s)$/,'');return w.length>2&&l.indexOf(' '+w)>-1})}
   /* shared lists respect every allergy and medical rule in the home, and the diet the whole home follows */
+  var NOTFOOD=/diaper|wipe|soap|detergent|shampoo|toothpaste|paper|bags?\b|litter|cleaner|sponge|batter(y|ies)|lotion|sunscreen|bandage|medicine|tablet|thermometer|candle|roller|napkin|tissue|pods|\bwash\b|antiseptic|reliever|antacid|pet treats| food$/i;
   function fits(name){
-    if(!profile)return true;var dairy=DAIRY.test(name)&&!PLANT.test(name),d=profile.diet,a=everyone('allergies'),r=everyone('rules'),has=function(l,x){return l.indexOf(x)>-1};
+    if(!profile||NOTFOOD.test(name)&&!/baby food/i.test(name))return true;var dairy=DAIRY.test(name)&&!PLANT.test(name),d=everyone('diet'),a=everyone('allergies'),r=everyone('rules'),has=function(l,x){return l.indexOf(x)>-1};
     if(has(a,'Milk')&&dairy)return false;if((has(a,'Wheat')||has(r,'Celiac'))&&(WHEAT.test(name)||/oats|barley|malt|granola/i.test(name)))return false;
     for(var k in CLASH)if(has(a,k)&&CLASH[k].test(name))return false;
     if(mentions(name,a.filter(function(x){return ALLERGENS.indexOf(x)<0}))||mentions(name,profile.avoid||[]))return false;
@@ -536,17 +543,20 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     if(has(d,'Pescatarian')&&MEAT.test(name)&&!FISHY.test(name))return false;
     if((has(d,'Halal')||has(d,'Kosher')||has(d,'No pork'))&&PORK.test(name))return false;if(has(d,'No beef')&&/beef/i.test(name))return false;
     if((has(d,'Jain')||has(d,'No onion or garlic'))&&/onion|garlic/i.test(name))return false;
-    if(has(d,'Dairy-free')&&dairy)return false;if(has(d,'Gluten-free')&&WHEAT.test(name))return false;
+    if((has(d,'Dairy-free')||has(r,'Lactose intolerant'))&&dairy)return false;if(has(d,'Gluten-free')&&WHEAT.test(name))return false;
     return true;
   }
+  var ALIAS={dadbusy:'mom',momsolo:'dad'};
   function pers(){return profile?(profile.personas||[profile.persona]):[]}
   function persLabel(){var p=pers();return p.length===1?PERSONA[p[0]][0]:'your home'}
-  function starterList(){var lists=pers().map(function(k){return STARTER[k]}),out=[],extra=[];
+  function starterList(){var lists=pers().map(function(k){return STARTER[ALIAS[k]||k]}),out=[],extra=[];
     (profile.pets||[]).forEach(function(p){if(p==='Dog')extra.push('Dog food','Poop bags');else if(p==='Cat')extra.push('Cat food','Cat litter');else extra.push(p+' food')});
     if((profile.members||[]).some(function(m){return m.kind==='baby'}))extra.push('Diapers','Baby wipes');
     if(extra.length)lists=lists.map(function(l){return l.filter(function(n){return n!=='Pet food'})});lists.unshift(extra);for(var i=0;i<14;i++)lists.forEach(function(l){if(l[i]&&out.indexOf(l[i])<0)out.push(l[i])});return out}
-  function profileLine(){if(!profile)return 'Make it yours';var n=profile.adults+profile.kids,a=everyone('allergies');
-    return pers().map(function(k){return PERSONA[k][0]}).join(' + ')+', '+n+(n===1?' person':' people')+(profile.diet.length?', '+profile.diet.join(', '):'')+(a.length?', no '+a.join(', ').toLowerCase():'')}
+  function profileLine(){if(!profile)return 'Make it yours';var n=profile.adults+profile.kids,a=everyone('allergies'),r=everyone('rules'),lab=pers().map(function(k){return PERSONA[k][0]}),
+      eat=profile.diet.length===1?profile.diet[0]:profile.diet.length?profile.diet.length+' diets':'',
+      care=a.length===1?'no '+a[0].toLowerCase():a.length?a.length+' allergies':r.length===1?r[0].toLowerCase():r.length?r.length+' health rules':'';
+    return (lab.length>2?lab[0]+' + '+(lab.length-1)+' more':lab.join(' + '))+', '+n+(n===1?' person':' people')+(eat?', '+eat:'')+(care?', '+care:'')}
   var SVGNS='http://www.w3.org/2000/svg';
   var $=function(id){return document.getElementById(id)};
   function el(t,c,txt){var e=document.createElement(t);if(c)e.className=c;if(txt!=null)e.textContent=txt;return e}
@@ -561,8 +571,10 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
   function addDays(s,n){var d=parse(s)||today();d.setDate(d.getDate()+n);return iso(d)}
   function fmt(s){var d=parse(s);if(!d)return '—';var o={month:'short',day:'numeric'};if(d.getFullYear()!==today().getFullYear())o.year='numeric';return d.toLocaleDateString(undefined,o)}
   function qtyText(q){return String(Math.round(q*100)/100)}
+  function amount(q,u){var n=qtyText(q);return u==='pcs'?n:u==='pack'?n+(q===1?' pack':' packs'):n+' '+u}
+  function amt(it){return it.qty<=0?'Out':amount(it.qty,it.unit)}
 
-  var items=[],log=[],extras=[],spend=null,profile=null,me='',tab='today',cat='All',query='',open={},busy=false,pending=null,toastTimer=null;
+  var items=[],log=[],extras=[],waste=0,spend=null,profile=null,me='',tab='today',cat='All',query='',open={},busy=false,pending=null,toastTimer=null;
 
   function toast(msg,label,fn){clearTimeout(toastTimer);$('toastMsg').textContent=msg;var b=$('toastBtn');b.hidden=!label;if(label){b.textContent=label;b.onclick=function(){$('toast').hidden=true;fn()}}
     $('toast').hidden=false;toastTimer=setTimeout(function(){$('toast').hidden=true},label?12000:5000)}
@@ -587,16 +599,18 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
      Anything the app merely suspects is offered as a suggestion and never goes on the list by itself. */
   /* fewer people at home this week means things last longer */
   function homeScale(){if(!profile)return 1;var total=Math.max(1,profile.adults+profile.kids),away=Math.min(total-1,(profile.members||[]).filter(function(m){return m.away}).length);return total/(total-away)}
-  function runOut(it){return addDays(it.bought||it.added,Math.round(it.finish_days*homeScale()))}
+  /* eating out stretches fresh food; the freezer stops the clock on a date */
+  function paceScale(it){var out=profile&&profile.eatOut?Math.min(6,profile.eatOut):0;return homeScale()*(areaOf(it)==='Kitchen'?7/(7-out*0.5):1)}
+  function runOut(it){return addDays(it.bought||it.added,Math.round(it.finish_days*paceScale(it)))}
   function plan(it){
     if(it.qty<=0)return {days:-999,date:iso(today()),why:"You're out"};
     if(it.low)return {days:-998,date:iso(today()),why:'Running low'};
     var d=runOut(it);return {days:daysFrom(d),date:d,why:it.learned?'at your usual pace':'at a typical pace'};
   }
   function guess(it){return it.qty>0&&!it.low&&daysFrom(runOut(it))<=(it.essential?3:1)&&-daysFrom(it.bought||it.added)>=2}
-  function maybeLow(it){return !needsBuy(it)&&guess(it)}
+  function maybeLow(it){return !needsBuy(it)&&!needsUse(it)&&guess(it)}
   function expiry(it){
-    if(!it.expiry||it.qty<=0)return null;var d=daysFrom(it.expiry);
+    if(!it.expiry||it.qty<=0||it.frozen)return null;var d=daysFrom(it.expiry);
     if(d<0)return {cls:'bad',text:'Expired',d:d};
     if(d===0)return {cls:'warn',text:'Use today',d:d};
     if(d<=3)return {cls:'warn',text:d+(d===1?' day left':' days left'),d:d};
@@ -615,7 +629,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     if(spend&&spend.total>0){var sp=el('div','card'),money=function(n){try{return new Intl.NumberFormat(undefined,{style:'currency',currency:spend.currency||'USD',maximumFractionDigits:0}).format(n)}catch(e){return String(Math.round(n))}};
       var row=el('div','row'),gg=el('div','grow');gg.append(el('div','sub','Spent this month'+(profile&&profile.budget?' of your '+money(profile.budget)+' budget':'')),el('div','name',money(spend.total)));gg.lastChild.style.fontFamily='var(--display)';gg.lastChild.style.fontSize='1.6rem';row.append(gg);sp.append(row);
       if(profile&&profile.budget){var bb=el('div','bar'),bf=el('i',spend.total>profile.budget?'bad':spend.total>profile.budget*0.8?'warn':'');bf.style.width=Math.min(100,Math.round(spend.total/profile.budget*100))+'%';bb.append(bf);sp.append(bb)}
-      var fx=el('div','facts');spend.byArea.forEach(function(a){var t=el('span');t.append(document.createTextNode(a.area+' '),el('b','',money(a.amount)));fx.append(t)});sp.append(fx,el('p','sub','From the prices on bills you scanned.'));v.append(sp)}
+      var fx=el('div','facts');spend.byArea.forEach(function(a){var t=el('span');t.append(document.createTextNode(a.area+' '),el('b','',money(a.amount)));fx.append(t)});sp.append(fx,el('p','sub','From the prices on receipts you scanned.'));v.append(sp)}
   }
   function starterCard(v){
     var hide=false;try{hide=localStorage.getItem('stocker.starterHide')==='1'}catch(e){}
@@ -631,18 +645,20 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
   function renderToday(){
     var v=$('v-today');v.textContent='';
     var use=items.filter(needsUse).sort(function(a,b){return expiry(a).d-expiry(b).d}),buy=items.filter(needsBuy).sort(function(a,b){return plan(a).days-plan(b).days});
-    var n=use.length+buy.length,hero=el('div','hero'),top=el('div');
+    var n=use.length+buy.length+extras.length,hero=el('div','hero'),top=el('div');
     top.append(el('p','day',today().toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric'})));
     var part=profile?(profile.members||[]).filter(function(m){return m.when}):[];
     var hp=el('button','hpill',profileLine());hp.type='button';hp.setAttribute('aria-label','Your home profile: '+profileLine());hp.onclick=openProfile;
     top.append(el('h2','',!items.length?'Nothing tracked yet':n?n+(n===1?' thing needs you':' things need you'):"You're all set"));
-    top.append(el('p','',!items.length?'Scan your last grocery bill and I will take it from there.':profile&&profile.shopDay===DAYS[today().getDay()]?"It's your shopping day"+(profile.store?' at '+profile.store:'')+'. '+(buy.length+extras.length)+' on your list.':n?'Here is what to use up and what to pick up.':'Nothing to use up, and nothing on your list.'));
+    top.append(el('p','',!items.length?'Scan your last grocery receipt and I will take it from there.':profile&&profile.shopDay===DAYS[today().getDay()]?"It's your shopping day"+(profile.store?' at '+profile.store:'')+'. '+(buy.length+extras.length)+' on your list.':n?'Here is what to use up and what to pick up.':'Nothing to use up, and nothing on your list.'));
     hero.append(hp,top);
     var trio=el('div','trio');[[items.length,'items','pantry'],[use.length,'use soon','today'],[buy.length+extras.length,'to buy','list']].forEach(function(s){
       var b=el('button');b.type='button';b.append(el('b','',String(s[0])),el('span','',s[1]));b.onclick=function(){go(s[2])};trio.append(b)});
     hero.append(trio);v.append(hero);
+    if(log.length){var l0=log[0],d0=new Date(l0.at),mins=Math.round((Date.now()-d0)/60000),ago=isNaN(d0)?'':mins<2?'just now':mins<60?mins+' min ago':mins<1440?Math.round(mins/60)+' h ago':Math.round(mins/1440)+' d ago';
+      var lt=el('button','latest','Latest: '+(l0.who?l0.who+' ':'')+l0.summary+(ago?', '+ago:'')+'.');lt.type='button';lt.setAttribute('aria-label','Latest activity. Open the full history.');lt.onclick=function(){go('log')};v.append(lt)}
     if(part.length){var wh=el('div','card'),wc=el('div','wrapchips');wh.append(el('h3','',"Who's home this week?"),el('p','sub','Tap anyone who is away. I stretch how long things last and plan dinners for who is here.'));
-      part.forEach(function(m){var b=el('button','chip',m.name);b.type='button';b.setAttribute('aria-pressed',m.away?'false':'true');b.setAttribute('aria-label',m.name+(m.away?', away this week':', home this week'));
+      part.forEach(function(m){var b=el('button','chip',m.name+(m.away?', away':', home'));b.type='button';b.setAttribute('aria-pressed',m.away?'false':'true');b.setAttribute('aria-label',m.name+(m.away?', away this week':', home this week'));
         b.onclick=async function(){m.away=!m.away;render();try{var r=await api('/api/profile',{method:'POST',body:JSON.stringify(profile)});profile=r.profile;render();toast(m.away?m.name+' is away this week.':m.name+' is home this week.')}
           catch(e){m.away=!m.away;render();if(e.code!=='locked')toast('Could not save that. Check your connection.')}};wc.append(b)});
       wh.append(wc);v.append(wh)}
@@ -651,7 +667,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     talk.onclick=function(){$('capVoice').click()};v.append(talk);
     if(items.filter(function(i){return areaOf(i)==='Kitchen'&&i.qty>0}).length>=2){
       var ck=el('button','talk');ck.type='button';ck.append(icon(POT));var ct=el('span');
-      ct.append(el('b','','What can I cook tonight?'),el('span','sub','Dinner ideas that use up what goes off soonest'));ck.append(ct);ck.onclick=cookIdeas;v.append(ck)}
+      ct.append(el('b','','What can I cook?'),el('span','sub','Dinner ideas that use up what goes off soonest'));ck.append(ct);ck.onclick=cookIdeas;v.append(ck)}
     if(!items.length)starterCard(v);
     if(!items.length){v.append(emptyCard('Pantry','Start with one photo','Photograph a receipt, a bathroom shelf or a cupboard, scan a barcode, or just say what you bought.','Add your first items',function(){$('capDlg').showModal()}));return}
     var ess=buy.filter(function(i){return i.essential});buy=buy.filter(function(i){return !i.essential});
@@ -661,8 +677,11 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
       s0.append(c0);v.append(s0)}
     if(use.length){var s1=el('div','sec');s1.append(el('h2','','Use soon'));var c1=el('div','card');
       use.forEach(function(it){var e=expiry(it),x=itemRow(it,el('span','pill '+e.cls,e.text));
-        x.grow.append(el('div','sub',e.d<0?'Went past its date '+(-e.d)+(e.d===-1?' day ago':' days ago'):'Good until '+fmt(it.expiry)));c1.append(x.row)});
+        x.grow.append(el('div','sub',e.d<0?'Went past its date '+(-e.d)+(e.d===-1?' day ago':' days ago'):'Best before '+fmt(it.expiry)));c1.append(x.row)});
       s1.append(c1);v.append(s1)}
+    var chk=items.filter(function(i){return i.warn&&i.qty>0});
+    if(chk.length){var s3=el('div','sec');s3.append(el('h2','','Check the label'),el('p','sub','These may not suit someone at home. I can miss things, so read the pack before anyone eats them.'));var c3=el('div','card');
+      chk.forEach(function(it){var x=itemRow(it);x.grow.append(el('div','sub',it.warn.charAt(0).toUpperCase()+it.warn.slice(1)));c3.append(x.row)});s3.append(c3);v.append(s3)}
     if(buy.length){var s2=el('div','sec'),h=el('div','sechead'),lk=el('button','link','Open list');lk.type='button';lk.onclick=function(){go('list')};
       h.append(el('h2','','Buy next'),lk);s2.append(h);var c2=el('div','card');
       buy.slice(0,4).forEach(function(it){var x=itemRow(it,el('span','pill '+(it.qty<=0?'bad':'warn'),it.qty<=0?'Out':'Low'));
@@ -685,29 +704,36 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     if(it.qty<=0)sub.append(el('span','pill bad','Out'));
     else if(it.low)sub.append(el('span','pill warn','Running low'));
     else if(e&&e.cls)sub.append(el('span','pill '+e.cls,e.text));
-    else if(it.expiry)sub.append(document.createTextNode(it.expiry_est&&daysFrom(it.expiry)>=150?'Keeps a long time':'Fresh until '+fmt(it.expiry)));
+    else if(it.expiry)sub.append(document.createTextNode(it.expiry_est&&daysFrom(it.expiry)>=150&&areaOf(it)!=='Health'?'Keeps a long time':'Best before '+fmt(it.expiry)));
     if(it.warn)sub.append(el('span','pill bad','Check label: '+it.warn));
+    if(it.frozen)sub.append(el('span','pill plain','Frozen'));
     if(it.essential)sub.append(el('span','pill plain','Essential'));
     if(it.owner)sub.append(el('span','pill plain',it.owner+"'s"));
     g.append(el('span','name',fullName(it)),sub);
-    head.append(iconFor(it),g,el('span','q',qtyText(it.qty)+' '+it.unit),icon('M6 9l6 6 6-6'));
+    head.append(iconFor(it),g,el('span','q',amt(it)),icon('M6 9l6 6 6-6'));
     head.onclick=function(){open[it.id]=!open[it.id];renderPantry()};wrap.append(head);
     if(!isOpen)return wrap;
     var panel=el('div','ipanel'),q2=el('span','qty'),minus=el('button','','\u2212'),plus=el('button','','+');minus.type=plus.type='button';
     minus.setAttribute('aria-label','Use some '+it.name);plus.setAttribute('aria-label','Add more '+it.name);
     var step=it.qty>=100?50:(it.unit==='kg'||it.unit==='L'||it.unit==='lb')?0.5:1;
     minus.onclick=function(){setQty(it,Math.max(0,it.qty-step))};plus.onclick=function(){setQty(it,it.qty+step)};
-    q2.append(minus,el('span','',qtyText(it.qty)+' '+it.unit),plus);panel.append(q2);
-    var acts=el('div','acts'),outB=el('button','mini',"We're out"),essB=el('button','mini',it.essential?'Essential':'Make essential');
+    q2.append(minus,el('span','',it.qty<=0?'0':amount(it.qty,it.unit)),plus);panel.append(q2);
+    var acts=el('div','acts'),outB=el('button','mini','Ran out'),essB=el('button','mini',it.essential?'Essential':'Make essential');
     outB.type=essB.type='button';outB.disabled=it.qty<=0;essB.setAttribute('aria-pressed',it.essential?'true':'false');
     outB.onclick=async function(){it.qty=0;render();try{await api('/api/items/'+it.id,{method:'PATCH',body:JSON.stringify({qty:0,out:true})});await refresh();toast(it.name+' is on your shopping list.')}catch(er){if(er.code!=='locked')toast('Could not save that. Check your connection.')}};
     essB.onclick=async function(){it.essential=it.essential?0:1;render();try{await api('/api/items/'+it.id,{method:'PATCH',body:JSON.stringify({essential:!!it.essential})});
       toast(it.essential?it.name+' is an essential. I will warn you earlier.':it.name+' is no longer an essential.')}catch(er){if(er.code!=='locked')toast('Could not save that. Check your connection.')}};
-    acts.append(outB,essB);panel.append(acts);
-    var det=el('div','meta'),nl=el('label','','Size or brand'),ni=el('input');ni.type='text';ni.maxLength=40;ni.value=it.note||'';ni.placeholder='Size 4';nl.append(ni);det.append(nl);
+    var frB=el('button','mini',it.frozen?'In the freezer':'Put in freezer'),binB=el('button','mini','Threw it away');frB.type=binB.type='button';frB.setAttribute('aria-pressed',it.frozen?'true':'false');
+    frB.onclick=async function(){it.frozen=it.frozen?0:1;render();try{await api('/api/items/'+it.id,{method:'PATCH',body:JSON.stringify({frozen:!!it.frozen})});toast(it.frozen?it.name+' is frozen. I will stop counting down its date.':it.name+' is out of the freezer.')}catch(er){if(er.code!=='locked')toast('Could not save that. Check your connection.')}};
+    binB.onclick=async function(){try{await api('/api/items/'+it.id,{method:'PATCH',body:JSON.stringify({binned:true})});await refresh();toast('Noted. '+it.name+' is gone and will not be put on your list.')}catch(er){if(er.code!=='locked')toast('Could not save that. Check your connection.')}};
+    acts.append(outB,essB);if(areaOf(it)==='Kitchen')acts.append(frB);acts.append(binB);panel.append(acts);
+    var det=el('div','meta'),nl=el('label','','Size or brand'),ni=el('input');ni.type='text';ni.maxLength=40;ni.value=it.note||'';ni.placeholder='Optional';nl.append(ni);det.append(nl);
     var saveDet=async function(body){try{await api('/api/items/'+it.id,{method:'PATCH',body:JSON.stringify(body)});await refresh();toast('Saved.')}catch(er){if(er.code!=='locked')toast('Could not save that. Check your connection.')}};
     ni.onchange=function(){saveDet({note:ni.value.trim()})};
     if(owners().length>1||it.owner){var ol=el('label','','Whose is it'),os=el('select');ownerFill(os,it.owner||'');ol.append(os);det.append(ol);os.onchange=function(){saveDet({owner:os.value})}}
+    var ll=el('label','','Lasts you about'),ls=el('select'),opts=[[4,'A few days'],[7,'A week'],[14,'Two weeks'],[30,'A month'],[60,'Two months'],[90,'Three months'],[180,'Six months']];
+    if(!opts.some(function(o){return o[0]===it.finish_days}))opts.push([it.finish_days,it.finish_days+' days']);opts.sort(function(a,b){return a[0]-b[0]});
+    opts.forEach(function(o){ls.append(new Option(o[1],o[0]))});ls.value=String(it.finish_days);ll.append(ls);det.append(ll);ls.onchange=function(){saveDet({finishDays:Number(ls.value)})};
     panel.append(det);
     var f=fresh(it);
     if(f!=null){var bar=el('div','bar'),fill=el('i',e&&e.cls?e.cls:'');fill.style.width=Math.max(4,Math.round((1-f)*100))+'%';bar.append(fill);bar.setAttribute('role','img');
@@ -715,7 +741,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     var m=el('div','more'),txt=el('span');m.style.borderTop='0';m.style.paddingTop='0';
     txt.textContent=(it.bought?'Bought '+fmt(it.bought):'Purchase date not recorded')+(it.store?' at '+it.store:'')+'. '+
       (it.expiry?(it.expiry_est&&daysFrom(it.expiry)>=150?'':'Best before '+fmt(it.expiry)+(it.expiry_est?' (my estimate). ':'. ')):'')+
-      (needsBuy(it)?'On your shopping list.':'Should last until '+fmt(p.date)+', '+p.why+'.');
+      (needsBuy(it)?'On your shopping list.':it.frozen?'In the freezer, so the date is on hold.':needsUse(it)?'Use it up before then.':p.days<0?'By my guess this should be nearly gone.':'My guess: you will run out around '+fmt(p.date)+', '+p.why+'.');
     var rm=el('button','danger','Remove');rm.type='button';rm.setAttribute('aria-label','Remove '+it.name);
     rm.onclick=async function(){try{await api('/api/items/'+it.id,{method:'DELETE'});items=items.filter(function(i){return i!==it});render();toast('Removed '+it.name+'.')}catch(er){if(er.code!=='locked')toast('Could not remove it. Try again.')}};
     m.append(txt,rm);panel.append(m);wrap.append(panel);return wrap;
@@ -728,7 +754,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
   var ROOM_IN={Kitchen:'the kitchen',Bathroom:'the bathroom',Cleaning:'cleaning supplies',Kids:"the kids' things",Pets:'pet supplies',Health:'the medicine cabinet',Home:'general supplies'};
   function roomLabel(a){return a==='Home'?'General':a}
   function kindOf(it){return ROOM_CATS[areaOf(it)].indexOf(it.category)>-1?it.category:'Other'}
-  function kindLabel(k){return k==='Pantry'?'Cupboard staples':k}
+  function kindLabel(k){return k==='Pantry'?'Cupboard staples':k==='Meat'?'Meat and fish':k}
   function fillKinds(room,kind){var k=$('addKind');k.textContent='';ROOM_CATS[room].concat(['Other']).forEach(function(c){k.append(new Option(kindLabel(c),c))});
     k.value=ROOM_CATS[room].indexOf(kind)>-1?kind:(room==='Kitchen'?'Pantry':'Other')}
   function openAdd(room,kind){
@@ -797,7 +823,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
       catch(er){if(er.code!=='locked')toast(er.code==='full'?'The list is full. Tick a few things off first.':'Could not add that. Check your connection.')}});
     v.append(f);
     if(!count)v.append(emptyCard('Pantry','Nothing to buy','Things land here when you run out, say they are low, or add them yourself.'));
-    function tick(label,fn){var ck=el('button','check');ck.type='button';ck.setAttribute('aria-label',label);ck.append(icon('M6 12l4 4 8-9'));ck.onclick=fn;return ck}
+    function tick(label,fn){var ck=el('button','check');ck.type='button';ck.setAttribute('aria-label',label);ck.onclick=function(){if(!ck.firstChild)ck.append(icon('M6 12l4 4 8-9'));fn()};return ck}
     if(extras.length){var se=el('div','sec'),ce=el('div','card');se.append(el('h2','','Added by hand'),ce);
       extras.forEach(function(x){var r=el('div','row'),g=el('div','grow');g.append(el('div','name',x.text));if(x.who)g.append(el('div','sub','Added by '+x.who));
         r.append(tick('Mark '+x.text+' as bought',async function(){try{await api('/api/extras/'+x.id,{method:'DELETE'});await refresh()}catch(er){if(er.code!=='locked')toast('Could not save that. Check your connection.')}}),g);ce.append(r)});
@@ -806,7 +832,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     buy.sort(function(a,b){return order.indexOf(areaOf(a))-order.indexOf(areaOf(b))});
     buy.forEach(function(it){var p=plan(it);
       if(areaOf(it)!==lastArea){lastArea=areaOf(it);var sec=el('div','sec');c=el('div','card');sec.append(el('h2','',lastArea),c);v.append(sec)}
-      var r=el('div','row'),g=el('div','grow');g.append(el('div','name',fullName(it)),el('div','sub',(it.owner?it.owner+"'s. ":'')+(it.qty<=0?"You're out":it.low?'Running low':'Essential, runs out about '+fmt(p.date))+(it.store?', usually from '+it.store:'')));
+      var r=el('div','row'),g=el('div','grow');g.append(el('div','name',fullName(it)),el('div','sub',(it.owner?it.owner+"'s. ":'')+(it.qty<=0?"You're out":it.low?'Running low':'Essential, runs out about '+fmt(p.date))+(it.store?', last bought at '+it.store:'')));
       r.append(tick('Mark '+it.name+' as bought',function(){restock(it)}),g,iconFor(it));c.append(r)});
     if(count)v.append(el('p','sub','Tick something when you buy it. Tracked items are restocked at home.'));
     var cp=el('button','btn block','Copy shopping list');cp.type='button';cp.onclick=function(){
@@ -846,7 +872,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
   }
 
   var POT='M5 10h14v6a4 4 0 0 1-4 4H9a4 4 0 0 1-4-4zM3 10h18M9 6c0-1 1-1 1-2M14 6c0-1 1-1 1-2';
-  var SRC={cook:['Cooked',POT,20],bill:['Bill','M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6',165],shelf:['Shelf photo','M4 7h3l2-3h6l2 3h3v13H4z',205],voice:['Voice note','M9 3h6v11H9zM5 11a7 7 0 0 0 14 0M12 18v3',355],
+  var SRC={cook:['Cooked',POT,20],bill:['Receipt','M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6',165],shelf:['Shelf photo','M4 7h3l2-3h6l2 3h3v13H4z',205],voice:['Voice note','M9 3h6v11H9zM5 11a7 7 0 0 0 14 0M12 18v3',355],
     barcode:['Barcode','M4 6v12M7 6v12M11 6v12M14 6v12M17 6v12M20 6v12',265],text:['Typed note','M4 20h4L19 9l-4-4L4 16z',35],hand:['By hand','M6 12l4 4 8-9',135]};
   /* curated kits: checklists for real situations, checked against what is already at home */
   var KITS=[
@@ -892,7 +918,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
   }
   function renderLog(){
     var v=$('v-log');v.textContent='';
-    var ps=pers(),mine=function(k){return k.p.some(function(x){return ps.indexOf(x)>-1})},kits=KITS.filter(function(k){return kitItems(k).length>=3&&(!k.p.length||!ps.length||mine(k)||ps.indexOf('other')>-1)})
+    var ps=pers().map(function(k){return ALIAS[k]||k}),mine=function(k){return k.p.some(function(x){return ps.indexOf(x)>-1})},kits=KITS.filter(function(k){return kitItems(k).length>=3&&(!k.p.length||!ps.length||mine(k)||ps.indexOf('other')>-1)})
       .sort(function(a,b){return mine(b)-mine(a)});
     var sk=el('div','sec'),hd=el('div','sechead');hd.append(el('h2','',profile?(ps.length===1&&ps[0]!=='other'?'Curated for a '+PERSONA[ps[0]][0].toLowerCase():'Curated for your home'):'Curated kits'));
     if(!profile){var mk=el('button','link','Make it yours');mk.type='button';mk.onclick=openProfile;hd.append(mk)}
@@ -903,6 +929,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
       b.append(bar,el('span','',have===list.length?'All set':'Have '+have+' of '+list.length));b.onclick=function(){openKit(k)};grid.append(b)});
     sk.append(grid);v.append(sk);
     starterCard(v);spendCard(v);
+    if(waste){var wc2=el('div','card');wc2.append(el('div','sub','Thrown away this month'),el('div','name',waste+(waste===1?' thing':' things')),el('p','sub','Tap Threw it away on anything you bin. I use it to suggest buying less of what gets wasted.'));v.append(wc2)}
     var sa=el('div','sec');sa.append(el('h2','','Recent activity'));
     if(!log.length){sa.append(el('p','sub','Every change is recorded here, with who made it and when.'));v.append(sa);return}
     var c=el('div','card'),ul=el('ul','tl');
@@ -923,7 +950,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
   var qtyTimer={};
   function setQty(it,q){it.qty=q;render();clearTimeout(qtyTimer[it.id]);
     qtyTimer[it.id]=setTimeout(function(){api('/api/items/'+it.id,{method:'PATCH',body:JSON.stringify({qty:q})}).catch(function(e){if(e.code!=='locked')toast('Could not save that change. Check your connection.')})},500)}
-  async function refresh(){var d=await api('/api/items');items=d.items||[];log=d.log||[];extras=d.extras||[];spend=d.spend||null;profile=d.profile||null;me=d.me||'';render()}
+  async function refresh(){var d=await api('/api/items');items=d.items||[];log=d.log||[];extras=d.extras||[];waste=d.waste||0;spend=d.spend||null;profile=d.profile||null;me=d.me||'';render()}
 
   /* ---- capture ---- */
   document.querySelectorAll('[data-close]').forEach(function(b){b.onclick=function(){b.closest('dialog').close()}});
@@ -970,6 +997,8 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     oneOf($('profCook'),[['quick','20 minutes or less'],['medium','About half an hour'],['any','No rush']],draft,'cook');
     oneOf($('profDay'),[['','No fixed day']].concat(DAYS.map(function(d,i){return [d,DAYNAMES[i]]})),draft,'shopDay');
     chipBox($('profStores'),[],draft,'stores',{add:'Add a store',ph:'Costco'});
+    var po=$('profOut');po.textContent='';var oq=el('span','qty'),om=el('button','','\u2212'),op=el('button','','+');om.type=op.type='button';om.setAttribute('aria-label','Fewer nights out');op.setAttribute('aria-label','More nights out');
+    om.onclick=function(){draft.eatOut=Math.max(0,draft.eatOut-1);drawProfile()};op.onclick=function(){draft.eatOut=Math.min(7,draft.eatOut+1);drawProfile()};oq.append(om,el('span','',String(draft.eatOut)),op);po.append(oq);
     $('profSave').disabled=!draft.personas.length;
   }
   function drawMember(){
@@ -988,17 +1017,20 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
   $('memDel').onclick=function(){if(memAt>-1)draft.members.splice(memAt,1);$('memDlg').close()};
   function openProfile(){document.querySelectorAll('dialog[open]').forEach(function(d){d.close()});var p=profile,cp=function(a){return (a||[]).slice()};ui={more:{},adding:''};
     draft=p?{personas:cp(p.personas||[p.persona]),adults:p.adults,kids:p.kids,members:(p.members||[]).map(function(m){return {name:m.name,kind:m.kind,when:m.when,away:!!m.away,diet:cp(m.diet),allergies:cp(m.allergies),rules:cp(m.rules),avoid:cp(m.avoid)}}),
-        pets:cp(p.pets),diet:cp(p.diet),allergies:cp(p.allergies),rules:cp(p.rules),avoid:cp(p.avoid),cuisines:cp(p.cuisines),goal:p.goal||'',cook:p.cook||'any',shopDay:p.shopDay||'',stores:cp(p.stores)}:
-      {personas:[],adults:2,kids:0,members:[],pets:[],diet:[],allergies:[],rules:[],avoid:[],cuisines:[],goal:'',cook:'any',shopDay:'',stores:[]};
+        pets:cp(p.pets),diet:cp(p.diet),allergies:cp(p.allergies),rules:cp(p.rules),avoid:cp(p.avoid),cuisines:cp(p.cuisines),goal:p.goal||'',eatOut:p.eatOut||0,cook:p.cook||'any',shopDay:p.shopDay||'',stores:cp(p.stores)}:
+      {personas:[],adults:2,kids:0,members:[],pets:[],diet:[],allergies:[],rules:[],avoid:[],cuisines:[],goal:'',eatOut:0,cook:'any',shopDay:'',stores:[]};
     $('profBudget').value=p&&p.budget?p.budget:'';$('profAbout').value=p&&p.about||'';
-    $('profMore').open=!!(p&&(p.avoid&&p.avoid.length||p.goal||p.cuisines&&p.cuisines.length||p.cook!=='any'||p.shopDay||p.stores&&p.stores.length||p.budget||p.about));
-    drawProfile();$('profDlg').showModal()}
+    $('profMore').open=!!(p&&(p.avoid&&p.avoid.length||p.goal||p.eatOut||p.cuisines&&p.cuisines.length||p.cook!=='any'||p.shopDay||p.stores&&p.stores.length||p.budget||p.about));
+    drawProfile();$('profDlg').showModal();$('profH').tabIndex=-1;$('profH').focus();$('profDlg').scrollTop=0}
   $('profSkip').onclick=function(){try{localStorage.setItem('stocker.profSkip','1')}catch(e){}$('profDlg').close()};
   $('profSave').onclick=async function(){if(!draft.personas.length)return;$('profSave').disabled=true;
     draft.budget=Number($('profBudget').value)||0;draft.about=$('profAbout').value;
     try{var r=await api('/api/profile',{method:'POST',body:JSON.stringify(draft)});profile=r.profile;try{localStorage.removeItem('stocker.starterHide')}catch(e){}$('profDlg').close();render();toast('Saved. Stocker is set up for '+(pers().length===1&&pers()[0]!=='other'?'a '+PERSONA[pers()[0]][0].toLowerCase():'your home')+'.')}
     catch(e){if(e.code!=='locked')toast('Could not save that. Check your connection.')}finally{$('profSave').disabled=false}};
   $('shareProf').onclick=openProfile;
+  function setBig(on){document.documentElement.classList.toggle('big',on);$('bigText').setAttribute('aria-pressed',on?'true':'false');$('bigText').textContent=on?'Larger text is on':'Larger text'}
+  try{setBig(localStorage.getItem('stocker.big')==='1')}catch(e){}
+  $('bigText').onclick=function(){var on=!document.documentElement.classList.contains('big');setBig(on);try{localStorage.setItem('stocker.big',on?'1':'0')}catch(e){}};
   $('shareBtn').onclick=function(){$('shareLink').textContent=location.origin;$('shareMe').textContent=me?'You are signed in as '+me+'.':'';$('shareDlg').showModal()};
   $('shareCopy').onclick=function(){try{navigator.clipboard.writeText(location.origin).then(function(){toast('Link copied.')},function(){toast('Select the link and copy it.')})}catch(e){toast('Select the link and copy it.')}};
   try{$('who').value=localStorage.getItem('stocker.who')||''}catch(e){}
@@ -1091,7 +1123,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     d.meals.forEach(function(m){
       var li=el('li','card'),acts=el('div','acts'),yes=el('button','btn primary','I cooked this');li.style.boxShadow='none';li.style.border='1px solid var(--line)';
       li.append(el('h3','',m.name),el('p','sub',m.minutes+' min'+(m.why?'. '+m.why:'')));
-      var u=el('p');u.append(el('b','','Uses '),document.createTextNode(m.uses.map(function(x){return x.name+' ('+qtyText(x.quantity)+' '+x.unit+')'}).join(', ')));li.append(u);
+      var u=el('p');u.append(el('b','','Uses '),document.createTextNode(m.uses.map(function(x){return x.name+' ('+amount(x.quantity,x.unit)+')'}).join(', ')));li.append(u);
       if(m.missing.length){var need=el('p','sub','You would also need '+m.missing.join(', ')+'.');li.append(need);
         var ad=el('button','mini','Add those to my list');ad.type='button';ad.onclick=async function(){ad.disabled=true;
           try{for(var i=0;i<m.missing.length;i++)await api('/api/extras',{method:'POST',body:JSON.stringify({text:m.missing[i]})});await refresh();ad.textContent='Added to your list'}
@@ -1109,8 +1141,8 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     done.forEach(function(c){
       var li=el('li','row'),g=el('div','grow'),x=el('button','iconbtn');
       g.append(el('div','name',c.name));if(c.warn)g.append(el('span','pill bad','Check label: '+c.warn));
-      g.append(el('div','sub',c.action==='low'?'Marked as running low, added to your list':c.action==='use'?(c.qty<=0?'Marked as finished':'Now '+qtyText(c.qty)+' '+c.unit+' left'):
-        qtyText(c.added)+' '+c.unit+(c.expiry?' \u00b7 good until '+(c.est?'about ':'')+fmt(c.expiry):'')));
+      g.append(el('div','sub',c.action==='low'?'Marked as running low, added to your list':c.action==='use'?(c.qty<=0?'Marked as finished':'Now '+amount(c.qty,c.unit)+' left'):
+        amount(c.added,c.unit)+(c.expiry?' \u00b7 good until '+(c.est?'about ':'')+fmt(c.expiry):'')));
       x.type='button';x.setAttribute('aria-label',"That's wrong, take back "+c.name);x.append(icon('M6 6l12 12M18 6L6 18'));
       x.onclick=async function(){x.disabled=true;try{await takeBack(c);done=done.filter(function(k){return k!==c});await refresh();
         if(done.length)drawDone();else{$('doneDlg').close();toast('Taken back. Nothing was changed.')}}

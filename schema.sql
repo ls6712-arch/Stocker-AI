@@ -18,7 +18,8 @@ CREATE TABLE IF NOT EXISTS items (
   low INTEGER NOT NULL DEFAULT 0,
   warn TEXT,
   note TEXT,
-  owner TEXT
+  owner TEXT,
+  frozen INTEGER NOT NULL DEFAULT 0
 );
 CREATE UNIQUE INDEX IF NOT EXISTS items_name_key ON items(name_key);
 CREATE TABLE IF NOT EXISTS purchases (
