@@ -1198,18 +1198,38 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
       u.onclick=async function(){u.disabled=true;try{await takeBack(c);await refresh();var st=el('s','',t.textContent);t.textContent='';t.append(st);u.textContent='Undone'}catch(er){u.disabled=false;if(er.code!=='locked')toast('Could not undo that. Check your connection.')}};
       row.append(t,u);host.append(row)})}
   /* suggestions: built from what is at home, the time of day and the last reply, never the same few lines twice */
-  var tipSeen={},lastTurn=null;
+  var tipSeen={},lastTurn=null,sent={},pending=null;
+  var COOKED=/\b(cook|cooking|cooked|made|making|ate|eating|had)\b/i;
+  function dishOf(t){var m=String(t||'').match(/\b(?:cooking|cooked|making|made|had|ate|eating)\s+(?:some\s+|a\s+|an\s+|the\s+)?([a-z][a-z ]{2,24}?)(?:\s+(?:tonight|today|for|with|again)\b|[.,!?]|$)/i);return m?m[1].trim().toLowerCase():''}
   function chatTips(){
     var box=$('chatTips');box.textContent='';
+    if(pending){var used=pending.pr.map(function(a){return a.name.toLowerCase()}),also=items.filter(function(i){return i.qty>0&&areaOf(i)==='Kitchen'&&!i.frozen&&used.indexOf(i.name.toLowerCase())<0}).sort(function(a,b){var x=expiry(a),y=expiry(b);return (x?x.d:99)-(y?y.d:99)}).slice(0,2);
+      var act=function(t,fn){var b=el('button','mini',t);b.type='button';b.onclick=fn;box.append(b)};
+      if(pending.pr.length)act("Yes, that's right",pending.yes);
+      also.filter(function(i){return !sent[('i also used '+i.name).toLowerCase().replace(/\b(now|the|a|an|please)\b|[^a-z ]/g,'').replace(/\s+/g,' ').trim()]}).forEach(function(i){var t='I also used the '+i.name.toLowerCase();act(t,function(){chatSend({text:t},t)})});
+      act('No, none of those',pending.no);return}
     var lc=function(x){return x.toLowerCase()},by=function(a,b){return a.p-b.p},pool=[],key=function(t){return t.toLowerCase().replace(/\b(now|the|a|an|please)\b|[^a-z ]/g,'').replace(/\s+/g,' ').trim()},add=function(t,p){if(t&&!pool.some(function(x){return key(x.t)===key(t)}))pool.push({t:t,p:p+(tipSeen[t]||0)*5+Math.random()})};
     var have=items.filter(function(i){return i.qty>0}),kit=have.filter(function(i){return areaOf(i)==='Kitchen'&&!i.frozen}),other=have.filter(function(i){return areaOf(i)!=='Kitchen'});
     var soon=items.filter(needsUse).sort(function(a,b){return expiry(a).d-expiry(b).d}),low=items.filter(maybeLow),unk=items.filter(function(i){return i.unsure&&i.qty>0});
     var listN=items.filter(needsBuy).length+extras.length,h=today().getHours(),quick=profile&&profile.cook==='quick',ps=pers().map(function(k){return ALIAS[k]||k});
     var pick=function(a){return a[Math.floor(Math.random()*a.length)]};
     // 1. follow-ups to what was just said
-    if(lastTurn){
+    if(lastTurn&&lastTurn.resolved){
+      add('What should I cook tomorrow?',0);if(lastTurn.out&&lastTurn.out.length)add("What's on my list now?",1);
+    }
+    if(lastTurn&&!lastTurn.resolved&&COOKED.test(lastTurn.text||'')&&!(lastTurn.changes||[]).length){
+      var said=items.filter(function(i){return i.qty>0&&areaOf(i)==='Kitchen'&&lc(lastTurn.reply||'').indexOf(lc(i.name))>-1}).slice(0,2);
+      said.forEach(function(i,k){add('I used the '+lc(i.name),k)});
+      var dish=dishOf(lastTurn.text);if(dish&&/do not see|don'?t see|not (tracked|at home)|isn'?t tracked/i.test(lastTurn.reply||''))add('Add '+dish+' to the list',2);
+    }
+    if(sent.__cooked&&lastTurn&&!lastTurn.resolved&&(lastTurn.changes||[]).length&&(lastTurn.changes||[]).every(function(c){return c.action==='use'})){
+      add("That's everything",0);
+      var named2=items.filter(function(i){return i.qty>0&&areaOf(i)==='Kitchen'&&!(lastTurn.changes||[]).some(function(c){return lc(c.name)===lc(i.name)})}).sort(function(a,b){var x=expiry(a),y=expiry(b);return (x?x.d:99)-(y?y.d:99)}).slice(0,1);
+      named2.forEach(function(i){add('I also used the '+lc(i.name),1)});
+    }
+    if(lastTurn&&!lastTurn.resolved){
       var ch=lastTurn.changes||[],named=items.filter(function(i){return lastTurn.text&&lc(lastTurn.text).indexOf(lc(i.name).split(' ').pop())>-1})[0];
-      if(ch.some(function(c){return c.action==='use'&&c.qty<=0}))add('What can I cook tonight?',0);
+      if(ch.some(function(c){return c.action==='use'&&c.qty<=0}))add(sent.__cooked?"What's on my list now?":'What can I cook tonight?',0);
       if(ch.some(function(c){return c.action==='list'}))add("What's on my list now?",1);
       if(ch.some(function(c){return c.action==='add'}))add('What should I use up first?',2);
       if(named&&named.qty>0&&areaOf(named)==='Kitchen'&&!ch.length)add('What can I make with the '+lc(named.name)+'?',0);
@@ -1224,7 +1244,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     if(listN)add("What's on my list?",6);
     if(profile&&profile.shopDay===DAYS[today().getDay()])add('What do I need for today’s shop?',2);
     // 3. the time of day and the kind of home
-    if(kit.length>=2){
+    if(kit.length>=2&&!sent.__cooked){
       if(h>=5&&h<11)add(pick(['What could I have for breakfast?','Breakfast ideas from what we have?']),4);
       else if(h<15)add(pick(['What can I have for lunch?','Lunch ideas from what is here?']),4);
       else if(h<22)add(quick?'What can I make in 20 minutes?':pick(['What can I cook tonight?','Dinner ideas from what we have?']),3);
@@ -1239,29 +1259,32 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     if(kit.length)add('How much '+lc(pick(kit).name)+' is left?',10);
     // 4. a fresh home
     if(!items.length){add('I bought milk, eggs and bread',0);add('Add coffee to the list',1);add('What can you help with?',2)}
+    pool=pool.filter(function(x){return !sent[key(x.t)]&&!(sent.__cooked&&/^(i'?m cooking|what can i cook tonight|dinner ideas|what can i make in 20)/i.test(x.t))});
     pool.sort(by).slice(0,3).forEach(function(x){tipSeen[x.t]=(tipSeen[x.t]||0)+1;var b=el('button','mini',x.t);b.type='button';b.onclick=function(){chatSend({text:x.t},x.t)};box.append(b)})}
   function buddy(){return profile&&profile.buddy||'Tote'}
-  function openChat(){if($('chatDlg').open)return;$('chatH').textContent='Talk to '+buddy();
+  function openChat(){if($('chatDlg').open)return;if(!$('chatLog').firstChild){sent={};lastTurn=null;pending=null}$('chatH').textContent='Talk to '+buddy();
     if(!$('chatLog').firstChild)bubble('bot','Hi'+(me?' '+me:'')+", I'm "+buddy()+'. I keep an eye on the house. Tell me what you cooked, used or bought and I will keep everything up to date, or ask me what you have.');
     chatTips();$('chatDlg').showModal();if(window.Tote&&Tote.mount($('toteChat'),84,buddy())){Tote.onTap=null;Tote.mood('happy');Tote.wave()}$('chatText').focus()}
   $('chatDlg').addEventListener('close',function(){if(window.Tote)Tote.talk(false);render()});
   window.addEventListener('tote-ready',function(){if(!$('app').hidden)render()});
   async function chatSend(payload,label){
-    if(chatBusy)return;chatBusy=true;$('chatGo').disabled=true;$('chatTips').textContent='';
+    if(chatBusy)return;var kk=String(payload.text||label||'').toLowerCase().replace(/\b(now|the|a|an|please)\b|[^a-z ]/g,'').replace(/\s+/g,' ').trim();if(kk)sent[kk]=1;if(COOKED.test(payload.text||'')&&!/^i also used/i.test(payload.text||''))sent.__cooked=dishOf(payload.text)||'it';if(!/^i also used/i.test(payload.text||''))pending=null;chatBusy=true;$('chatGo').disabled=true;$('chatTips').textContent='';
     var mine=bubble('me',label),wait=bubble('bot','Thinking\u2026');payload.history=chatHist.slice(-4);if(window.Tote)Tote.talk(true);
     try{var r=await api('/api/chat',{method:'POST',body:JSON.stringify(payload)});
       if(r.heard)mine.textContent=r.heard;wait.textContent=r.reply;if(window.Tote)Tote.mood(r.blocked?'oops':'happy');
       chatChanges(wait,r.changes||[]);
       if(r.proposal&&r.proposal.length){var pr=r.proposal.slice(),box=el('div');wait.append(box);
         var drawP=function(){box.textContent='';pr.forEach(function(a){var row=el('div','chg'),t=el('span','',a.name+': '+amount(a.quantity,a.unit)),x=el('button','mini','Not this');x.type='button';x.setAttribute('aria-label','I did not use '+a.name);
-            x.onclick=function(){pr=pr.filter(function(k){return k!==a});drawP()};row.append(t,x);box.append(row)});
+            x.onclick=function(){pr=pr.filter(function(k){return k!==a});drawP();chatTips()};row.append(t,x);box.append(row)});
           var bar=el('div','chg'),yes=el('button','mini',pr.length?'Yes, update':'None of these'),no=el('button','mini','No');yes.type=no.type='button';
-          yes.onclick=async function(){yes.disabled=no.disabled=true;if(!pr.length){box.textContent='';bubble('bot','No problem. Tell me what you used and I will take it off.');return}
+          yes.onclick=async function(){yes.disabled=no.disabled=true;if(!pr.length){box.textContent='';pending=null;bubble('bot','No problem. What went into it? You can tap one below or tell me.');lastTurn={text:'cooked',reply:'',changes:[]};chatTips();return}
             try{var res=await api('/api/apply',{method:'POST',body:JSON.stringify({source:'voice',actions:pr.map(function(a){return {action:'use',name:a.name,quantity:a.quantity,unit:a.unit}})})});
-              box.textContent='';var done=bubble('bot','Done. I took those off.');chatChanges(done,res.changes||[]);if(window.Tote)Tote.hop();await refresh()}
+              box.textContent='';pending=null;var out=(res.changes||[]).filter(function(c){return c.qty<=0}).map(function(c){return c.name});
+              var done=bubble('bot','Done, I took those off.'+(out.length?' You are now out of '+out.join(' and ')+', so it is on your list.':'')+' Enjoy your meal.');chatChanges(done,res.changes||[]);if(window.Tote)Tote.hop();
+              lastTurn={resolved:'yes',out:out,text:'',reply:'',changes:res.changes||[]};await refresh();chatTips()}
             catch(er){yes.disabled=no.disabled=false;if(er.code!=='locked')toast('Could not save that. Check your connection.')}};
-          no.onclick=function(){box.textContent='';bubble('bot','No problem, I have not changed anything. Tell me what you used and I will take it off.');$('chatText').focus()};
-          if(pr.length)bar.append(yes,no);else bar.append(yes);box.append(bar)};drawP()}
+          no.onclick=function(){box.textContent='';pending=null;bubble('bot','No problem, I have not changed anything. What went into it? You can tap one below or tell me.');lastTurn={text:'cooked',reply:'',changes:[]};chatTips();$('chatText').focus()};
+          if(pr.length)bar.append(yes,no);else bar.append(yes);box.append(bar);pending={pr:pr,yes:function(){yes.click()},no:function(){no.click()}}};drawP()}
       chatHist.push({role:'user',text:r.heard||payload.text||''},{role:'assistant',text:r.reply});
       lastTurn={text:r.heard||payload.text||'',reply:r.reply,changes:r.changes||[]};
       if(r.changes&&r.changes.length){if(window.Tote)Tote.hop();await refresh()}

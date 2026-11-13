@@ -1171,6 +1171,11 @@
       0,
       0
      ]
+    },
+    {
+     "hasNot": {
+      "name": "beef"
+     }
     }
    ]
   },
@@ -1711,6 +1716,122 @@
     },
     {
      "blocked": true
+    }
+   ]
+  },
+  {
+   "id": "cook-no-main-ingredient",
+   "group": "Real conversations",
+   "kind": "chat",
+   "text": "I'm cooking pasta tonight",
+   "inventory": [
+    {
+     "name": "Ground Beef",
+     "qty": 2,
+     "unit": "lb",
+     "expiry": "2026-11-15"
+    },
+    {
+     "name": "Unsalted Butter",
+     "qty": 1,
+     "unit": "pack"
+    },
+    {
+     "name": "Tomatoes",
+     "qty": 4,
+     "unit": "pcs",
+     "expiry": "2026-11-16"
+    },
+    {
+     "name": "Baby Spinach",
+     "qty": 1,
+     "unit": "pack",
+     "expiry": "2026-11-14"
+    }
+   ],
+   "checks": [
+    {
+     "count": [
+      0,
+      0
+     ]
+    },
+    {
+     "replyHas": "pasta"
+    },
+    {
+     "replyHas": "\\?"
+    },
+    {
+     "replyNot": "took off|I have taken|updated"
+    }
+   ]
+  },
+  {
+   "id": "cook-only-essentials",
+   "group": "Real conversations",
+   "kind": "chat",
+   "text": "I'm cooking pasta tonight",
+   "inventory": [
+    {
+     "name": "Spaghetti",
+     "qty": 500,
+     "unit": "g"
+    },
+    {
+     "name": "Tomato Pasta Sauce",
+     "qty": 1,
+     "unit": "pcs"
+    },
+    {
+     "name": "Ground Beef",
+     "qty": 2,
+     "unit": "lb",
+     "expiry": "2026-11-15"
+    },
+    {
+     "name": "Unsalted Butter",
+     "qty": 1,
+     "unit": "pack"
+    },
+    {
+     "name": "Tomatoes",
+     "qty": 4,
+     "unit": "pcs",
+     "expiry": "2026-11-16"
+    },
+    {
+     "name": "Baby Spinach",
+     "qty": 1,
+     "unit": "pack",
+     "expiry": "2026-11-14"
+    }
+   ],
+   "checks": [
+    {
+     "has": {
+      "action": "use",
+      "name": "spaghetti"
+     }
+    },
+    {
+     "confirm": true
+    },
+    {
+     "hasNot": {
+      "name": "beef"
+     }
+    },
+    {
+     "hasNot": {
+      "name": "butter"
+     }
+    },
+    {
+     "appliedCount": [
+      0,
+      0
+     ]
     }
    ]
   }
