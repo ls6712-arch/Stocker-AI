@@ -289,7 +289,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     <div class="wrapchips" id="chatTips"></div>
     <form class="chatbar" id="chatForm">
       <button type="button" class="micb" id="chatMic" aria-label="Speak instead of typing"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
-      <input type="text" id="chatText" maxlength="300" placeholder="I'm cooking pasta tonight" aria-label="Message" autocomplete="off">
+      <input type="text" id="chatText" maxlength="300" placeholder="Tell me what you used, bought or need" aria-label="Message" autocomplete="off">
       <button type="submit" class="btn primary" id="chatGo">Send</button>
     </form>
     <button type="button" class="btn block" data-close>Done</button>
@@ -1197,9 +1197,49 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
       u.setAttribute('aria-label','Undo the change to '+c.name);if(c.action==='list'&&!c.created){t.textContent='Already on your list: '+c.name;row.append(t);host.append(row);return}
       u.onclick=async function(){u.disabled=true;try{await takeBack(c);await refresh();var st=el('s','',t.textContent);t.textContent='';t.append(st);u.textContent='Undone'}catch(er){u.disabled=false;if(er.code!=='locked')toast('Could not undo that. Check your connection.')}};
       row.append(t,u);host.append(row)})}
-  function chatTips(){var box=$('chatTips');box.textContent='';var k=items.filter(function(i){return areaOf(i)==='Kitchen'&&i.qty>0}),tips=["I'm cooking pasta tonight",'What should I use up first?'];
-    if(k.length)tips.push('Do we have '+k[0].name.toLowerCase()+'?','We ran out of '+k[k.length-1].name.toLowerCase());else tips.push('I bought milk, eggs and bread');
-    tips.forEach(function(t){var b=el('button','mini',t);b.type='button';b.onclick=function(){chatSend({text:t},t)};box.append(b)})}
+  /* suggestions: built from what is at home, the time of day and the last reply, never the same few lines twice */
+  var tipSeen={},lastTurn=null;
+  function chatTips(){
+    var box=$('chatTips');box.textContent='';
+    var lc=function(x){return x.toLowerCase()},by=function(a,b){return a.p-b.p},pool=[],key=function(t){return t.toLowerCase().replace(/\b(now|the|a|an|please)\b|[^a-z ]/g,'').replace(/\s+/g,' ').trim()},add=function(t,p){if(t&&!pool.some(function(x){return key(x.t)===key(t)}))pool.push({t:t,p:p+(tipSeen[t]||0)*5+Math.random()})};
+    var have=items.filter(function(i){return i.qty>0}),kit=have.filter(function(i){return areaOf(i)==='Kitchen'&&!i.frozen}),other=have.filter(function(i){return areaOf(i)!=='Kitchen'});
+    var soon=items.filter(needsUse).sort(function(a,b){return expiry(a).d-expiry(b).d}),low=items.filter(maybeLow),unk=items.filter(function(i){return i.unsure&&i.qty>0});
+    var listN=items.filter(needsBuy).length+extras.length,h=today().getHours(),quick=profile&&profile.cook==='quick',ps=pers().map(function(k){return ALIAS[k]||k});
+    var pick=function(a){return a[Math.floor(Math.random()*a.length)]};
+    // 1. follow-ups to what was just said
+    if(lastTurn){
+      var ch=lastTurn.changes||[],named=items.filter(function(i){return lastTurn.text&&lc(lastTurn.text).indexOf(lc(i.name).split(' ').pop())>-1})[0];
+      if(ch.some(function(c){return c.action==='use'&&c.qty<=0}))add('What can I cook tonight?',0);
+      if(ch.some(function(c){return c.action==='list'}))add("What's on my list now?",1);
+      if(ch.some(function(c){return c.action==='add'}))add('What should I use up first?',2);
+      if(named&&named.qty>0&&areaOf(named)==='Kitchen'&&!ch.length)add('What can I make with the '+lc(named.name)+'?',0);
+      if(named&&!ch.length&&(named.qty<=0||named.low||maybeLow(named)))add('Add '+lc(named.name)+' to the list',1);
+      if(/not tracked|isn'?t tracked|don'?t (see|have)/i.test(lastTurn.reply||'')){var w=(lastTurn.text||'').replace(/^.*\b(have|got)\s+(any\s+)?/i,'').replace(/[?.!]+$/,'').trim();if(w&&w.split(' ').length<=4)add('Add '+lc(w)+' to the list',0)}
+    }
+    // 2. what the home needs right now
+    if(soon[0])add('What can I make with the '+lc(soon[0].name)+'?',3);
+    if(soon[1])add('I used the '+lc(soon[1].name),6);
+    if(low[0])add('We ran out of '+lc(pick(low).name),5);
+    if(low[0])add('Are we low on '+lc(pick(low).name)+'?',7);
+    if(listN)add("What's on my list?",6);
+    if(profile&&profile.shopDay===DAYS[today().getDay()])add('What do I need for today’s shop?',2);
+    // 3. the time of day and the kind of home
+    if(kit.length>=2){
+      if(h>=5&&h<11)add(pick(['What could I have for breakfast?','Breakfast ideas from what we have?']),4);
+      else if(h<15)add(pick(['What can I have for lunch?','Lunch ideas from what is here?']),4);
+      else if(h<22)add(quick?'What can I make in 20 minutes?':pick(['What can I cook tonight?','Dinner ideas from what we have?']),3);
+      else add('Anything quick to eat right now?',4);
+      add("I'm cooking "+pick(['pasta','a stir fry','tacos','curry','soup','omelettes','fried rice'])+' tonight',8);
+    }
+    if(ps.indexOf('mom')>-1||ps.indexOf('dad')>-1||ps.indexOf('family4')>-1||ps.indexOf('big')>-1)add('What can I pack for lunchboxes tomorrow?',7);
+    if(ps.indexOf('gym')>-1||ps.indexOf('fit')>-1)add('What high-protein meal can I make?',6);
+    if(ps.indexOf('host')>-1)add('Do we have enough for 6 guests?',7);
+    if(ps.indexOf('newparents')>-1)add('How many diapers are left?',5);
+    if(other.length)add('Do we have '+lc(pick(other).name)+'?',9);
+    if(kit.length)add('How much '+lc(pick(kit).name)+' is left?',10);
+    // 4. a fresh home
+    if(!items.length){add('I bought milk, eggs and bread',0);add('Add coffee to the list',1);add('What can you help with?',2)}
+    pool.sort(by).slice(0,3).forEach(function(x){tipSeen[x.t]=(tipSeen[x.t]||0)+1;var b=el('button','mini',x.t);b.type='button';b.onclick=function(){chatSend({text:x.t},x.t)};box.append(b)})}
   function buddy(){return profile&&profile.buddy||'Tote'}
   function openChat(){if($('chatDlg').open)return;$('chatH').textContent='Talk to '+buddy();
     if(!$('chatLog').firstChild)bubble('bot','Hi'+(me?' '+me:'')+", I'm "+buddy()+'. I keep an eye on the house. Tell me what you cooked, used or bought and I will keep everything up to date, or ask me what you have.');
@@ -1223,6 +1263,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
           no.onclick=function(){box.textContent='';bubble('bot','No problem, I have not changed anything. Tell me what you used and I will take it off.');$('chatText').focus()};
           if(pr.length)bar.append(yes,no);else bar.append(yes);box.append(bar)};drawP()}
       chatHist.push({role:'user',text:r.heard||payload.text||''},{role:'assistant',text:r.reply});
+      lastTurn={text:r.heard||payload.text||'',reply:r.reply,changes:r.changes||[]};
       if(r.changes&&r.changes.length){if(window.Tote)Tote.hop();await refresh()}
     }catch(e){if(window.Tote)Tote.mood('oops');wait.textContent=e.code==='slow_down'?COPY.slow_down:e.code==='silent'?"I couldn't hear anything in that. Try again a little closer to the phone.":e.code==='offline'?'You seem to be offline. Nothing was changed.':e.code==='locked'?'':'I could not work that out just now. Nothing was changed. Try again in a moment.'}
     if(window.Tote)Tote.talk(false);chatBusy=false;$('chatGo').disabled=false;chatTips();$('chatLog').scrollTop=$('chatLog').scrollHeight}
