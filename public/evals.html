@@ -1,0 +1,55 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Stocker agent evals</title>
+<style>
+:root{--bg:#eef3f0;--fg:#10231d;--muted:#52655e;--card:#fff;--line:#d9e3de;--ok:#0f6b5c;--bad:#b3261e;--warn:#8a5a00}
+@media (prefers-color-scheme:dark){:root{--bg:#0d1412;--fg:#e8f0ec;--muted:#9fb3ab;--card:#16201d;--line:#26342f;--ok:#5fd0b8;--bad:#ff8a80;--warn:#f6c453}}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.45 system-ui,sans-serif}main{max-width:860px;margin:0 auto;padding:24px 16px 60px}
+h1{font-size:1.5rem;margin:0 0 4px}p{color:var(--muted);margin:4px 0 14px}button{font:inherit;font-weight:600;border:0;border-radius:999px;padding:12px 20px;background:var(--ok);color:#fff;cursor:pointer}button:disabled{opacity:.5}
+.sum{display:flex;gap:10px;flex-wrap:wrap;margin:16px 0}.sum div{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 14px;min-width:110px}.sum b{display:block;font-size:1.5rem}
+.case{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin:8px 0}.case h3{margin:0;font-size:1rem;display:flex;gap:8px;justify-content:space-between;align-items:baseline}
+.pill{font-size:12px;font-weight:700;border-radius:999px;padding:2px 10px;border:1px solid currentColor;white-space:nowrap}.pass{color:var(--ok)}.fail{color:var(--bad)}.stretch{color:var(--warn)}
+.q{color:var(--muted);font-size:13.5px;margin:4px 0;white-space:pre-wrap;overflow-wrap:anywhere}ul{margin:6px 0 0;padding-left:18px;font-size:13.5px}li.fail{color:var(--bad)}pre{font-size:12px;overflow-x:auto;background:var(--bg);border-radius:8px;padding:8px;margin:6px 0 0;white-space:pre-wrap;overflow-wrap:anywhere}
+h2{font-size:1.05rem;margin:22px 0 4px}
+</style></head><body><main>
+<h1>Stocker agent evals</h1>
+<p>Each case sends a made-up home and a message to the live agent in dry-run mode, then checks the result with fixed rules. Nothing in your real home is read or changed. You must be signed in to Stocker in this browser.</p>
+<button id="run">Run all cases</button> <span id="state" role="status"></span>
+<div class="sum" id="sum"></div><div id="out"></div>
+<script>
+(function(){
+  var $=function(i){return document.getElementById(i)},el=function(t,c,x){var e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e};
+  var rx=function(p){return new RegExp(p,'iu')},nm=function(a,p){return rx(p).test(a.name||'')};
+  function match(a,w){return (!w.action||rx('^('+w.action+')$').test(a.action))&&(!w.name||nm(a,w.name))&&(!w.area||a.area===w.area)&&(!w.category||a.category===w.category)}
+  function check(c,r){var A=r.actions||[],reply=r.reply||'',k=Object.keys(c)[0],v=c[k];
+    if(k==='has')return [A.some(function(a){return match(a,v)}),'has '+JSON.stringify(v)];
+    if(k==='hasNot')return [!A.some(function(a){return match(a,v)}),'has no '+JSON.stringify(v)];
+    if(k==='count')return [A.length>=v[0]&&A.length<=v[1],'between '+v[0]+' and '+v[1]+' actions (got '+A.length+')'];
+    if(k==='maxQuantity')return [A.every(function(a){return a.quantity<=v}),'no quantity above '+v];
+    if(k==='warned')return [A.some(function(a){return nm(a,v)&&a.warn}),'flags '+v];
+    if(k==='notWarned')return [!A.some(function(a){return nm(a,v)&&a.warn}),'does not flag '+v];
+    if(k==='useBetween')return [A.some(function(a){return a.action==='use'&&nm(a,v[0])&&a.quantity>=v[1]&&a.quantity<=v[2]}),'uses between '+v[1]+' and '+v[2]+' of '+v[0]];
+    if(k==='blocked')return [!!r.blocked===v,'blocked is '+v];
+    if(k==='replyHas')return [rx(v).test(reply),'reply mentions /'+v+'/'];
+    if(k==='replyNot')return [!rx(v).test(reply),'reply avoids /'+v+'/'];
+    if(k==='replyMax')return [reply.length<=v,'reply is at most '+v+' characters (got '+reply.length+')'];
+    return [false,'unknown check '+k]}
+  $('run').onclick=async function(){
+    $('run').disabled=true;$('out').textContent='';$('sum').textContent='';
+    var data;try{data=await (await fetch('/evals/cases.json',{cache:'no-store'})).json()}catch(e){$('state').textContent='Could not load the cases.';$('run').disabled=false;return}
+    var pass=0,fail=0,sp=0,sf=0,groups={},results=[],t0=Date.now();
+    for(var i=0;i<data.cases.length;i++){var c=data.cases[i];$('state').textContent='Running '+(i+1)+' of '+data.cases.length+': '+c.id;
+      var r,err='';try{var res=await fetch('/api/eval',{method:'POST',credentials:'same-origin',headers:{'content-type':'application/json'},body:JSON.stringify({kind:c.kind,text:c.text,inventory:c.inventory||[],profile:c.profile||null,today:data.today})});
+        r=await res.json();if(!res.ok)err=res.status===401?'Not signed in. Open Stocker, enter the passcode, then come back.':res.status===429?'Rate limit reached. Wait ten minutes.':(r.error||'error')+' '+(r.message||'')}catch(e){err='Network error';r={}}
+      var checks=err?[[false,err]]:c.checks.map(function(k){return check(k,r)}),ok=checks.every(function(x){return x[0]});
+      if(c.stretch){ok?sp++:sf++}else{ok?pass++:fail++}
+      var g=groups[c.group]=groups[c.group]||{p:0,n:0};if(!c.stretch){g.n++;if(ok)g.p++}
+      results.push({id:c.id,group:c.group,ok:ok,stretch:!!c.stretch,failed:checks.filter(function(x){return !x[0]}).map(function(x){return x[1]}),actions:(r.actions||[]).map(function(a){return a.action+' '+a.quantity+' '+a.unit+' '+a.name+(a.warn?' ['+a.warn+']':'')}),reply:r.reply||'',blocked:!!r.blocked});
+      var box=el('div','case'),h=el('h3');h.append(el('span','',c.group+': '+c.id),el('span','pill '+(ok?'pass':c.stretch?'stretch':'fail'),ok?'Pass':c.stretch?'Stretch, not counted':'Fail'));box.append(h,el('div','q',c.text));
+      var ul=el('ul');checks.forEach(function(x){ul.append(el('li',x[0]?'':'fail',(x[0]?'Pass: ':'Fail: ')+x[1]))});box.append(ul);
+      if(!err)box.append(el('pre','',(r.blocked?'BLOCKED\n':'')+(results[i].actions.length?results[i].actions.join('\n'):'(no actions)')+(r.reply?'\nreply: '+r.reply:'')));
+      $('out').append(box);if(err&&/signed in|Rate limit/.test(err))break}
+    var S=$('sum');[[pass+' / '+(pass+fail),'passed'],[Math.round(pass/Math.max(1,pass+fail)*100)+'%','score'],[sp+' / '+(sp+sf),'stretch'],[Math.round((Date.now()-t0)/1000)+'s','run time']].forEach(function(x){var d=el('div');d.append(el('b','',x[0]),document.createTextNode(x[1]));S.append(d)});
+    Object.keys(groups).forEach(function(k){var d=el('div');d.append(el('b','',groups[k].p+' / '+groups[k].n),document.createTextNode(k));S.append(d)});
+    window.__evals={pass:pass,fail:fail,stretchPass:sp,stretchFail:sf,groups:groups,results:results};document.title='evals done '+pass+'/'+(pass+fail);
+    $('state').textContent='Done.';$('run').disabled=false};
+})();
+</script></main></body></html>

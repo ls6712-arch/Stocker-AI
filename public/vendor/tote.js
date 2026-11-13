@@ -89,11 +89,13 @@ function build() {
   const shadow = mesh(new THREE.PlaneGeometry(2.9, 2.9), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(sc), transparent: true, opacity: 0.5, depthWrite: false }), 0, -1.02, 0);
   shadow.rotation.x = -Math.PI / 2; shadow.scale.set(1, 0.5, 1); root.add(shadow);
 
-  return { root, body, eyes, pupils, smile, mouth, arms, goods, shadow };
+  // confetti for small celebrations
+  const bits = [0xf6c453, 0xe8604c, 0x2e8b78, 0x9fd3c4, 0xf59a8b].flatMap((c) => [0, 1, 2]).map((_, k) => { const b = mesh(new THREE.BoxGeometry(0.09, 0.09, 0.02), new THREE.MeshBasicMaterial({ color: [0xf6c453, 0xe8604c, 0x2e8b78, 0x9fd3c4, 0xf59a8b][k % 5] })); b.visible = false; root.add(b); return b; });
+  return { root, body, eyes, pupils, smile, mouth, arms, goods, shadow, bits };
 }
 
 let renderer = null, scene, camera, parts, canvas, raf = 0, failed = false;
-const state = { press: 0, sq: 1, sqV: 0, tilt: 0, tiltV: 0, mood: 'happy', talk: false, hop: 0, wave: 0, look: { x: 0, y: 0 }, target: { x: 0, y: 0 }, nextBlink: 2, blink: 0, nextGlance: 3, glance: 0, glanceX: 0, lastPointer: -10, t0: performance.now() };
+const state = { party: 0, press: 0, sq: 1, sqV: 0, tilt: 0, tiltV: 0, mood: 'happy', talk: false, hop: 0, wave: 0, look: { x: 0, y: 0 }, target: { x: 0, y: 0 }, nextBlink: 2, blink: 0, nextGlance: 3, glance: 0, glanceX: 0, lastPointer: -10, t0: performance.now() };
 const still = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 function init() {
@@ -135,17 +137,20 @@ function frame(now) {
     if (t > s.nextGlance) { s.glanceX = (Math.random() < 0.5 ? -1 : 1) * (0.5 + Math.random() * 0.5); s.glance = t + 0.9 + Math.random() * 0.8; s.nextGlance = s.glance + 1.5 + Math.random() * 3; }
     s.target.x = t < s.glance ? s.glanceX : 0; s.target.y = t < s.glance ? -0.15 : 0;
   }
+  if (s.mood === 'oops') { s.target.x = 0; s.target.y = 0.7; } else if (s.mood === 'think') { s.target.x = -0.65; s.target.y = -0.7; }
   s.look.x += (s.target.x - s.look.x) * 0.12; s.look.y += (s.target.y - s.look.y) * 0.12;
   p.pupils.forEach((pu) => { pu.position.x = s.look.x * 0.075; pu.position.y = -s.look.y * 0.06; });
   p.body.rotation.y = s.look.x * 0.32; p.body.rotation.x = s.look.y * 0.1;
   // blink
   if (t > s.nextBlink) { s.blink = t; s.nextBlink = t + 2.2 + Math.random() * 3.5; }
   const bl = Math.max(0, 1 - Math.abs((t - s.blink) / 0.09 - 1));
-  const lid = s.mood === 'sleepy' ? 0.42 : s.mood === 'alert' ? 1.14 : 1;
+  const lid = s.mood === 'sleepy' ? 0.42 : s.mood === 'oops' ? 0.7 : s.mood === 'alert' ? 1.14 : 1;
   p.eyes.forEach((e) => { e.scale.y = Math.max(0.08, lid * (1 - bl * 0.92)); e.scale.x = s.mood === 'alert' ? 1.08 : 1; });
   // breathing, hopping
   const speed = s.mood === 'sleepy' ? 1.1 : s.mood === 'alert' ? 3.4 : 1.9, amp = still ? 0 : s.mood === 'alert' ? 0.05 : 0.035;
   let y = Math.sin(t * speed) * amp, squash = 1 + Math.sin(t * speed + 1.2) * (still ? 0 : 0.012);
+  const pk = s.party ? (t - s.party) / 1.5 : 1; if (s.party && pk >= 1) { s.party = 0; p.bits.forEach((b) => { b.visible = false; }); }
+  if (s.party) { y += Math.abs(Math.sin(pk * Math.PI * 2)) * 0.36; p.bits.forEach((b, k) => { const a = (k / p.bits.length) * Math.PI * 2, r = 0.5 + pk * (1.1 + (k % 3) * 0.25); b.visible = true; b.position.set(Math.cos(a) * r, 1.2 + pk * 2.2 - pk * pk * 3.4 + (k % 4) * 0.12, Math.sin(a) * r * 0.4 + 0.5); b.rotation.set(pk * 9 + k, pk * 7, k); }); }
   if (s.hop) { const k = (t - s.hop) / 0.55; if (k >= 1) s.hop = 0; else { y += Math.sin(k * Math.PI) * 0.42; squash = 1 + Math.sin(k * Math.PI * 2) * 0.06; } }
   // a soft spring: pressing squashes it like a cushion, letting go makes it wobble back
   const goal = s.press ? 0.8 : 1; s.sqV += (goal - s.sq) * 0.2; s.sqV *= 0.8; s.sq += s.sqV;
@@ -156,11 +161,13 @@ function frame(now) {
   p.goods.rotation.z = Math.sin(t * speed * 0.7) * 0.03;
   // arms: a wave on hello, a little flutter when alert
   const wv = s.wave ? Math.max(0, 1 - (t - s.wave) / 1.3) : 0; if (s.wave && !wv) s.wave = 0;
+  if (s.party) { p.arms[1].rotation.z = 1.7 + Math.sin(t * 14) * 0.2; p.arms[0].rotation.z = -1.7 - Math.sin(t * 14) * 0.2; } else {
   p.arms[1].rotation.z = wv ? 1.5 + Math.sin(t * 16) * 0.35 : s.mood === 'alert' ? 0.5 + Math.sin(t * 9) * 0.18 : Math.sin(t * speed) * 0.06;
-  p.arms[0].rotation.z = s.mood === 'alert' ? -0.5 - Math.sin(t * 9) * 0.18 : -Math.sin(t * speed) * 0.06;
+  p.arms[0].rotation.z = s.mood === 'alert' ? -0.5 - Math.sin(t * 9) * 0.18 : -Math.sin(t * speed) * 0.06; }
   // mouth
   const open = s.talk ? 0.35 + Math.abs(Math.sin(t * 11)) * 0.9 : 0;
   p.mouth.visible = s.talk; p.smile.visible = !s.talk; p.mouth.scale.y = Math.max(0.1, open);
+  p.smile.rotation.z = s.mood === 'oops' ? 0 : Math.PI; p.smile.position.y = s.mood === 'oops' ? -0.3 : -0.2; p.smile.scale.setScalar(s.mood === 'oops' ? 0.7 : 1);
   renderer.render(scene, camera);
 }
 
@@ -186,7 +193,8 @@ const api = {
     if (canvas.parentNode !== host) host.appendChild(canvas);
     loop(); return true;
   },
-  mood(m) { state.mood = m === 'alert' || m === 'sleepy' ? m : 'happy'; },
+  mood(m) { state.mood = ['alert', 'sleepy', 'oops', 'think'].indexOf(m) > -1 ? m : 'happy'; },
+  celebrate() { if (!still) state.party = (performance.now() - state.t0) / 1000; },
   talk(on) { state.talk = !!on; },
   hop() { if (!still) state.hop = (performance.now() - state.t0) / 1000; },
   wave() { if (!still) state.wave = (performance.now() - state.t0) / 1000; },
