@@ -11,6 +11,8 @@ A household inventory agent that runs on Cloudflare Workers. You show it a groce
 | Apply | Changes are saved straight away and recorded in the activity log. | D1 |
 | Check | A short summary shows what changed. One tap takes back anything it got wrong, or undoes the lot. | Browser |
 | Picture | Each item gets one generated picture the first time it appears, kept in the database and reused. | Workers AI, D1 |
+| Cook | Suggests three dinners from what is at home, favouring what expires first; "I cooked this" deducts the ingredients. | Workers AI |
+| Spend | Prices read from bills are totalled by month and area. | D1 |
 | Advise | The briefing works out what to use soon and when to buy each item again. After you buy the same item twice it uses your own pace. | Browser |
 
 ## Deploy (about five minutes)

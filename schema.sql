@@ -41,3 +41,11 @@ CREATE TABLE IF NOT EXISTS pics (
   data BLOB NOT NULL,
   made TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS spend (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  item_id TEXT,
+  day TEXT NOT NULL,
+  area TEXT,
+  amount REAL NOT NULL,
+  currency TEXT
+);

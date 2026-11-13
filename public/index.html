@@ -295,6 +295,16 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
   </div>
 </dialog>
 
+<dialog class="sheet" id="mealDlg" aria-labelledby="mealH">
+  <div class="pad">
+    <div class="grab"></div>
+    <h2 id="mealH">Dinner from what you have</h2>
+    <p class="sub">Picked to use up what goes off soonest. Tap "I cooked this" afterwards and I will update your stock.</p>
+    <ul class="list" id="mealList"></ul>
+    <button type="button" class="btn block" data-close>Close</button>
+  </div>
+</dialog>
+
 <dialog class="sheet" id="shopDlg" aria-labelledby="shopH">
   <div class="pad">
     <div class="grab"></div>
@@ -360,7 +370,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
   function fmt(s){var d=parse(s);if(!d)return '—';var o={month:'short',day:'numeric'};if(d.getFullYear()!==today().getFullYear())o.year='numeric';return d.toLocaleDateString(undefined,o)}
   function qtyText(q){return String(Math.round(q*100)/100)}
 
-  var items=[],log=[],extras=[],me='',tab='today',cat='All',query='',open={},busy=false,pending=null,toastTimer=null;
+  var items=[],log=[],extras=[],spend=null,me='',tab='today',cat='All',query='',open={},busy=false,pending=null,toastTimer=null;
 
   function toast(msg,label,fn){clearTimeout(toastTimer);$('toastMsg').textContent=msg;var b=$('toastBtn');b.hidden=!label;if(label){b.textContent=label;b.onclick=function(){$('toast').hidden=true;fn()}}
     $('toast').hidden=false;toastTimer=setTimeout(function(){$('toast').hidden=true},label?12000:5000)}
@@ -421,6 +431,9 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     var talk=el('button','talk');talk.type='button';talk.append(icon('M9 3h6v11H9zM5 11a7 7 0 0 0 14 0M12 18v3'));
     var tt=el('span');tt.append(el('b','','Tell me'),el('span','sub','What you bought, cooked, or are running low on'));talk.append(tt);
     talk.onclick=function(){$('capVoice').click()};v.append(talk);
+    if(items.filter(function(i){return areaOf(i)==='Kitchen'&&i.qty>0}).length>=2){
+      var ck=el('button','talk');ck.type='button';ck.append(icon(POT));var ct=el('span');
+      ct.append(el('b','','What can I cook tonight?'),el('span','sub','Dinner ideas that use up what goes off soonest'));ck.append(ct);ck.onclick=cookIdeas;v.append(ck)}
     if(!items.length){v.append(emptyCard('Pantry','Start with one photo','Photograph a receipt, a bathroom shelf or a cupboard, scan a barcode, or just say what you bought.','Add your first items',function(){$('capDlg').showModal()}));return}
     var ess=buy.filter(function(i){return i.essential});buy=buy.filter(function(i){return !i.essential});
     if(ess.length){var s0=el('div','sec');s0.append(el('h2','',"Don't run out"));var c0=el('div','card');
@@ -437,6 +450,9 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
         x.grow.append(el('div','sub',it.qty<=0?"You're out":'Running low'));c2.append(x.row)});
       if(buy.length>4)c2.append(el('p','sub','and '+(buy.length-4)+' more on the list'));
       s2.append(c2);v.append(s2)}
+    if(spend&&spend.total>0){var sp=el('div','card'),money=function(n){try{return new Intl.NumberFormat(undefined,{style:'currency',currency:spend.currency||'USD',maximumFractionDigits:0}).format(n)}catch(e){return String(Math.round(n))}};
+      var row=el('div','row'),gg=el('div','grow');gg.append(el('div','sub','Spent this month'),el('div','name',money(spend.total)));gg.lastChild.style.fontFamily='var(--display)';gg.lastChild.style.fontSize='1.6rem';row.append(gg);sp.append(row);
+      var fx=el('div','facts');spend.byArea.forEach(function(a){var t=el('span');t.append(document.createTextNode(a.area+' '),el('b','',money(a.amount)));fx.append(t)});sp.append(fx,el('p','sub','From the prices on bills you scanned.'));v.append(sp)}
     var sug=items.filter(maybeLow).length;
     if(sug){var sb=el('button','talk');sb.type='button';sb.append(icon('M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 8v5M12 16h.01'));
       var st=el('span');st.append(el('b','',sug+(sug===1?' thing might be running low':' things might be running low')),el('span','sub','My guess. Tap to check them.'));sb.append(st);sb.onclick=function(){go('list')};v.append(sb)}
@@ -561,7 +577,8 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     catch(er){if(er.code!=='locked')toast('Could not save that. Check your connection.')}
   }
 
-  var SRC={bill:['Bill','M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6',165],shelf:['Shelf photo','M4 7h3l2-3h6l2 3h3v13H4z',205],voice:['Voice note','M9 3h6v11H9zM5 11a7 7 0 0 0 14 0M12 18v3',355],
+  var POT='M5 10h14v6a4 4 0 0 1-4 4H9a4 4 0 0 1-4-4zM3 10h18M9 6c0-1 1-1 1-2M14 6c0-1 1-1 1-2';
+  var SRC={cook:['Cooked',POT,20],bill:['Bill','M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6',165],shelf:['Shelf photo','M4 7h3l2-3h6l2 3h3v13H4z',205],voice:['Voice note','M9 3h6v11H9zM5 11a7 7 0 0 0 14 0M12 18v3',355],
     barcode:['Barcode','M4 6v12M7 6v12M11 6v12M14 6v12M17 6v12M20 6v12',265],text:['Typed note','M4 20h4L19 9l-4-4L4 16z',35],hand:['By hand','M6 12l4 4 8-9',135]};
   function renderLog(){
     var v=$('v-log');v.textContent='';
@@ -584,7 +601,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
   var qtyTimer={};
   function setQty(it,q){it.qty=q;render();clearTimeout(qtyTimer[it.id]);
     qtyTimer[it.id]=setTimeout(function(){api('/api/items/'+it.id,{method:'PATCH',body:JSON.stringify({qty:q})}).catch(function(e){if(e.code!=='locked')toast('Could not save that change. Check your connection.')})},500)}
-  async function refresh(){var d=await api('/api/items');items=d.items||[];log=d.log||[];extras=d.extras||[];me=d.me||'';render()}
+  async function refresh(){var d=await api('/api/items');items=d.items||[];log=d.log||[];extras=d.extras||[];spend=d.spend||null;me=d.me||'';render()}
 
   /* ---- capture ---- */
   document.querySelectorAll('[data-close]').forEach(function(b){b.onclick=function(){b.closest('dialog').close()}});
@@ -664,13 +681,36 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
   var done=[];
   async function commit(d){
     var acts=(d&&d.actions)||[];if(!acts.length)return null;
-    var r=await api('/api/apply',{method:'POST',body:JSON.stringify({source:d.kind,store:d.store||'',bought:d.bought||(d.kind==='shelf'?'':iso(today())),actions:acts})});
+    var r=await api('/api/apply',{method:'POST',body:JSON.stringify({source:d.kind,store:d.store||'',bought:d.bought||(d.kind==='shelf'?'':iso(today())),currency:d.currency||'',actions:acts})});
     await refresh();return r;
   }
   async function takeBack(c){
-    if(c.created)await api('/api/items/'+c.id,{method:'DELETE'});
+    if(c.created)await api('/api/items/'+c.id+'?undo=1',{method:'DELETE'});
     else if(c.action==='low')await api('/api/items/'+c.id,{method:'PATCH',body:JSON.stringify({low:!!c.prevLow})});
-    else await api('/api/items/'+c.id,{method:'PATCH',body:JSON.stringify({qty:c.prevQty})});
+    else await api('/api/items/'+c.id,{method:'PATCH',body:JSON.stringify(c.action==='add'?{qty:c.prevQty,undo:true}:{qty:c.prevQty})});
+  }
+  /* dinner ideas: suggestions come from what is at home; "I cooked this" deducts the ingredients */
+  async function cookIdeas(){
+    if(busy)return;setBusy('Thinking about dinner');var d;
+    try{d=await api('/api/meals',{method:'POST'})}catch(e){setBusy(null);if(e.code!=='locked')toast(e.code==='offline'?COPY.offline:'I could not come up with ideas just now. Try again in a moment.');return}
+    setBusy(null);
+    if(!d.meals||!d.meals.length){toast(d.few?'Add a few more kitchen items first, then I can suggest dinners.':'I could not find a dinner in what you have. Try again after your next shop.');return}
+    var ul=$('mealList');ul.textContent='';
+    d.meals.forEach(function(m){
+      var li=el('li','card'),acts=el('div','acts'),yes=el('button','btn primary','I cooked this');li.style.boxShadow='none';li.style.border='1px solid var(--line)';
+      li.append(el('h3','',m.name),el('p','sub',m.minutes+' min'+(m.why?'. '+m.why:'')));
+      var u=el('p');u.append(el('b','','Uses '),document.createTextNode(m.uses.map(function(x){return x.name+' ('+qtyText(x.quantity)+' '+x.unit+')'}).join(', ')));li.append(u);
+      if(m.missing.length){var need=el('p','sub','You would also need '+m.missing.join(', ')+'.');li.append(need);
+        var ad=el('button','mini','Add those to my list');ad.type='button';ad.onclick=async function(){ad.disabled=true;
+          try{for(var i=0;i<m.missing.length;i++)await api('/api/extras',{method:'POST',body:JSON.stringify({text:m.missing[i]})});await refresh();ad.textContent='Added to your list'}
+          catch(e){ad.disabled=false;if(e.code!=='locked')toast('Could not add those. Check your connection.')}};acts.append(ad)}
+      yes.type='button';yes.style.minHeight='40px';yes.style.padding='8px 16px';
+      yes.onclick=async function(){yes.disabled=true;
+        try{var r=await api('/api/apply',{method:'POST',body:JSON.stringify({source:'cook',actions:m.uses.map(function(x){return {action:'use',name:x.name,quantity:x.quantity,unit:x.unit}})})});
+          await refresh();$('mealDlg').close();showResult({kind:'cook',heard:'',store:''},r)}
+        catch(e){yes.disabled=false;if(e.code!=='locked')toast('Could not save that. Check your connection.')}};
+      acts.prepend(yes);li.append(acts);ul.append(li)});
+    $('mealDlg').showModal();
   }
   function drawDone(){
     var ul=$('doneList');ul.textContent='';
