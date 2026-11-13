@@ -50,7 +50,7 @@
      "checks": [{"count": [0, 0]}, {"replyHas": "egg"}, {"replyHas": "6|six"}]},
     {"id": "question-have-not", "group": "Questions change nothing", "kind": "chat", "text": "Do we have any butter?",
      "inventory": [{"name": "Eggs", "qty": 6, "unit": "pcs"}],
-     "checks": [{"count": [0, 0]}, {"replyNot": "^yes"}, {"replyNot": "you have (some |a |one )?butter"}]},
+     "checks": [{"count": [0, 0]}, {"replyNot": "^yes"}, {"replyHas": "not tracked|no butter|don't have|do not have|not at home|isn't|is not"}]},
     {"id": "question-use-up", "group": "Questions change nothing", "kind": "chat", "text": "What should I use up first?",
      "inventory": [{"name": "Baby Spinach", "qty": 1, "unit": "pack", "expiry": "2026-11-14"}, {"name": "Jasmine Rice", "qty": 1, "unit": "kg"}, {"name": "Greek Yogurt", "qty": 2, "unit": "pcs", "expiry": "2026-11-25"}],
      "checks": [{"count": [0, 0]}, {"replyHas": "spinach"}]},
