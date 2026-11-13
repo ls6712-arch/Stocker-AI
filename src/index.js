@@ -75,7 +75,7 @@ function cleanProfile(p) {
     const name = word(m.name, 20);
     if (!name) return null;
     return {
-      name, kind: Object.prototype.hasOwnProperty.call(KINDS, m.kind) ? m.kind : 'adult', when: word(m.when, 40),
+      name, kind: Object.prototype.hasOwnProperty.call(KINDS, m.kind) ? m.kind : 'adult', when: word(m.when, 40), away: !!m.away && !!word(m.when, 40),
       diet: chipList(m.diet, DIETS, 8), allergies: chipList(m.allergies, ALLERGENS, 10), rules: chipList(m.rules, Object.keys(RULES), 6), avoid: chipList(m.avoid, [], 10),
     };
   }).filter(Boolean);
@@ -115,7 +115,7 @@ function describe(p) {
     (p.rules.length ? ' Health rules for the whole home: ' + p.rules.map(ruleText).join('; ') + '.' : '') +
     (hard.length ? ' HARD RULE, allergies at home: ' + hard.join(', ') + '. Never suggest food that contains or commonly contains these.' : '') +
     (p.avoid.length ? ' Nobody eats: ' + p.avoid.join(', ') + '.' : '') +
-    p.members.map((m) => ' ' + m.name + ' is a ' + KINDS[m.kind] + (m.when ? ' who is here ' + m.when : '') +
+    p.members.map((m) => ' ' + m.name + ' is a ' + KINDS[m.kind] + (m.when ? ' who is here ' + m.when + (m.away ? ' and is NOT home this week, so leave them out of this week\'s dinners' : '') : '') +
       (m.diet.length ? ', eats ' + m.diet.join(', ') : '') + (m.rules.length ? ', ' + m.rules.map(ruleText).join('; ') : '') +
       (m.allergies.length ? ', allergic to ' + m.allergies.join(', ') : '') + (m.avoid.length ? ', will not eat ' + m.avoid.join(', ') : '') + '.').join('') +
     (p.members.some((m) => m.diet.length || m.rules.length || m.avoid.length) ? ' A shared dinner must work for every person listed, or say plainly who it does not suit.' : '') +
@@ -169,14 +169,60 @@ async function hearAudio(env, base64) {
 }
 
 async function lookupBarcode(code) {
-  const r = await fetch('https://world.openfoodfacts.org/api/v2/product/' + code + '.json?fields=product_name,brands,quantity', {
-    headers: { 'user-agent': 'PantryKeeper/1.0 (personal pantry tracker)' },
+  const r = await fetch('https://world.openfoodfacts.org/api/v2/product/' + code + '.json?fields=product_name,brands,quantity,allergens_tags,traces_tags,ingredients_text_en,ingredients_text,labels_tags', {
+    headers: { 'user-agent': 'StockerAI/1.0 (household inventory tracker)' },
   });
   if (!r.ok) return null;
   const d = await r.json();
   if (!d || d.status !== 1 || !d.product || !d.product.product_name) return null;
   const p = d.product;
-  return [p.brands, p.product_name].filter(Boolean).join(' ') + (p.quantity ? ', pack size ' + p.quantity : '');
+  const tags = (v) => (Array.isArray(v) ? v.map((t) => String(t).toLowerCase()) : []);
+  return {
+    text: [p.brands, p.product_name].filter(Boolean).join(' ') + (p.quantity ? ', pack size ' + p.quantity : ''),
+    allergens: tags(p.allergens_tags), traces: tags(p.traces_tags), labels: tags(p.labels_tags),
+    ingredients: String(p.ingredients_text_en || p.ingredients_text || '').toLowerCase().slice(0, 4000),
+  };
+}
+
+// Checks a scanned product's declared allergens and ingredient list against everyone at home.
+// It reports what the label data says; it can never promise a product is safe.
+const OFF = {
+  Peanuts: ['en:peanuts'], 'Tree nuts': ['en:nuts'], Milk: ['en:milk'], Eggs: ['en:eggs'], Wheat: ['en:gluten'], Soy: ['en:soybeans'], Fish: ['en:fish'],
+  Shellfish: ['en:crustaceans', 'en:molluscs'], Sesame: ['en:sesame-seeds'], Mustard: ['en:mustard'], Celery: ['en:celery'], Sulphites: ['en:sulphur-dioxide-and-sulphites'],
+};
+const WORDS = {
+  Peanuts: /peanut/, 'Tree nuts': /almond|walnut|cashew|pecan|hazelnut|pistachio|macadamia/, Milk: /\bmilk|whey|casein|butter|cream|cheese|lactose/, Eggs: /\begg/, Wheat: /wheat/, Soy: /\bsoy/,
+  Fish: /\bfish|anchov|salmon|tuna|cod\b/, Shellfish: /shrimp|prawn|crab|lobster|oyster|mussel|clam/, Sesame: /sesame|tahini/, Mustard: /mustard/, Celery: /celery/, Corn: /\bcorn|maize/, Sulphites: /sulphite|sulfite/,
+};
+const GLUTEN = /wheat|barley|\brye\b|malt|\boats?\b|spelt|semolina/;
+function labelCheck(prod, p) {
+  if (!p) return null;
+  const who = [{ name: '', allergies: p.allergies, rules: p.rules, avoid: p.avoid }].concat(p.members);
+  if (!who.some((w) => w.allergies.length || w.rules.length || w.avoid.length)) return null;
+  const known = prod.ingredients.length > 0 || prod.allergens.length > 0;
+  const has = (list, tags) => (tags || []).some((t) => list.includes(t));
+  if (!known) return { status: 'unknown', warn: 'no ingredient list on file', text: 'This product has no ingredient list in the database, so I could not check it against your allergies. Read the pack.' };
+  const found = [], seen = new Set();
+  const say = (text, name) => { const k = text + '|' + name; if (!seen.has(k)) { seen.add(k); found.push(text + (name ? ', for ' + name : '')); } };
+  for (const w of who) {
+    for (const a of w.allergies) {
+      const word = WORDS[a] || new RegExp(a.toLowerCase().replace(/[^\p{L}\p{N} ]/gu, '').replace(/(es|s)$/, ''));
+      if (has(prod.allergens, OFF[a]) || word.test(prod.ingredients)) say('contains ' + a.toLowerCase(), w.name);
+      else if (has(prod.traces, OFF[a])) say('may contain ' + a.toLowerCase(), w.name);
+    }
+    if (w.rules.includes('Celiac')) {
+      if (prod.allergens.includes('en:gluten') || GLUTEN.test(prod.ingredients)) say('contains gluten', w.name);
+      else if (prod.traces.includes('en:gluten')) say('may contain gluten', w.name);
+      else if (!prod.labels.includes('en:no-gluten')) say('not labelled gluten-free', w.name);
+    }
+    if (w.rules.includes('Lactose intolerant') && (prod.allergens.includes('en:milk') || WORDS.Milk.test(prod.ingredients)) && !/lactose[- ]free/.test(prod.ingredients)) say('contains milk', w.name);
+    for (const a of w.avoid) {
+      const word = a.toLowerCase().replace(/[^\p{L}\p{N} ]/gu, '').replace(/(es|s)$/, '');
+      if (word.length > 2 && prod.ingredients.includes(word)) say('has ' + a.toLowerCase(), w.name);
+    }
+  }
+  if (found.length) return { status: 'warn', warn: found.slice(0, 3).join(', ').slice(0, 70), text: 'From the ingredient list: ' + found.join('; ') + '. Check the pack before anyone eats it.' };
+  return { status: 'ok', warn: '', text: 'I checked the listed ingredients and declared allergens against everyone at home and found no match. Recipes change, so still glance at the pack.' };
 }
 
 // ---------- picture ----------
@@ -289,7 +335,7 @@ function sanitize(raw, kind) {
       unit: UNITS.includes(a.unit) ? a.unit : 'pcs',
       area: AREAS.includes(a.area) ? a.area : 'Kitchen',
       category: ROOM_CATS[AREAS.includes(a.area) ? a.area : 'Kitchen'].includes(a.category) ? a.category : 'Other',
-      warn: use ? '' : String(a.warn || '').replace(/[^\p{L}\p{N} ,'-]/gu, ' ').replace(/\s+/g, ' ').trim().slice(0, 40),
+      warn: use ? '' : String(a.warn || '').replace(/[^\p{L}\p{N} ,'-]/gu, ' ').replace(/\s+/g, ' ').trim().slice(0, 70),
       expiry: isDate(a.expiryDate) ? a.expiryDate : '',
       shelfLifeDays: clamp(Math.round(num(a.shelfLifeDays, 0)), 0, 3650),
       price: use ? 0 : Math.round(clamp(num(a.price, 0), 0, 100000) * 100) / 100,
@@ -479,6 +525,8 @@ async function api(request, env, url) {
     if (body.finishDays !== undefined) await env.DB.prepare('UPDATE items SET finish_days = ? WHERE id = ?').bind(clamp(Math.round(num(body.finishDays, 14)), 1, 365), m[1]).run();
     if (body.undo) await env.DB.prepare('DELETE FROM spend WHERE id = (SELECT MAX(id) FROM spend WHERE item_id = ?)').bind(m[1]).run();
     if (body.essential !== undefined) await env.DB.prepare('UPDATE items SET essential = ? WHERE id = ?').bind(body.essential ? 1 : 0, m[1]).run();
+    if (body.note !== undefined) await env.DB.prepare('UPDATE items SET note = ? WHERE id = ?').bind(word(body.note, 40) || null, m[1]).run();
+    if (body.owner !== undefined) await env.DB.prepare('UPDATE items SET owner = ? WHERE id = ?').bind(word(body.owner, 20) || null, m[1]).run();
     if (body.out) {
       const row = await env.DB.prepare('SELECT name FROM items WHERE id = ?').bind(m[1]).first();
       if (row) await env.DB.prepare('INSERT INTO log (at, source, summary, who) VALUES (?, ?, ?, ?)').bind(new Date().toISOString(), 'hand', 'marked ' + row.name + ' as out', me || null).run();
@@ -542,7 +590,7 @@ async function api(request, env, url) {
     const kind = path.slice('/api/scan/'.length);
     const known = (await env.DB.prepare('SELECT name, qty, unit FROM items ORDER BY name').all()).results.map((r) => r.name + ' (' + Math.round(r.qty * 100) / 100 + ' ' + r.unit + ')');
     try {
-      let text = '', heard = '';
+      let text = '', heard = '', product = null;
       if (kind === 'bill' || kind === 'shelf') {
         const body = await request.json();
         if (typeof body.image !== 'string' || !body.image.startsWith('data:image/') || body.image.length > 6_000_000) return json({ error: 'bad_image' }, 400);
@@ -558,15 +606,18 @@ async function api(request, env, url) {
       } else if (kind === 'barcode') {
         const code = (url.searchParams.get('code') || '').replace(/\D/g, '');
         if (code.length < 6 || code.length > 14) return json({ error: 'bad_code' }, 400);
-        const product = await lookupBarcode(code);
+        product = await lookupBarcode(code);
         if (!product) return json({ error: 'unknown_product', code }, 404);
-        text = 'Bought one of: ' + product;
+        text = 'Bought one of: ' + product.text;
       } else return json({ error: 'not_found' }, 404);
 
       const profile = await getProfile(env);
       const out = sanitize(await structure(env, kind, text, today, known, profile), kind);
       if (!restricted(profile)) out.actions.forEach((a) => { a.warn = ''; });
-      return json({ kind, heard, read: kind === 'bill' || kind === 'shelf' ? text.slice(0, 2000) : '', ...out });
+      // a barcode gives real label data, which beats a guess from the product name
+      const label = product ? labelCheck(product, profile) : null;
+      if (label) out.actions.forEach((a) => { if (a.action === 'add') a.warn = label.warn; });
+      return json({ kind, heard, label: label ? { status: label.status, text: label.text } : null, read: kind === 'bill' || kind === 'shelf' ? text.slice(0, 2000) : '', ...out });
     } catch (e) {
       const msg = String((e && e.message) || e);
       if (/agree/i.test(msg)) return json({ error: 'licence' }, 409);
