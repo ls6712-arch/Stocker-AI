@@ -8,8 +8,8 @@ A household inventory agent that runs on Cloudflare Workers. You show it a groce
 |---|---|---|
 | Perceive | Photo of a bill or shelf is read by a vision model. A voice note is transcribed. A barcode is looked up in Open Food Facts. | Workers AI, Open Food Facts |
 | Structure | A language model turns what it read into "add" and "use" actions, with estimated shelf life and how long each item usually lasts. | Workers AI |
-| Confirm | You see every proposed change and can edit or untick it. Nothing is saved without your tap. | Browser |
-| Apply | Changes are written to the database and recorded in the activity log. | D1 |
+| Apply | Changes are saved straight away and recorded in the activity log. | D1 |
+| Check | A short summary shows what changed. One tap takes back anything it got wrong, or undoes the lot. | Browser |
 | Advise | The briefing works out what to use soon and when to buy each item again. After you buy the same item twice it uses your own pace. | Browser |
 
 ## Deploy (about five minutes)

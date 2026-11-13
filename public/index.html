@@ -254,19 +254,15 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
   </div>
 </dialog>
 
-<dialog class="sheet" id="rvDlg" aria-labelledby="rvTitle">
+<dialog class="sheet" id="doneDlg" aria-labelledby="doneTitle">
   <div class="pad">
     <div class="grab"></div>
-    <h2 id="rvTitle">Here's what I understood</h2>
-    <p class="sub">Fix anything that's wrong. Nothing is saved until you apply it.</p>
-    <p class="heard" id="rvHeard" hidden></p>
-    <div class="meta" id="rvMeta">
-      <label for="rvStore">Bought from<input type="text" id="rvStore" maxlength="40"></label>
-      <label for="rvDate">Bought on<input type="date" id="rvDate"></label>
-    </div>
-    <div id="rvBody"></div>
-    <button type="button" class="btn primary block" id="rvApply">Apply</button>
-    <button type="button" class="btn block" id="rvDiscard">Discard</button>
+    <h2 id="doneTitle">Added</h2>
+    <p class="sub" id="doneSub"></p>
+    <p class="heard" id="doneHeard" hidden></p>
+    <ul class="list" id="doneList"></ul>
+    <button type="button" class="btn primary block" id="doneOk">Done</button>
+    <button type="button" class="btn block" id="doneUndo">Undo all</button>
   </div>
 </dialog>
 
@@ -463,7 +459,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
   var lastScan=null;
   async function scan(doFetch,waitMsg){
     if(busy)return;lastScan=[doFetch,waitMsg];setBusy(waitMsg);
-    try{var d=await doFetch();setBusy(null);showReview(d)}
+    try{var d=await doFetch(),r=await commit(d);setBusy(null);showResult(d,r)}
     catch(e){setBusy(null);if(e.code==='locked')return;
       if(e.code==='licence')$('licDlg').showModal();
       else toast(COPY[e.code]||COPY.server)}
@@ -522,39 +518,47 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
   $('typeForm').addEventListener('submit',function(ev){ev.preventDefault();var t=$('typeText').value.trim();if(!t)return;$('typeDlg').close();$('typeText').value='';
     scan(function(){return api('/api/scan/text',{method:'POST',body:JSON.stringify({text:t})})},'Reading your note')});
 
-  /* review before anything is saved */
-  function field(label,inp,cls){var l=el('label',cls||'',label);l.htmlFor=inp.id;l.append(inp);return l}
-  function showReview(d){
-    var acts=(d&&d.actions)||[];
-    if(!acts.length){toast(d&&d.kind==='voice'&&d.heard?'I heard “'+d.heard+'” but found nothing to add or use.':"I couldn't find any items in that. Try a clearer photo, or tell me instead.");return}
-    pending=d;
-    $('rvTitle').textContent=acts.length+(acts.length===1?' change to check':' changes to check');
-    $('rvHeard').hidden=!d.heard;$('rvHeard').textContent=d.heard?'“'+d.heard+'”':'';
-    $('rvMeta').hidden=!acts.some(function(a){return a.action==='add'});
-    $('rvStore').value=d.store||'';$('rvDate').value=d.bought||(d.kind==='shelf'?'':iso(today()));
-    var body=$('rvBody');body.textContent='';
-    acts.forEach(function(a,i){
-      var row=el('div','rv'),ck=el('input'),f=el('div','fields'),inp;
-      ck.type='checkbox';ck.checked=true;ck.id='rvKeep'+i;ck.setAttribute('aria-label','Keep change '+(i+1));row.append(ck);
-      inp=el('input');inp.type='text';inp.id='rvName'+i;inp.maxLength=60;inp.value=a.name;f.append(field(a.action==='use'?'Used up':'Add',inp,'full'));
-      inp=el('input');inp.type='number';inp.id='rvQty'+i;inp.min='0';inp.step='any';inp.value=String(a.quantity);f.append(field(a.action==='use'?'Amount (0 = all)':'Quantity',inp));
-      inp=el('select');inp.id='rvUnit'+i;UNITS.forEach(function(u){inp.append(new Option(u,u))});inp.value=a.unit;f.append(field('Unit',inp));
-      if(a.action==='add'){inp=el('input');inp.type='date';inp.id='rvExp'+i;inp.value=a.expiry||'';f.append(field(a.expiry?'Best before':'Best before (blank = I estimate)',inp,'full'))}
-      row.append(f);body.append(row);
-    });
-    $('rvDlg').showModal();
+  /* a scan is saved straight away; the summary lets you take back anything that's wrong */
+  var done=[];
+  async function commit(d){
+    var acts=(d&&d.actions)||[];if(!acts.length)return null;
+    var r=await api('/api/apply',{method:'POST',body:JSON.stringify({source:d.kind,store:d.store||'',bought:d.bought||(d.kind==='shelf'?'':iso(today())),actions:acts})});
+    await refresh();return r;
   }
-  $('rvDiscard').onclick=function(){pending=null;$('rvDlg').close()};
-  $('rvApply').onclick=async function(){
-    if(!pending)return;var acts=[];
-    pending.actions.forEach(function(a,i){if(!$('rvKeep'+i).checked)return;var exp=$('rvExp'+i);
-      acts.push({action:a.action,name:$('rvName'+i).value,quantity:Number($('rvQty'+i).value),unit:$('rvUnit'+i).value,category:a.category,expiry:exp?exp.value:'',shelfLifeDays:a.shelfLifeDays,finishDays:a.finishDays})});
-    if(!acts.length){pending=null;$('rvDlg').close();toast('Nothing was ticked, so nothing changed.');return}
-    $('rvApply').disabled=true;
-    try{var r=await api('/api/apply',{method:'POST',body:JSON.stringify({source:pending.kind,store:$('rvStore').value,bought:$('rvDate').value,actions:acts})});
-      pending=null;$('rvDlg').close();await refresh();toast('Done: '+r.summary+'.')}
-    catch(e){if(e.code!=='locked')toast('Could not save that. Check your connection and try again.')}
-    finally{$('rvApply').disabled=false}
+  async function takeBack(c){
+    if(c.created)await api('/api/items/'+c.id,{method:'DELETE'});
+    else await api('/api/items/'+c.id,{method:'PATCH',body:JSON.stringify({qty:c.prevQty})});
+  }
+  function drawDone(){
+    var ul=$('doneList');ul.textContent='';
+    done.forEach(function(c){
+      var li=el('li','row'),g=el('div','grow'),x=el('button','iconbtn');
+      g.append(el('div','name',c.name));
+      g.append(el('div','sub',c.action==='use'?(c.qty<=0?'Marked as finished':'Now '+qtyText(c.qty)+' '+c.unit+' left'):
+        qtyText(c.added)+' '+c.unit+(c.expiry?' \u00b7 good until '+(c.est?'about ':'')+fmt(c.expiry):'')));
+      x.type='button';x.setAttribute('aria-label',"That's wrong, take back "+c.name);x.append(icon('M6 6l12 12M18 6L6 18'));
+      x.onclick=async function(){x.disabled=true;try{await takeBack(c);done=done.filter(function(k){return k!==c});await refresh();
+        if(done.length)drawDone();else{$('doneDlg').close();toast('Taken back. Nothing was changed.')}}
+        catch(e){x.disabled=false;if(e.code!=='locked')toast('Could not undo that. Try again.')}};
+      li.append(catIcon(c.category),g,x);ul.append(li)});
+  }
+  function showResult(d,r){
+    if(!r||!r.changes||!r.changes.length){
+      toast(r&&r.missed&&r.missed.length?"I couldn't find "+r.missed.join(', ')+' in your pantry.':
+        d&&d.kind==='voice'&&d.heard?'I heard \u201c'+d.heard+'\u201d but found nothing to add or use.':"I couldn't find any items in that. Try a clearer photo, or tell me instead.");return}
+    done=r.changes.slice();
+    var parts=[];if(r.added)parts.push('Added '+r.added+(r.added===1?' item':' items'));if(r.used)parts.push((r.added?'updated ':'Updated ')+r.used);
+    $('doneTitle').textContent=parts.join(', ');
+    $('doneSub').textContent=(d.store?'From '+d.store+'. ':'')+'Saved to your pantry. Tap the cross on anything I got wrong.'+(r.missed&&r.missed.length?" I couldn't find "+r.missed.join(', ')+'.':'');
+    $('doneHeard').hidden=!d.heard;$('doneHeard').textContent=d.heard?'\u201c'+d.heard+'\u201d':'';
+    drawDone();$('doneDlg').showModal();
+  }
+  $('doneOk').onclick=function(){$('doneDlg').close()};
+  $('doneUndo').onclick=async function(){
+    $('doneUndo').disabled=true;
+    try{for(var i=0;i<done.length;i++)await takeBack(done[i]);done=[];await refresh();$('doneDlg').close();toast('Undone. Your pantry is back to how it was.')}
+    catch(e){if(e.code!=='locked')toast('Could not undo everything. Check the Pantry tab.');try{await refresh()}catch(er){}}
+    finally{$('doneUndo').disabled=false}
   };
 
   async function start(){

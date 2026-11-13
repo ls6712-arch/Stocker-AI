@@ -1,6 +1,6 @@
 // Pantry Keeper: a household inventory agent on Cloudflare Workers.
 // Inputs: photos (bill or shelf), voice notes, barcodes, typed text.
-// Pipeline: perceive (vision / speech / barcode lookup) -> structure (LLM, JSON) -> person confirms -> apply to D1.
+// Pipeline: perceive (vision / speech / barcode lookup) -> structure (LLM, JSON) -> apply to D1 -> show what changed, with undo.
 
 const UNITS = ['pcs', 'pack', 'g', 'kg', 'ml', 'L', 'lb', 'oz'];
 const CATS = ['Produce', 'Dairy', 'Bakery', 'Meat', 'Frozen', 'Pantry', 'Drinks', 'Snacks', 'Household', 'Other'];
@@ -146,7 +146,7 @@ async function apply(env, body, today, source) {
   const bought = isDate(body.bought) ? body.bought : '';
   const clean = sanitize({ actions: (body.actions || []).map((a) => ({ ...a, expiryDate: a.expiry, daysToFinish: a.finishDays })) }, 'apply').actions;
   let added = 0, used = 0;
-  const missed = [];
+  const missed = [], changes = [];
   for (const a of clean) {
     const key = keyOf(a.name);
     let row = await env.DB.prepare('SELECT * FROM items WHERE name_key = ?').bind(key).first();
@@ -155,6 +155,7 @@ async function apply(env, body, today, source) {
       if (!row) { missed.push(a.name); continue; }
       const qty = a.quantity > 0 ? Math.max(0, row.qty - a.quantity) : 0;
       await env.DB.prepare('UPDATE items SET qty = ? WHERE id = ?').bind(qty, row.id).run();
+      changes.push({ id: row.id, name: row.name, action: 'use', created: false, prevQty: row.qty, qty, unit: row.unit, category: row.category });
       used++;
       continue;
     }
@@ -174,9 +175,12 @@ async function apply(env, body, today, source) {
     if (row) {
       await env.DB.prepare('UPDATE items SET qty = qty + ?, unit = ?, bought = COALESCE(?, bought), store = COALESCE(?, store), expiry = COALESCE(?, expiry), expiry_est = ?, finish_days = ?, learned = ?, source = ? WHERE id = ?')
         .bind(a.quantity, a.unit, bought || null, store || null, expiry, est, finish, learned, source, row.id).run();
+      changes.push({ id: row.id, name: row.name, action: 'add', created: false, prevQty: row.qty, qty: row.qty + a.quantity, added: a.quantity, unit: a.unit, category: row.category, expiry, est });
     } else {
+      const id = crypto.randomUUID();
       await env.DB.prepare('INSERT INTO items (id, name, name_key, qty, unit, category, bought, added, store, expiry, expiry_est, finish_days, learned, source) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
-        .bind(crypto.randomUUID(), a.name, key, a.quantity, a.unit, a.category, bought || null, today, store || null, expiry, est, finish, learned, source).run();
+        .bind(id, a.name, key, a.quantity, a.unit, a.category, bought || null, today, store || null, expiry, est, finish, learned, source).run();
+      changes.push({ id, name: a.name, action: 'add', created: true, prevQty: 0, qty: a.quantity, added: a.quantity, unit: a.unit, category: a.category, expiry, est });
     }
     added++;
   }
@@ -186,7 +190,7 @@ async function apply(env, body, today, source) {
   if (missed.length) parts.push("couldn't find " + missed.join(', '));
   const summary = parts.length ? parts.join('; ') : 'nothing changed';
   if (added || used) await env.DB.prepare('INSERT INTO log (at, source, summary) VALUES (?, ?, ?)').bind(new Date().toISOString(), source, summary).run();
-  return { added, used, missed, summary };
+  return { added, used, missed, summary, changes };
 }
 
 const SOURCES = ['bill', 'shelf', 'voice', 'text', 'barcode', 'hand'];
