@@ -108,7 +108,7 @@ async function picture(env, name) {
   if (!item) return null;
   const subject = item.name.replace(/[^\p{L}\p{N} '&-]/gu, ' ').replace(/\s+/g, ' ').trim().slice(0, 60);
   const r = await env.AI.run(env.IMAGE_MODEL || '@cf/black-forest-labs/flux-1-schnell', {
-    prompt: 'A single ' + subject + ', household product, soft matte 3D clay render, centered, three-quarter view, plain very light warm grey background, soft studio lighting, gentle shadow, pastel colours, no text, no labels, no logos, no people, no hands',
+    prompt: 'A single ' + subject + ', household product, close-up filling most of the frame, soft matte 3D clay render, centered, three-quarter view, plain very light warm grey background, soft studio lighting, gentle shadow, pastel colours, no text, no labels, no logos, no people, no hands',
     steps: 4,
   });
   if (!r || !r.image) return null;

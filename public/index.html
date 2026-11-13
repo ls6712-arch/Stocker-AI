@@ -81,7 +81,7 @@ input[type=text],input[type=password],input[type=number],input[type=date],input[
 .name{font-weight:600;overflow-wrap:anywhere}
 .ico{flex:none;width:44px;height:44px;border-radius:14px;display:grid;place-items:center;background:hsl(var(--h) var(--ts) var(--tl));color:hsl(var(--h) var(--fs) var(--fl))}
 .ico.pic{width:56px;height:56px;border-radius:16px;position:relative;overflow:hidden}
-.ico.pic img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .3s}
+.ico.pic img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .3s;transform:scale(1.45)}
 .ico.pic img.on{opacity:1}
 .qty{display:inline-flex;align-items:center;gap:4px;white-space:nowrap;font-variant-numeric:tabular-nums;font-weight:600}
 .qty button{width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:var(--surface2);font-weight:700;font-size:18px;line-height:1}
@@ -221,7 +221,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     <button type="button" class="tab" data-tab="pantry"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14v16H5zM5 10h14M5 15h14"/></svg>At home</button>
     <button type="button" class="fab" id="fab" aria-label="Add to your home"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
     <button type="button" class="tab" data-tab="list"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h2l2 10h9l2-7H8M10 20h.01M17 20h.01"/></svg>List<span class="badge" id="listBadge" hidden></span></button>
-    <button type="button" class="tab" data-tab="log"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg>Activity</button>
+    <button type="button" class="tab" data-tab="log"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.6 5.6 6 .8-4.4 4.2 1.1 6-5.3-3-5.3 3 1.1-6L3.4 9.400l6-.8z"/></svg>For you</button>
   </div>
 </nav>
 
@@ -297,6 +297,17 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     <button type="button" class="btn primary block" id="shareCopy">Copy link</button>
     <p class="sub" id="shareMe"></p>
     <button type="button" class="btn block" id="shareProf">Change your home profile</button>
+    <button type="button" class="btn block" data-close>Close</button>
+  </div>
+</dialog>
+
+<dialog class="sheet" id="kitDlg" aria-labelledby="kitH">
+  <div class="pad">
+    <div class="grab"></div>
+    <h2 id="kitH">Kit</h2>
+    <p class="sub" id="kitSub"></p>
+    <ul class="list" id="kitList"></ul>
+    <button type="button" class="btn primary block" id="kitAll">Add missing to my list</button>
     <button type="button" class="btn block" data-close>Close</button>
   </div>
 </dialog>
@@ -469,6 +480,11 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
   function emptyCard(cat,title,text,btn,fn){var c=el('div','empty');c.append(catIcon(cat),el('h2','',title),el('p','sub',text));
     if(btn){var b=el('button','btn primary',btn);b.type='button';b.onclick=fn;c.append(b)}return c}
 
+  function spendCard(v){
+    if(spend&&spend.total>0){var sp=el('div','card'),money=function(n){try{return new Intl.NumberFormat(undefined,{style:'currency',currency:spend.currency||'USD',maximumFractionDigits:0}).format(n)}catch(e){return String(Math.round(n))}};
+      var row=el('div','row'),gg=el('div','grow');gg.append(el('div','sub','Spent this month'),el('div','name',money(spend.total)));gg.lastChild.style.fontFamily='var(--display)';gg.lastChild.style.fontSize='1.6rem';row.append(gg);sp.append(row);
+      var fx=el('div','facts');spend.byArea.forEach(function(a){var t=el('span');t.append(document.createTextNode(a.area+' '),el('b','',money(a.amount)));fx.append(t)});sp.append(fx,el('p','sub','From the prices on bills you scanned.'));v.append(sp)}
+  }
   function starterCard(v){
     var hide=false;try{hide=localStorage.getItem('stocker.starterHide')==='1'}catch(e){}
     if(profile&&!hide){var have=items.map(function(i){return i.name.toLowerCase()}).concat(extras.map(function(x){return x.text.toLowerCase()}));
@@ -515,10 +531,6 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
         x.grow.append(el('div','sub',it.qty<=0?"You're out":'Running low'));c2.append(x.row)});
       if(buy.length>4)c2.append(el('p','sub','and '+(buy.length-4)+' more on the list'));
       s2.append(c2);v.append(s2)}
-    starterCard(v);
-    if(spend&&spend.total>0){var sp=el('div','card'),money=function(n){try{return new Intl.NumberFormat(undefined,{style:'currency',currency:spend.currency||'USD',maximumFractionDigits:0}).format(n)}catch(e){return String(Math.round(n))}};
-      var row=el('div','row'),gg=el('div','grow');gg.append(el('div','sub','Spent this month'),el('div','name',money(spend.total)));gg.lastChild.style.fontFamily='var(--display)';gg.lastChild.style.fontSize='1.6rem';row.append(gg);sp.append(row);
-      var fx=el('div','facts');spend.byArea.forEach(function(a){var t=el('span');t.append(document.createTextNode(a.area+' '),el('b','',money(a.amount)));fx.append(t)});sp.append(fx,el('p','sub','From the prices on bills you scanned.'));v.append(sp)}
     var sug=items.filter(maybeLow).length;
     if(sug){var sb=el('button','talk');sb.type='button';sb.append(icon('M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 8v5M12 16h.01'));
       var st=el('span');st.append(el('b','',sug+(sug===1?' thing might be running low':' things might be running low')),el('span','sub','My guess. Tap to check them.'));sb.append(st);sb.onclick=function(){go('list')};v.append(sb)}
@@ -531,7 +543,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     if(it.qty<=0)sub.append(el('span','pill bad','Out'));
     else if(it.low)sub.append(el('span','pill warn','Running low'));
     else if(e&&e.cls)sub.append(el('span','pill '+e.cls,e.text));
-    else if(it.expiry)sub.append(document.createTextNode(it.expiry_est&&daysFrom(it.expiry)>365?'Keeps a long time':'Fresh until '+fmt(it.expiry)));
+    else if(it.expiry)sub.append(document.createTextNode(it.expiry_est&&daysFrom(it.expiry)>=150?'Keeps a long time':'Fresh until '+fmt(it.expiry)));
     if(it.warn)sub.append(el('span','pill bad','Check label: '+it.warn));
     if(it.essential)sub.append(el('span','pill plain','Essential'));
     g.append(el('span','name',it.name),sub);
@@ -554,7 +566,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
       bar.setAttribute('aria-label',Math.round((1-f)*100)+' percent of shelf life left');panel.append(bar)}
     var m=el('div','more'),txt=el('span');m.style.borderTop='0';m.style.paddingTop='0';
     txt.textContent=(it.bought?'Bought '+fmt(it.bought):'Purchase date not recorded')+(it.store?' at '+it.store:'')+'. '+
-      (it.expiry?(it.expiry_est&&daysFrom(it.expiry)>365?'':'Best before '+fmt(it.expiry)+(it.expiry_est?' (my estimate). ':'. ')):'')+
+      (it.expiry?(it.expiry_est&&daysFrom(it.expiry)>=150?'':'Best before '+fmt(it.expiry)+(it.expiry_est?' (my estimate). ':'. ')):'')+
       (needsBuy(it)?'On your shopping list.':'Should last until '+fmt(p.date)+', '+p.why+'.');
     var rm=el('button','danger','Remove');rm.type='button';rm.setAttribute('aria-label','Remove '+it.name);
     rm.onclick=async function(){try{await api('/api/items/'+it.id,{method:'DELETE'});items=items.filter(function(i){return i!==it});render();toast('Removed '+it.name+'.')}catch(er){if(er.code!=='locked')toast('Could not remove it. Try again.')}};
@@ -647,17 +659,66 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
   var POT='M5 10h14v6a4 4 0 0 1-4 4H9a4 4 0 0 1-4-4zM3 10h18M9 6c0-1 1-1 1-2M14 6c0-1 1-1 1-2';
   var SRC={cook:['Cooked',POT,20],bill:['Bill','M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6',165],shelf:['Shelf photo','M4 7h3l2-3h6l2 3h3v13H4z',205],voice:['Voice note','M9 3h6v11H9zM5 11a7 7 0 0 0 14 0M12 18v3',355],
     barcode:['Barcode','M4 6v12M7 6v12M11 6v12M14 6v12M17 6v12M20 6v12',265],text:['Typed note','M4 20h4L19 9l-4-4L4 16z',35],hand:['By hand','M6 12l4 4 8-9',135]};
+  /* curated kits: checklists for real situations, checked against what is already at home */
+  var KITS=[
+    {t:'School lunchbox week',s:'Five days of lunches, sorted',p:['mom','dad','family4'],i:['Bread','Cheese slices','Yogurt','Apples','Carrots','Crackers','Granola bars','Juice boxes','Sandwich bags']},
+    {t:'New baby basics',s:'What you reach for ten times a day',p:['mom','dad'],i:['Diapers','Baby wipes','Diaper cream','Formula','Baby wash','Baby laundry detergent','Infant fever medicine']},
+    {t:'Meal-prep Sunday',s:'A week of high-protein meals',p:['gym','fit'],i:['Chicken breast','Rice','Broccoli','Sweet potatoes','Eggs','Oats','Greek yogurt','Frozen berries','Olive oil']},
+    {t:'Dorm room starter',s:'Everything for a first week away',p:['student'],i:['Instant noodles','Cereal','Milk','Coffee','Snacks','Laundry pods','Dish soap','Toilet paper','Trash bags','Paper towels']},
+    {t:'Plant-based pantry',s:'The staples a vegan kitchen runs on',p:['vegan'],i:['Tofu','Lentils','Chickpeas','Oat milk','Nutritional yeast','Quinoa','Peanut butter','Canned tomatoes','Vitamin B12']},
+    {t:'Friday taco night',s:'One dinner everyone agrees on',p:['mom','dad','family4'],i:['Taco shells','Ground beef','Salsa','Cheese','Lettuce','Tomatoes','Sour cream','Limes']},
+    {t:'Sick day kit',s:'So nobody goes out at 9pm',p:[],i:['Fever medicine','Cough syrup','Throat lozenges','Tissues','Electrolyte drink','Chicken soup','Honey','Tea']},
+    {t:'Guests this weekend',s:'Ready before the doorbell rings',p:[],i:['Coffee','Milk','Eggs','Bread','Fruit','Snacks','Sparkling water','Toilet paper','Hand soap','Paper towels']},
+    {t:'Easy breakfasts',s:'Mornings on autopilot',p:[],i:['Eggs','Bread','Oats','Bananas','Yogurt','Butter','Coffee','Orange juice']},
+    {t:'Deep clean day',s:'Every surface, one trip',p:[],i:['All-purpose cleaner','Dish soap','Sponges','Trash bags','Paper towels','Laundry detergent','Toilet cleaner','Glass cleaner']},
+    {t:'Storm shelf',s:'Three days without the shops',p:[],i:['Bottled water','Canned soup','Pasta','Peanut butter','Crackers','Batteries','Candles','First aid supplies']},
+    {t:'Pet essentials',s:'For the family member who cannot ask',p:[],i:['Pet food','Pet treats','Poop bags','Cat litter','Flea treatment']}];
+  function words(n){return n.toLowerCase().replace(/[^a-z0-9 ]/g,' ').split(/\s+/).filter(Boolean).map(function(w){return w.length>3?w.replace(/(es|s)$/,''):w})}
+  function same(a,b){var x=words(a),y=words(b);if(x.length>y.length){var t=x;x=y;y=t}return x.length>0&&x.every(function(w){return y.indexOf(w)>-1})}
+  function kitState(n){
+    if(items.some(function(i){return i.qty>0&&!i.low&&same(i.name,n)}))return 'home';
+    if(extras.some(function(x){return same(x.text,n)})||items.some(function(i){return needsBuy(i)&&same(i.name,n)}))return 'list';
+    return 'need';
+  }
+  function kitItems(k){return k.i.filter(fits)}
+  function openKit(k){
+    function draw(){
+      var list=kitItems(k),need=list.filter(function(n){return kitState(n)==='need'}),ul=$('kitList');ul.textContent='';
+      $('kitH').textContent=k.t;$('kitSub').textContent=k.s+'. '+(need.length?'You have '+(list.length-need.length)+' of '+list.length+'.':'You have everything.');
+      list.forEach(function(n){var st=kitState(n),li=el('li','row'),g=el('span','grow');g.append(el('span','name',n));li.append(g);
+        if(st==='home')li.append(el('span','pill ok','At home'));else if(st==='list')li.append(el('span','pill warn','On your list'));
+        else{var b=el('button','mini','+ Add');b.type='button';b.setAttribute('aria-label','Add '+n+' to the shopping list');b.onclick=async function(){b.disabled=true;
+          try{await api('/api/extras',{method:'POST',body:JSON.stringify({text:n})});await refresh();draw()}catch(e){b.disabled=false;if(e.code!=='locked')toast('Could not add that. Check your connection.')}};li.append(b)}
+        ul.append(li)});
+      var all=$('kitAll');all.hidden=!need.length;all.textContent='Add all '+need.length+' missing to my list';
+      all.onclick=async function(){all.disabled=true;try{for(var i=0;i<need.length;i++)await api('/api/extras',{method:'POST',body:JSON.stringify({text:need[i]})});await refresh();draw();toast(need.length+' added to your shopping list.')}
+        catch(e){if(e.code!=='locked')toast('Could not add everything. Check your connection.')}finally{all.disabled=false}};
+    }
+    draw();$('kitDlg').showModal();
+  }
   function renderLog(){
     var v=$('v-log');v.textContent='';
-    if(!log.length){v.append(emptyCard('Other','No activity yet','Every change is recorded here, with who made it and when.'));return}
+    var per=profile?profile.persona:'',kits=KITS.filter(function(k){return kitItems(k).length>=3&&(!k.p.length||!per||k.p.indexOf(per)>-1||per==='other')})
+      .sort(function(a,b){return (b.p.indexOf(per)>-1)-(a.p.indexOf(per)>-1)});
+    var sk=el('div','sec'),hd=el('div','sechead');hd.append(el('h2','',profile?'Curated for a '+PERSONA[per][0].toLowerCase():'Curated kits'));
+    if(!profile){var mk=el('button','link','Make it yours');mk.type='button';mk.onclick=openProfile;hd.append(mk)}
+    sk.append(hd,el('p','sub','Checklists for real situations, checked against what you already have.'));
+    var grid=el('div','tiles');kits.forEach(function(k){var list=kitItems(k),have=list.filter(function(n){return kitState(n)!=='need'}).length,b=el('button','tile');b.type='button';b.style.minHeight='0';
+      if(k.p.indexOf(per)>-1)b.append(el('span','pill ok','For you'));
+      b.append(el('b','',k.t),el('span','',k.s));var bar=el('div','bar'),fill=el('i');bar.style.width='100%';fill.style.width=Math.round(have/list.length*100)+'%';bar.append(fill);
+      b.append(bar,el('span','',have===list.length?'All set':'Have '+have+' of '+list.length));b.onclick=function(){openKit(k)};grid.append(b)});
+    sk.append(grid);v.append(sk);
+    starterCard(v);spendCard(v);
+    var sa=el('div','sec');sa.append(el('h2','','Recent activity'));
+    if(!log.length){sa.append(el('p','sub','Every change is recorded here, with who made it and when.'));v.append(sa);return}
     var c=el('div','card'),ul=el('ul','tl');
     log.forEach(function(l){var s=SRC[l.source]||SRC.hand,li=el('li'),ic=el('span','ico'),g=el('div'),d=new Date(l.at);ic.style.setProperty('--h',s[2]);ic.append(icon(s[1]));
       g.append(el('div','name',(l.who?l.who+' ':'')+(l.who?l.summary:l.summary.charAt(0).toUpperCase()+l.summary.slice(1))+'.'),
         el('div','sub',s[0]+(isNaN(d)?'':', '+d.toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}))));
       li.append(ic,g);ul.append(li)});
-    c.append(ul);v.append(c);
+    c.append(ul);sa.append(c);v.append(sa);
   }
-  var TITLES={today:'Today',pantry:'At home',list:'Shopping list',log:'Activity'};
+  var TITLES={today:'Today',pantry:'At home',list:'Shopping list',log:'For you'};
   function render(){renderToday();renderPantry();renderList();renderLog();
     $('barDate').textContent=tab==='today'?'Stocker AI':today().toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});$('barTitle').textContent=TITLES[tab]}
   function go(t){tab=t;['today','pantry','list','log'].forEach(function(k){$('v-'+k).hidden=k!==t});
