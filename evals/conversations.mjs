@@ -173,6 +173,9 @@ async function main() {
     note('reply: no raw dates or markup', !/\d{4}-\d{2}-\d{2}|[*_`#<>]/.test(r), { reply: r });
   }
 
+  // the router is the first of two gates: anything it sends on must also be labelled an update by the model before it can change the home
+  const routed = users.flatMap((u) => u.convo).filter((m) => MUST_ANSWER.has(m.intent) && A.route(m.said) === 'update').length;
+  console.log('Messages the router left to the model to judge (no change unless the model also calls them an update): ' + routed);
   const rows = Object.entries(stats).map(([k, s]) => ({ check: k, pass: s.pass, total: s.total, rate: s.pass / s.total }));
   rows.sort((a, b) => a.rate - b.rate);
   const all = rows.reduce((t, r) => ({ p: t.p + r.pass, n: t.n + r.total }), { p: 0, n: 0 });

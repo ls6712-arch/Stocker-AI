@@ -74,6 +74,25 @@ Tote holds household data and reads untrusted content (receipts, product databas
 
 Known limits: the passcode is shared by the household, so anyone who has it sees everything in that home; the inline app script means the policy allows inline scripts; item pictures and model calls run on Cloudflare Workers AI.
 
+## Conversation simulation
+
+`evals/conversations.mjs` runs 1,000 simulated households (about 5,500 messages) through the agent's real routing, privacy and guardrail code, with no network. Each household is a weighted mix of real household types; each message is a realistic phrasing re-said the way people do it (greetings, misheard names like "toad" or "toto", fillers, lowercase, missing punctuation, swapped-letter typos, sign-offs).
+
+| Set | What it is | Used for |
+|---|---|---|
+| `evals/corpus` | 319 phrasings from parents, solo households, couples and retirees, and a red team | Teaching the router |
+| `evals/heldout` | 150 phrasings from an independent writer | First honest test, then teaching |
+| `evals/heldout2` | 160 phrasings from new groups and languages, never used for teaching | The honest score |
+
+`npm test` runs the households test and the taught set; `npm run test:heldout` runs a held-out set. When a new held-out set is used to fix something, it stops being held out: write a fresh one for the next honest score.
+
+### Two gates
+
+1. **The router** (code) handles only clear-cut cases: refusals, wipes, corrections in the main languages, and unmistakable questions, greetings, health and off-topic messages. It never changes anything itself.
+2. **The model's intent label**: anything the router sends on must also be labelled "update" by the model before a change is applied.
+
+The router is deliberately cautious, so on new phrasing its misses mostly hand a question to the model gate (safe) rather than losing an update.
+
 ## Evals
 
 Two layers, both in this repository.
