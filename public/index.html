@@ -92,6 +92,18 @@ input[type=text],input[type=password],input[type=number],input[type=date],input[
 .facts b{color:var(--fg);font-weight:600}
 .more{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between;border-top:1px solid var(--line);padding-top:10px;font-size:13px;color:var(--muted)}
 .danger{border:0;background:none;color:var(--bad);font-weight:600;padding:8px 0}
+#pantryList{gap:20px}
+.card.tight{padding:2px 14px;gap:0}
+.it+.it{border-top:1px solid var(--line)}
+.ihead{display:flex;align-items:center;gap:12px;width:100%;border:0;background:none;text-align:left;padding:10px 0;min-height:64px}
+.ihead .grow{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.ihead .ico.pic{width:48px;height:48px;border-radius:14px}
+.ihead .sub{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.ihead .q{font-weight:600;white-space:nowrap;font-variant-numeric:tabular-nums}
+.ihead>svg{flex:none;width:18px;height:18px;color:var(--muted);transition:transform .15s}
+.ihead[aria-expanded="true"]>svg{transform:rotate(180deg)}
+.ipanel{display:flex;flex-direction:column;gap:12px;padding:2px 0 16px}
+.ipanel .qty{align-self:flex-start}
 .acts{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .mini{border:1px solid var(--line);background:var(--surface2);border-radius:999px;padding:8px 14px;font-weight:600;font-size:13.5px;min-height:40px}
 .mini[aria-pressed="true"]{background:var(--warn-bg);color:var(--warn);border-color:transparent}
@@ -188,7 +200,9 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     <div class="view" id="v-today"></div>
     <div class="view" id="v-pantry" hidden>
       <input type="search" id="search" placeholder="Search your things" aria-label="Search your things">
-      <div class="chips" id="chips" role="group" aria-label="Filter by area of the home"></div>
+      <div class="chips" id="chips" role="group" aria-label="Filter by what needs attention"></div>
+      <div class="chips" id="chips2" role="group" aria-label="Filter by area of the home" hidden></div>
+      <p class="sub" id="pantryCount"></p>
       <ul class="list" id="pantryList"></ul>
     </div>
     <div class="view" id="v-list" hidden></div>
@@ -428,49 +442,63 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
       var st=el('span');st.append(el('b','',sug+(sug===1?' thing might be running low':' things might be running low')),el('span','sub','My guess. Tap to check them.'));sb.append(st);sb.onclick=function(){go('list')};v.append(sb)}
   }
 
+  var stat='all';
+  function itemBlock(it){
+    var wrap=el('div','it'),e=expiry(it),p=plan(it),isOpen=!!open[it.id];
+    var head=el('button','ihead'),g=el('span','grow'),sub=el('span','sub');head.type='button';head.setAttribute('aria-expanded',isOpen?'true':'false');
+    if(it.qty<=0)sub.append(el('span','pill bad','Out'));
+    else if(it.low)sub.append(el('span','pill warn','Running low'));
+    else if(e&&e.cls)sub.append(el('span','pill '+e.cls,e.text));
+    else if(it.expiry)sub.append(document.createTextNode(it.expiry_est&&daysFrom(it.expiry)>365?'Keeps a long time':'Fresh until '+fmt(it.expiry)));
+    if(it.essential)sub.append(el('span','pill plain','Essential'));
+    g.append(el('span','name',it.name),sub);
+    head.append(iconFor(it),g,el('span','q',qtyText(it.qty)+' '+it.unit),icon('M6 9l6 6 6-6'));
+    head.onclick=function(){open[it.id]=!open[it.id];renderPantry()};wrap.append(head);
+    if(!isOpen)return wrap;
+    var panel=el('div','ipanel'),q2=el('span','qty'),minus=el('button','','\u2212'),plus=el('button','','+');minus.type=plus.type='button';
+    minus.setAttribute('aria-label','Use some '+it.name);plus.setAttribute('aria-label','Add more '+it.name);
+    var step=it.qty>=100?50:(it.unit==='kg'||it.unit==='L'||it.unit==='lb')?0.5:1;
+    minus.onclick=function(){setQty(it,Math.max(0,it.qty-step))};plus.onclick=function(){setQty(it,it.qty+step)};
+    q2.append(minus,el('span','',qtyText(it.qty)+' '+it.unit),plus);panel.append(q2);
+    var acts=el('div','acts'),outB=el('button','mini',"We're out"),essB=el('button','mini',it.essential?'Essential':'Make essential');
+    outB.type=essB.type='button';outB.disabled=it.qty<=0;essB.setAttribute('aria-pressed',it.essential?'true':'false');
+    outB.onclick=async function(){it.qty=0;render();try{await api('/api/items/'+it.id,{method:'PATCH',body:JSON.stringify({qty:0,out:true})});await refresh();toast(it.name+' is on your shopping list.')}catch(er){if(er.code!=='locked')toast('Could not save that. Check your connection.')}};
+    essB.onclick=async function(){it.essential=it.essential?0:1;render();try{await api('/api/items/'+it.id,{method:'PATCH',body:JSON.stringify({essential:!!it.essential})});
+      toast(it.essential?it.name+' is an essential. I will warn you earlier.':it.name+' is no longer an essential.')}catch(er){if(er.code!=='locked')toast('Could not save that. Check your connection.')}};
+    acts.append(outB,essB);panel.append(acts);
+    var f=fresh(it);
+    if(f!=null){var bar=el('div','bar'),fill=el('i',e&&e.cls?e.cls:'');fill.style.width=Math.max(4,Math.round((1-f)*100))+'%';bar.append(fill);bar.setAttribute('role','img');
+      bar.setAttribute('aria-label',Math.round((1-f)*100)+' percent of shelf life left');panel.append(bar)}
+    var m=el('div','more'),txt=el('span');m.style.borderTop='0';m.style.paddingTop='0';
+    txt.textContent=(it.bought?'Bought '+fmt(it.bought):'Purchase date not recorded')+(it.store?' at '+it.store:'')+'. '+
+      (it.expiry?(it.expiry_est&&daysFrom(it.expiry)>365?'':'Best before '+fmt(it.expiry)+(it.expiry_est?' (my estimate). ':'. ')):'')+
+      (needsBuy(it)?'On your shopping list.':'Should last until '+fmt(p.date)+', '+p.why+'.');
+    var rm=el('button','danger','Remove');rm.type='button';rm.setAttribute('aria-label','Remove '+it.name);
+    rm.onclick=async function(){try{await api('/api/items/'+it.id,{method:'DELETE'});items=items.filter(function(i){return i!==it});render();toast('Removed '+it.name+'.')}catch(er){if(er.code!=='locked')toast('Could not remove it. Try again.')}};
+    m.append(txt,rm);panel.append(m);wrap.append(panel);return wrap;
+  }
   function renderPantry(){
+    var use=items.filter(needsUse).length,buy=items.filter(needsBuy).length,ess=items.filter(function(i){return i.essential}).length;
     var chips=$('chips');chips.textContent='';
-    var cats=['All'].concat(Object.keys(AREA).filter(function(c){return items.some(function(i){return areaOf(i)===c})}));
-    if(cats.indexOf(cat)<0)cat='All';
-    cats.forEach(function(c){var b=el('button','chip',c);b.type='button';b.setAttribute('aria-pressed',c===cat?'true':'false');b.onclick=function(){cat=c;renderPantry()};chips.append(b)});
+    [['all','Everything',''],['use','Use soon',use],['buy','Out or low',buy],['ess','Essentials',ess]].forEach(function(c){
+      var b=el('button','chip',c[1]+(c[2]===''?'':' '+c[2]));b.type='button';b.setAttribute('aria-pressed',stat===c[0]?'true':'false');b.onclick=function(){stat=c[0];renderPantry()};chips.append(b)});
+    var areas=Object.keys(AREA).filter(function(a){return items.some(function(i){return areaOf(i)===a})}),c2=$('chips2');
+    c2.textContent='';c2.hidden=areas.length<2;if(areas.indexOf(cat)<0||areas.length<2)cat='All';
+    if(areas.length>=2)['All'].concat(areas).forEach(function(a){var b=el('button','chip',a==='All'?'Whole home':a);b.type='button';b.setAttribute('aria-pressed',a===cat?'true':'false');b.onclick=function(){cat=a;renderPantry()};c2.append(b)});
+    var q=query.toLowerCase(),shown=items.filter(function(it){return (cat==='All'||areaOf(it)===cat)&&(!q||it.name.toLowerCase().indexOf(q)>-1)&&
+      (stat==='all'||(stat==='use'?needsUse(it):stat==='buy'?needsBuy(it):!!it.essential))});
+    $('pantryCount').textContent=items.length?shown.length+(shown.length===1?' thing':' things')+(shown.length!==items.length?' of '+items.length:' at home'):'';
     var ul=$('pantryList');ul.textContent='';
-    var q=query.toLowerCase(),shown=items.filter(function(it){return (cat==='All'||areaOf(it)===cat)&&(!q||it.name.toLowerCase().indexOf(q)>-1)})
-      .sort(function(a,b){return plan(a).days-plan(b).days});
-    if(!shown.length){var li0=el('li');li0.append(emptyCard('Other',items.length?'Nothing matches':'Nothing here yet',items.length?'Try a different search or category.':'Tap the plus button to add your first items.'));ul.append(li0);return}
-    shown.forEach(function(it){
-      var li=el('li','card'),p=plan(it),e=expiry(it),f=fresh(it);
-      var q2=el('span','qty'),minus=el('button','','−'),plus=el('button','','+');minus.type=plus.type='button';
-      minus.setAttribute('aria-label','Use some '+it.name);plus.setAttribute('aria-label','Add more '+it.name);
-      var step=it.qty>=100?50:(it.unit==='kg'||it.unit==='L'||it.unit==='lb')?0.5:1;
-      minus.onclick=function(){setQty(it,Math.max(0,it.qty-step))};plus.onclick=function(){setQty(it,it.qty+step)};
-      q2.append(minus,el('span','',qtyText(it.qty)+' '+it.unit),plus);
-      var x=itemRow(it,q2);x.grow.append(el('div','sub',(areaOf(it)==='Kitchen'&&it.category&&it.category!=='Other'?'Kitchen · '+it.category:areaOf(it))+(it.store?' · '+it.store:'')));li.append(x.row);
-      if(f!=null){var bar=el('div','bar'),fill=el('i',e&&e.cls?e.cls:'');fill.style.width=Math.max(4,Math.round((1-f)*100))+'%';bar.append(fill);bar.setAttribute('role','img');
-        bar.setAttribute('aria-label',Math.round((1-f)*100)+' percent of shelf life left');li.append(bar)}
-      var facts=el('div','facts'),a=el('span'),b=el('span');
-      if(it.qty<=0)a.append(el('span','pill bad','Out'));
-      else if(e&&e.cls)a.append(el('span','pill '+e.cls,e.text));
-      else if(it.expiry&&it.expiry_est&&daysFrom(it.expiry)>365)a.textContent='Keeps a long time';
-      else if(it.expiry){a.append(document.createTextNode('Best before '),el('b','',fmt(it.expiry)),document.createTextNode(it.expiry_est?' (est.)':''))}
-      else a.textContent='No date recorded';
-      if(needsBuy(it))b.append(el('b','','On your list'));else b.append(document.createTextNode('Should last until '),el('b','',fmt(p.date)));
-      facts.append(a,b);li.append(facts);
-      var acts=el('div','acts'),outB=el('button','mini',"We're out"),essB=el('button','mini',it.essential?'Essential':'Make essential');
-      outB.type=essB.type='button';outB.disabled=it.qty<=0;essB.setAttribute('aria-pressed',it.essential?'true':'false');
-      outB.onclick=async function(){it.qty=0;render();try{await api('/api/items/'+it.id,{method:'PATCH',body:JSON.stringify({qty:0,out:true})});await refresh();toast(it.name+' is on your shopping list.')}catch(er){if(er.code!=='locked')toast('Could not save that. Check your connection.')}};
-      essB.onclick=async function(){it.essential=it.essential?0:1;render();try{await api('/api/items/'+it.id,{method:'PATCH',body:JSON.stringify({essential:!!it.essential})});
-        toast(it.essential?it.name+' is an essential. I will warn you earlier.':it.name+' is no longer an essential.')}catch(er){if(er.code!=='locked')toast('Could not save that. Check your connection.')}};
-      acts.append(outB,essB);li.append(acts);
-      var tg=el('button','link',open[it.id]?'Hide details':'Details');tg.type='button';tg.style.padding='0';tg.style.textAlign='left';tg.setAttribute('aria-expanded',open[it.id]?'true':'false');
-      tg.onclick=function(){open[it.id]=!open[it.id];renderPantry()};li.append(tg);
-      if(open[it.id]){var m=el('div','more'),txt=el('span');
-        txt.textContent=(it.bought?'Bought '+fmt(it.bought):'Purchase date not recorded')+(it.store?' at '+it.store:'')+'. '+
-          (it.qty<=0?'':'Runs out '+p.why+'. ')+(it.expiry?(it.expiry_est?'Best-before date is my estimate.':'Best-before date was printed.'):'');
-        var rm=el('button','danger','Remove');rm.type='button';rm.setAttribute('aria-label','Remove '+it.name);
-        rm.onclick=async function(){try{await api('/api/items/'+it.id,{method:'DELETE'});items=items.filter(function(i){return i!==it});render();toast('Removed '+it.name+'.')}catch(er){if(er.code!=='locked')toast('Could not remove it. Try again.')}};
-        m.append(txt,rm);li.append(m)}
-      ul.append(li);
-    });
+    if(!shown.length){var li0=el('li');li0.append(emptyCard('Pantry',items.length?'Nothing matches':'Nothing here yet',items.length?'Try a different search or filter.':'Tap the plus button to add your first items.'));ul.append(li0);return}
+    function group(it){var a=areaOf(it);return a!=='Kitchen'?a:(it.category&&it.category!=='Other'&&it.category!=='Household'?it.category:'Other food')}
+    function rank(it){return it.qty<=0?0:it.low?1:needsUse(it)?2:3}
+    var order=['Produce','Dairy','Meat','Bakery','Frozen','Pantry','Drinks','Snacks','Other food'].concat(Object.keys(AREA).slice(1));
+    shown.sort(function(a,b){return order.indexOf(group(a))-order.indexOf(group(b))||rank(a)-rank(b)||a.name.localeCompare(b.name)});
+    var card=null,last=null;
+    shown.forEach(function(it){var gn=group(it);
+      if(gn!==last){last=gn;var li=el('li','sec'),hd=el('div','sechead'),n=shown.filter(function(x){return group(x)===gn}).length;
+        hd.append(el('h2','',gn==='Pantry'?'Cupboard staples':gn),el('span','sub',String(n)));card=el('div','card tight');li.append(hd,card);ul.append(li)}
+      card.append(itemBlock(it))});
   }
 
   function renderList(){
