@@ -117,6 +117,14 @@ input[type=text],input[type=password],input[type=number],input[type=date],input[
 .wrapchips{display:flex;flex-wrap:wrap;gap:8px}
 #profH:focus{outline:0}
 html.big{zoom:1.16}
+.chat{display:flex;flex-direction:column;gap:8px;max-height:44vh;min-height:120px;overflow-y:auto;padding:2px}
+.msg{max-width:88%;padding:10px 12px;border-radius:16px;overflow-wrap:anywhere;font-size:15px;line-height:1.4}
+.msg.me{align-self:flex-end;background:var(--accent);color:#fff;border-bottom-right-radius:4px}
+.msg.bot{align-self:flex-start;background:var(--surface2);border:1px solid var(--line);border-bottom-left-radius:4px}
+.msg .chg{display:flex;justify-content:space-between;gap:10px;align-items:center;font-size:13.5px;border-top:1px solid var(--line);padding-top:6px;margin-top:6px}
+.msg .chg s{color:var(--muted)}.msg .chg button{min-height:36px;padding:4px 12px}
+.chatbar{display:flex;gap:8px;align-items:center}.chatbar input{flex:1;min-width:0}
+.chatbar .micb{flex:none;width:48px;height:48px;border-radius:50%;border:1px solid var(--line);background:var(--surface2);display:grid;place-items:center;color:var(--accent)}
 .latest{border:0;background:none;text-align:left;padding:0 4px;font-size:13px;color:var(--muted)}
 .chip.add{border-style:dashed;color:var(--accent);background:none}
 .addin{display:flex;gap:6px;flex:1 1 220px;min-width:0}.addin input{flex:1;min-width:0;min-height:40px;padding:6px 12px;border-radius:999px}
@@ -261,6 +269,22 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
       <button type="button" class="tile wide" id="capType"><span class="ico" style="--h:35"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16zM13 7l4 4"/></svg></span><span style="display:flex;flex-direction:column;color:inherit"><b>Type or paste</b><span>A note, or an emailed receipt</span></span></button>
     </div>
     <button type="button" class="btn block" data-close>Cancel</button>
+  </div>
+</dialog>
+
+<dialog class="sheet" id="chatDlg" aria-labelledby="chatH">
+  <div class="pad">
+    <div class="grab"></div>
+    <h2 id="chatH">Talk to Stocker</h2>
+    <p class="sub">Tell me what you are cooking, what you used up or what you bought, and I will update your home. Or ask me what you have.</p>
+    <div class="chat" id="chatLog" role="log" aria-live="polite" aria-label="Conversation"></div>
+    <div class="wrapchips" id="chatTips"></div>
+    <form class="chatbar" id="chatForm">
+      <button type="button" class="micb" id="chatMic" aria-label="Speak instead of typing"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
+      <input type="text" id="chatText" maxlength="300" placeholder="I'm cooking pasta tonight" aria-label="Message" autocomplete="off">
+      <button type="submit" class="btn primary" id="chatGo">Send</button>
+    </form>
+    <button type="button" class="btn block" data-close>Done</button>
   </div>
 </dialog>
 
@@ -663,8 +687,8 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
           catch(e){m.away=!m.away;render();if(e.code!=='locked')toast('Could not save that. Check your connection.')}};wc.append(b)});
       wh.append(wc);v.append(wh)}
     var talk=el('button','talk');talk.type='button';talk.append(icon('M9 3h6v11H9zM5 11a7 7 0 0 0 14 0M12 18v3'));
-    var tt=el('span');tt.append(el('b','','Tell me'),el('span','sub','What you bought, cooked, or are running low on'));talk.append(tt);
-    talk.onclick=function(){$('capVoice').click()};v.append(talk);
+    var tt=el('span');tt.append(el('b','','Talk to Stocker'),el('span','sub','Say \u201cI\u2019m cooking pasta\u201d and I update what you have'));talk.append(tt);
+    talk.onclick=openChat;v.append(talk);
     if(items.filter(function(i){return areaOf(i)==='Kitchen'&&i.qty>0}).length>=2){
       var ck=el('button','talk');ck.type='button';ck.append(icon(POT));var ct=el('span');
       ct.append(el('b','','What can I cook?'),el('span','sub','Dinner ideas that use up what goes off soonest'));ck.append(ct);ck.onclick=cookIdeas;v.append(ck)}
@@ -1062,9 +1086,10 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
   photo($('billFile'),'bill');photo($('shelfFile'),'shelf');
 
   /* voice */
-  var rec=null,chunks=[],recTimer=null,recStart=0,recSend=false;
-  $('capVoice').onclick=async function(){
-    $('capDlg').close();
+  var rec=null,chunks=[],recTimer=null,recStart=0,recSend=false,recMode='scan';
+  $('capVoice').onclick=function(){recMode='scan';startRec()};
+  async function startRec(){
+    if($('capDlg').open)$('capDlg').close();
     if(!navigator.mediaDevices||!window.MediaRecorder){toast('This browser cannot record audio. Type it instead.');return}
     var stream;try{stream=await navigator.mediaDevices.getUserMedia({audio:true})}catch(e){toast('Microphone access was blocked. Allow it in your browser settings.');return}
     chunks=[];recSend=false;rec=new MediaRecorder(stream);recStart=Date.now();$('recTime').textContent='0:00';
@@ -1073,6 +1098,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
       var blob=new Blob(chunks,{type:rec.mimeType||'audio/webm'});rec=null;if($('recDlg').open)$('recDlg').close();
       if(!recSend)return;
       if(blob.size<800){toast('That was too short. Try again and speak for a few seconds.');return}
+      if(recMode==='chat'){var fr0=new FileReader();fr0.onload=function(){chatSend({audio:String(fr0.result).split(',')[1]},'Voice note')};fr0.onerror=function(){toast('Could not read that recording. Try again.')};fr0.readAsDataURL(blob);return}
       scan(function(){return new Promise(function(res,rej){var fr=new FileReader();
         fr.onload=function(){api('/api/scan/voice',{method:'POST',body:JSON.stringify({audio:String(fr.result).split(',')[1]})}).then(res,rej)};
         fr.onerror=function(){rej({code:'server'})};fr.readAsDataURL(blob)})},'Listening back')};
@@ -1113,6 +1139,28 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     else if(c.action==='low')await api('/api/items/'+c.id,{method:'PATCH',body:JSON.stringify({low:!!c.prevLow})});
     else await api('/api/items/'+c.id,{method:'PATCH',body:JSON.stringify(c.action==='add'?{qty:c.prevQty,undo:true}:{qty:c.prevQty})});
   }
+  /* conversation: say what happened in plain words; changes are applied straight away and each can be undone */
+  var chatHist=[],chatBusy=false;
+  function bubble(cls,text){var m=el('div','msg '+cls,text);$('chatLog').append(m);$('chatLog').scrollTop=$('chatLog').scrollHeight;return m}
+  function chatTips(){var box=$('chatTips');box.textContent='';var k=items.filter(function(i){return areaOf(i)==='Kitchen'&&i.qty>0}),tips=["I'm cooking pasta tonight",'What should I use up first?'];
+    if(k.length)tips.push('Do we have '+k[0].name.toLowerCase()+'?','We ran out of '+k[k.length-1].name.toLowerCase());else tips.push('I bought milk, eggs and bread');
+    tips.forEach(function(t){var b=el('button','mini',t);b.type='button';b.onclick=function(){chatSend({text:t},t)};box.append(b)})}
+  function openChat(){if(!$('chatLog').firstChild)bubble('bot','Hi'+(me?' '+me:'')+'. Tell me what you cooked, used or bought and I will keep your home up to date. You can also ask what you have.');chatTips();$('chatDlg').showModal();$('chatText').focus()}
+  async function chatSend(payload,label){
+    if(chatBusy)return;chatBusy=true;$('chatGo').disabled=true;$('chatTips').textContent='';
+    var mine=bubble('me',label),wait=bubble('bot','Thinking\u2026');payload.history=chatHist.slice(-4);
+    try{var r=await api('/api/chat',{method:'POST',body:JSON.stringify(payload)});
+      if(r.heard)mine.textContent=r.heard;wait.textContent=r.reply;
+      (r.changes||[]).forEach(function(c){var row=el('div','chg'),t=el('span','',c.name+': '+(c.action==='low'?'running low':amount(c.prevQty,c.unit)+' \u2192 '+(c.qty<=0?'none':amount(c.qty,c.unit)))),u=el('button','mini','Undo');u.type='button';
+        u.setAttribute('aria-label','Undo the change to '+c.name);
+        u.onclick=async function(){u.disabled=true;try{await takeBack(c);await refresh();var st=el('s','',t.textContent);t.textContent='';t.append(st);u.textContent='Undone'}catch(er){u.disabled=false;if(er.code!=='locked')toast('Could not undo that. Check your connection.')}};
+        row.append(t,u);wait.append(row)});
+      chatHist.push({role:'user',text:r.heard||payload.text||''},{role:'assistant',text:r.reply});
+      if(r.changes&&r.changes.length)await refresh();
+    }catch(e){wait.textContent=e.code==='silent'?"I couldn't hear anything in that. Try again a little closer to the phone.":e.code==='offline'?'You seem to be offline. Nothing was changed.':e.code==='locked'?'':'I could not work that out just now. Nothing was changed. Try again in a moment.'}
+    chatBusy=false;$('chatGo').disabled=false;chatTips();$('chatLog').scrollTop=$('chatLog').scrollHeight}
+  $('chatForm').addEventListener('submit',function(ev){ev.preventDefault();var t=$('chatText').value.trim();if(!t)return;$('chatText').value='';chatSend({text:t},t)});
+  $('chatMic').onclick=function(){recMode='chat';startRec()};
   /* dinner ideas: suggestions come from what is at home; "I cooked this" deducts the ingredients */
   async function cookIdeas(){
     if(busy)return;setBusy('Thinking about dinner');var d;
