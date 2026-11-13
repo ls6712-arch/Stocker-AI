@@ -3,7 +3,17 @@
 // Pipeline: perceive (vision / speech / barcode lookup) -> structure (LLM, JSON) -> apply to D1 -> show what changed, with undo.
 
 const UNITS = ['pcs', 'pack', 'g', 'kg', 'ml', 'L', 'lb', 'oz'];
-const CATS = ['Produce', 'Dairy', 'Bakery', 'Meat', 'Frozen', 'Pantry', 'Drinks', 'Snacks', 'Household', 'Other'];
+// Each room of the home has its own kinds of things.
+const ROOM_CATS = {
+  Kitchen: ['Produce', 'Dairy', 'Bakery', 'Meat', 'Frozen', 'Pantry', 'Drinks', 'Snacks'],
+  Bathroom: ['Dental', 'Hair', 'Skin and body', 'Paper and tissue'],
+  Cleaning: ['Laundry', 'Dishes', 'Surfaces', 'Bags and wraps'],
+  Kids: ['Diapering', 'Feeding', 'Kids care'],
+  Pets: ['Pet food', 'Pet care'],
+  Health: ['Medicine', 'Vitamins', 'First aid'],
+  Home: ['Batteries and bulbs', 'Stationery', 'General'],
+};
+const CATS = [...new Set(Object.values(ROOM_CATS).flat()), 'Other'];
 const AREAS = ['Kitchen', 'Bathroom', 'Cleaning', 'Kids', 'Pets', 'Health', 'Home'];
 const DAY = 86400000;
 
@@ -168,7 +178,8 @@ async function structure(env, kind, text, today, known, profile) {
     'For "use", give the quantity in the same unit as the tracked item, and never more than the amount left.\n' +
     'For each action give: name (a plain product name a person would say, expanding receipt abbreviations), quantity (a number; for "use", 0 means all of it), unit, ' +
     'area (where it is kept: Kitchen for food, drink and cooking supplies; Bathroom for toiletries and personal care; Cleaning for laundry and cleaning products; Kids for baby and children\'s things; Pets; Health for medicine, vitamins and first aid; Home for batteries, bulbs, stationery and other general supplies), ' +
-    'category (Produce for fresh fruit, vegetables and herbs; Dairy for milk, eggs, butter, cheese and yogurt; Bakery for bread and baked goods; Meat for meat, poultry and fish; Frozen only for products sold frozen; Pantry for dry goods, tins, jars, sauces, coffee, tea, oil and spices; Drinks; Snacks; Household or Other for anything that is not food), ' +
+    'category (the kind of thing, chosen from the list for its area. Kitchen: Produce for fresh fruit, vegetables and herbs; Dairy for milk, eggs, butter, cheese and yogurt; Bakery for bread and baked goods; Meat for meat, poultry and fish; Frozen only for products sold frozen; Pantry for dry goods, tins, jars, sauces, coffee, tea, oil and spices; Drinks; Snacks. ' +
+    Object.entries(ROOM_CATS).filter(([k]) => k !== 'Kitchen').map(([k, v]) => k + ': ' + v.join(', ')).join('. ') + '. Use Other only when nothing fits), ' +
     'price (the total paid for that line as a plain number, 0 if no price is shown), ' +
     'expiryDate (YYYY-MM-DD only if a date was actually printed or said, otherwise an empty string), shelfLifeDays (your estimate of how long it typically keeps from purchase when stored properly), ' +
     'daysToFinish (how many days until this household would need to buy this again, allowing for how many people live there: about a week for fresh food bought weekly, a month or more for staples and household supplies; never less than 4).\n' +
@@ -203,8 +214,8 @@ function sanitize(raw, kind) {
       name,
       quantity: Math.max(0, num(a.quantity, use ? 0 : 1)),
       unit: UNITS.includes(a.unit) ? a.unit : 'pcs',
-      category: CATS.includes(a.category) ? a.category : 'Other',
-      area: AREAS.includes(a.area) ? a.area : a.category === 'Household' ? 'Cleaning' : 'Kitchen',
+      area: AREAS.includes(a.area) ? a.area : 'Kitchen',
+      category: ROOM_CATS[AREAS.includes(a.area) ? a.area : 'Kitchen'].includes(a.category) ? a.category : 'Other',
       warn: use ? '' : String(a.warn || '').replace(/[^\p{L}\p{N} ,'-]/gu, ' ').replace(/\s+/g, ' ').trim().slice(0, 40),
       expiry: isDate(a.expiryDate) ? a.expiryDate : '',
       shelfLifeDays: clamp(Math.round(num(a.shelfLifeDays, 0)), 0, 3650),

@@ -93,6 +93,14 @@ input[type=text],input[type=password],input[type=number],input[type=date],input[
 .more{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between;border-top:1px solid var(--line);padding-top:10px;font-size:13px;color:var(--muted)}
 .danger{border:0;background:none;color:var(--bad);font-weight:600;padding:8px 0}
 #pantryList{gap:20px}
+.rooms{display:flex;gap:10px;overflow-x:auto;padding:2px 0 6px;scrollbar-width:none}
+.rooms::-webkit-scrollbar{display:none}
+.room{flex:none;width:122px;border:1px solid var(--line);background:var(--surface);border-radius:18px;padding:12px;display:flex;flex-direction:column;gap:3px;align-items:flex-start;text-align:left;min-height:118px}
+.room b{font-weight:600}
+.room>span{font-size:12.5px;color:var(--muted)}
+.room .ico{width:40px;height:40px;border-radius:12px;margin-bottom:4px}
+.room>span.pill{color:var(--warn);font-size:11.5px;padding:2px 8px;margin-top:2px}
+.room[aria-pressed="true"]{border-color:var(--accent);box-shadow:inset 0 0 0 1.5px var(--accent)}
 .card.tight{padding:2px 14px;gap:0}
 .it+.it{border-top:1px solid var(--line)}
 .ihead{display:flex;align-items:center;gap:12px;width:100%;border:0;background:none;text-align:left;padding:10px 0;min-height:64px}
@@ -205,8 +213,9 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     <div class="view" id="v-today"></div>
     <div class="view" id="v-pantry" hidden>
       <input type="search" id="search" placeholder="Search your things" aria-label="Search your things">
+      <div class="rooms" id="rooms" role="group" aria-label="Rooms"></div>
+      <div class="chips" id="chips2" role="group" aria-label="Kinds of things in this room" hidden></div>
       <div class="chips" id="chips" role="group" aria-label="Filter by what needs attention"></div>
-      <div class="chips" id="chips2" role="group" aria-label="Filter by area of the home" hidden></div>
       <p class="sub" id="pantryCount"></p>
       <ul class="list" id="pantryList"></ul>
     </div>
@@ -572,27 +581,50 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     rm.onclick=async function(){try{await api('/api/items/'+it.id,{method:'DELETE'});items=items.filter(function(i){return i!==it});render();toast('Removed '+it.name+'.')}catch(er){if(er.code!=='locked')toast('Could not remove it. Try again.')}};
     m.append(txt,rm);panel.append(m);wrap.append(panel);return wrap;
   }
+  /* At home: pick a room, then a kind of thing within it */
+  var sub='All';
+  var ROOM_CATS={Kitchen:['Produce','Dairy','Meat','Bakery','Frozen','Pantry','Drinks','Snacks'],Bathroom:['Dental','Hair','Skin and body','Paper and tissue'],
+    Cleaning:['Laundry','Dishes','Surfaces','Bags and wraps'],Kids:['Diapering','Feeding','Kids care'],Pets:['Pet food','Pet care'],Health:['Medicine','Vitamins','First aid'],Home:['Batteries and bulbs','Stationery','General']};
+  var ROOM_HINT={Kitchen:'the fridge or a cupboard',Bathroom:'the bathroom cabinet',Cleaning:'the cleaning cupboard',Kids:"the kids' shelf or changing table",Pets:'the pet shelf',Health:'the medicine cabinet',Home:'the drawer with batteries and bulbs'};
+  var ROOM_IN={Kitchen:'the kitchen',Bathroom:'the bathroom',Cleaning:'cleaning supplies',Kids:"the kids' things",Pets:'pet supplies',Health:'the medicine cabinet',Home:'general supplies'};
+  function roomLabel(a){return a==='Home'?'General':a}
+  function kindOf(it){return ROOM_CATS[areaOf(it)].indexOf(it.category)>-1?it.category:'Other'}
+  function kindLabel(k){return k==='Pantry'?'Cupboard staples':k}
   function renderPantry(){
-    var use=items.filter(needsUse).length,buy=items.filter(needsBuy).length,ess=items.filter(function(i){return i.essential}).length;
-    var chips=$('chips');chips.textContent='';
+    var rooms=$('rooms');rooms.textContent='';
+    [['All','Whole home',[160,'M4 11l8-7 8 7v9h-5v-6H9v6H4z']]].concat(Object.keys(AREA).map(function(a){return [a,roomLabel(a),AREA[a]]})).forEach(function(r){
+      var list=r[0]==='All'?items:items.filter(function(i){return areaOf(i)===r[0]}),att=list.filter(function(i){return needsUse(i)||needsBuy(i)}).length;
+      var b=el('button','room'),ic=el('span','ico');b.type='button';b.setAttribute('aria-pressed',cat===r[0]?'true':'false');ic.style.setProperty('--h',r[2][0]);ic.append(icon(r[2][1]));
+      b.append(ic,el('b','',r[1]),el('span','',list.length?list.length+(list.length===1?' thing':' things'):'Nothing yet'));
+      if(att)b.append(el('span','pill warn',att+' to check'));
+      b.onclick=function(){cat=r[0];sub='All';renderPantry()};rooms.append(b)});
+    if(cat!=='All'&&!AREA[cat])cat='All';
+    var scope=cat==='All'?items:items.filter(function(i){return areaOf(i)===cat});
+    var kinds=cat==='All'?[]:ROOM_CATS[cat].concat(['Other']).filter(function(k){return scope.some(function(i){return kindOf(i)===k})}),c2=$('chips2');
+    c2.textContent='';c2.hidden=kinds.length<2;if(kinds.indexOf(sub)<0)sub='All';
+    if(kinds.length>=2)[['All','All '+scope.length]].concat(kinds.map(function(k){return [k,kindLabel(k)+' '+scope.filter(function(i){return kindOf(i)===k}).length]})).forEach(function(k){
+      var b=el('button','chip',k[1]);b.type='button';b.setAttribute('aria-pressed',sub===k[0]?'true':'false');b.onclick=function(){sub=k[0];renderPantry()};c2.append(b)});
+    var use=scope.filter(needsUse).length,buy=scope.filter(needsBuy).length,ess=scope.filter(function(i){return i.essential}).length,chips=$('chips');
+    chips.textContent='';chips.hidden=!scope.length;
     [['all','Everything',''],['use','Use soon',use],['buy','Out or low',buy],['ess','Essentials',ess]].forEach(function(c){
       var b=el('button','chip',c[1]+(c[2]===''?'':' '+c[2]));b.type='button';b.setAttribute('aria-pressed',stat===c[0]?'true':'false');b.onclick=function(){stat=c[0];renderPantry()};chips.append(b)});
-    var areas=Object.keys(AREA).filter(function(a){return items.some(function(i){return areaOf(i)===a})}),c2=$('chips2');
-    c2.textContent='';c2.hidden=areas.length<2;if(areas.indexOf(cat)<0||areas.length<2)cat='All';
-    if(areas.length>=2)['All'].concat(areas).forEach(function(a){var b=el('button','chip',a==='All'?'Whole home':a);b.type='button';b.setAttribute('aria-pressed',a===cat?'true':'false');b.onclick=function(){cat=a;renderPantry()};c2.append(b)});
-    var q=query.toLowerCase(),shown=items.filter(function(it){return (cat==='All'||areaOf(it)===cat)&&(!q||it.name.toLowerCase().indexOf(q)>-1)&&
+    var q=query.toLowerCase(),shown=scope.filter(function(it){return (sub==='All'||kindOf(it)===sub)&&(!q||it.name.toLowerCase().indexOf(q)>-1)&&
       (stat==='all'||(stat==='use'?needsUse(it):stat==='buy'?needsBuy(it):!!it.essential))});
-    $('pantryCount').textContent=items.length?shown.length+(shown.length===1?' thing':' things')+(shown.length!==items.length?' of '+items.length:' at home'):'';
+    $('pantryCount').textContent=scope.length?shown.length+(shown.length===1?' thing':' things')+(shown.length!==scope.length?' of '+scope.length:'')+(cat==='All'?' at home':' in '+ROOM_IN[cat]):'';
     var ul=$('pantryList');ul.textContent='';
-    if(!shown.length){var li0=el('li');li0.append(emptyCard('Pantry',items.length?'Nothing matches':'Nothing here yet',items.length?'Try a different search or filter.':'Tap the plus button to add your first items.'));ul.append(li0);return}
-    function group(it){var a=areaOf(it);return a!=='Kitchen'?a:(it.category&&it.category!=='Other'&&it.category!=='Household'?it.category:'Other food')}
+    if(!scope.length){var li0=el('li');li0.append(cat==='All'?emptyCard('Pantry','Nothing here yet','Tap the plus button to add your first items.'):
+      emptyCard('Other','Nothing in '+ROOM_IN[cat]+' yet','Photograph '+ROOM_HINT[cat]+' and I will list what is there, or just tell me.','Add things',function(){$('capDlg').showModal()}));
+      li0.querySelector('.ico').replaceWith((function(){var s=el('span','ico');var A=cat==='All'?AREA.Kitchen:AREA[cat];s.style.setProperty('--h',A[0]);s.append(icon(A[1]));return s})());ul.append(li0);return}
+    if(!shown.length){var li1=el('li');li1.append(emptyCard('Pantry','Nothing matches','Try a different search or filter.'));ul.append(li1);return}
+    var rorder=Object.keys(AREA);
+    function gkey(it){var a=areaOf(it),k=kindOf(it);return cat==='All'?(k==='Other'?roomLabel(a):roomLabel(a)+' \u00b7 '+kindLabel(k)):kindLabel(k)}
+    function gord(it){var a=areaOf(it),ki=ROOM_CATS[a].indexOf(it.category);return rorder.indexOf(a)*100+(ki<0?99:ki)}
     function rank(it){return it.qty<=0?0:it.low?1:needsUse(it)?2:3}
-    var order=['Produce','Dairy','Meat','Bakery','Frozen','Pantry','Drinks','Snacks','Other food'].concat(Object.keys(AREA).slice(1));
-    shown.sort(function(a,b){return order.indexOf(group(a))-order.indexOf(group(b))||rank(a)-rank(b)||a.name.localeCompare(b.name)});
+    shown.sort(function(a,b){return gord(a)-gord(b)||rank(a)-rank(b)||a.name.localeCompare(b.name)});
     var card=null,last=null;
-    shown.forEach(function(it){var gn=group(it);
-      if(gn!==last){last=gn;var li=el('li','sec'),hd=el('div','sechead'),n=shown.filter(function(x){return group(x)===gn}).length;
-        hd.append(el('h2','',gn==='Pantry'?'Cupboard staples':gn),el('span','sub',String(n)));card=el('div','card tight');li.append(hd,card);ul.append(li)}
+    shown.forEach(function(it){var gn=gkey(it);
+      if(gn!==last){last=gn;var li=el('li','sec'),hd=el('div','sechead'),n=shown.filter(function(x){return gkey(x)===gn}).length;
+        hd.append(el('h2','',gn),el('span','sub',String(n)));card=el('div','card tight');li.append(hd,card);ul.append(li)}
       card.append(itemBlock(it))});
   }
 
