@@ -196,8 +196,8 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     <div class="grab"></div>
     <h2 id="capH">Add to the pantry</h2>
     <div class="tiles">
-      <label class="tile"><span class="ico" style="--h:165"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6"/></svg></span><b>Scan a bill</b><span>Photo of a receipt</span><input type="file" id="billFile" accept="image/*" aria-label="Photograph a bill"></label>
-      <label class="tile"><span class="ico" style="--h:205"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h3l2-3h6l2 3h3v13H4z"/><circle cx="12" cy="13" r="3.500"/></svg></span><b>Scan a shelf</b><span>Photo of what you have</span><input type="file" id="shelfFile" accept="image/*" aria-label="Photograph a shelf"></label>
+      <label class="tile"><span class="ico" style="--h:165"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6"/></svg></span><b>Scan a bill</b><span>Photo of a receipt</span><input type="file" id="billFile" accept="image/*" title="" aria-label="Photograph a bill"></label>
+      <label class="tile"><span class="ico" style="--h:205"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h3l2-3h6l2 3h3v13H4z"/><circle cx="12" cy="13" r="3.500"/></svg></span><b>Scan a shelf</b><span>Photo of what you have</span><input type="file" id="shelfFile" accept="image/*" title="" aria-label="Photograph a shelf"></label>
       <button type="button" class="tile" id="capVoice"><span class="ico" style="--h:355"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></span><b>Voice note</b><span>Say what you bought or used</span></button>
       <button type="button" class="tile" id="capCode"><span class="ico" style="--h:265"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6v12M7 6v12M11 6v12M14 6v12M17 6v12M20 6v12"/></svg></span><b>Barcode</b><span>Scan a product</span></button>
       <button type="button" class="tile wide" id="capType"><span class="ico" style="--h:35"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16zM13 7l4 4"/></svg></span><span style="display:flex;flex-direction:column;color:inherit"><b>Type or paste</b><span>A note, or an emailed receipt</span></span></button>
@@ -241,6 +241,17 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     <button type="submit" class="btn primary block">Read it</button>
     <button type="button" class="btn block" data-close>Cancel</button>
   </form>
+</dialog>
+
+<dialog class="sheet" id="licDlg" aria-labelledby="licH">
+  <div class="pad">
+    <div class="grab"></div>
+    <h2 id="licH">One-time step before I can read photos</h2>
+    <p class="sub" style="font-size:15px">Photos are read by Meta's Llama 3.2 vision model on your Cloudflare account. Meta asks each account to accept its licence and acceptable use policy once.</p>
+    <p class="sub"><a href="https://github.com/meta-llama/llama-models/blob/main/models/llama3_2/LICENSE" target="_blank" rel="noopener">Licence</a> &middot; <a href="https://github.com/meta-llama/llama-models/blob/main/models/llama3_2/USE_POLICY.md" target="_blank" rel="noopener">Acceptable use policy</a></p>
+    <button type="button" class="btn primary block" id="licOk">Accept and read my photo</button>
+    <button type="button" class="btn block" data-close>Not now</button>
+  </div>
 </dialog>
 
 <dialog class="sheet" id="rvDlg" aria-labelledby="rvTitle">
@@ -449,13 +460,20 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     bad_audio:'That recording was too long. Keep voice notes under a minute.',silent:"I couldn't hear anything in that recording. Try again closer to the mic.",
     unknown_product:"That barcode isn't in the product database. Use a voice note or type it instead.",bad_code:"That doesn't look like a barcode number.",
     empty:'Write something first.',offline:'You seem to be offline. Check your connection.',server:'Something went wrong. Try again.'};
+  var lastScan=null;
   async function scan(doFetch,waitMsg){
-    if(busy)return;setBusy(waitMsg);
+    if(busy)return;lastScan=[doFetch,waitMsg];setBusy(waitMsg);
     try{var d=await doFetch();setBusy(null);showReview(d)}
     catch(e){setBusy(null);if(e.code==='locked')return;
-      if(e.code==='licence')toast(COPY.licence,'Accept',async function(){try{await api('/api/agree',{method:'POST'});toast('Licence accepted. Take the photo again.')}catch(er){toast('Could not accept the licence. Try again.')}});
+      if(e.code==='licence')$('licDlg').showModal();
       else toast(COPY[e.code]||COPY.server)}
   }
+  $('licOk').onclick=async function(){
+    $('licOk').disabled=true;
+    try{await api('/api/agree',{method:'POST'});$('licDlg').close();if(lastScan)scan(lastScan[0],lastScan[1])}
+    catch(er){if(er.code!=='locked'){$('licDlg').close();toast('Could not accept the licence. Try again.')}}
+    finally{$('licOk').disabled=false}
+  };
   function shrink(file){return new Promise(function(res,rej){var img=new Image(),u=URL.createObjectURL(file);
     img.onload=function(){var s=Math.min(1,1400/Math.max(img.width,img.height)),c=document.createElement('canvas');
       c.width=Math.round(img.width*s);c.height=Math.round(img.height*s);c.getContext('2d').drawImage(img,0,0,c.width,c.height);URL.revokeObjectURL(u);res(c.toDataURL('image/jpeg',0.85))};
