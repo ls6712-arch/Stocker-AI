@@ -39,7 +39,12 @@ The model never writes to the database. It proposes; code decides. This is the s
 
 ### What Tote deliberately cannot do
 
-Tote holds household data and reads untrusted content (receipts, product databases, typed text), so it is given no way to send data anywhere: no email, no messages, no purchases, no web requests chosen by the model. The only outbound call is a barcode lookup made by code with the barcode alone. Keep it that way; any future feature that sends something out (ordering, sharing, reminders by email) must go through an explicit tap by the person, outside the chat.
+Tote holds household data and reads untrusted content (receipts, product databases, typed text), so the model is given no way to send data anywhere: no email, no messages, no purchases, no web requests chosen by the model. Code makes two outbound calls, and the model controls neither:
+
+1. A barcode lookup, with the barcode alone.
+2. A reminder to a phone (see Reminders below). It is sent only to a phone where someone tapped Turn on, only to that phone's own push service (Google, Apple, Mozilla or Microsoft; any other address is refused), is sealed so only that phone can read it, and is built from fixed sentences plus item names.
+
+Keep it that way; any future feature that sends something out (ordering, sharing, reminders by email) must go through an explicit tap by the person, outside the chat.
 
 ## Guardrails
 
@@ -71,6 +76,7 @@ Tote holds household data and reads untrusted content (receipts, product databas
 | Database | Every query is parameterised; all model output is validated before it is written |
 | Errors | Internal error text is logged, never sent to the browser |
 | Secrets | `APP_PIN` and `MCP_TOKEN` should be stored as Worker secrets, not plain variables |
+| Reminders | A phone's address is accepted only if it is an https address at a known push service; the message is encrypted for that phone (RFC 8291) and signed (VAPID); the service worker caches nothing and intercepts no requests |
 
 Known limits: the passcode is shared by the household, so anyone who has it sees everything in that home; the inline app script means the policy allows inline scripts; item pictures and model calls run on Cloudflare Workers AI.
 
@@ -95,15 +101,47 @@ The router is deliberately cautious, so on new phrasing its misses mostly hand a
 
 ## Learning from real use
 
-Tote does not retrain itself, and nothing a person types can change its rules. It learns in three bounded ways:
+Tote does not retrain itself, and nothing a person types can change its rules. It learns in two separate ways.
+
+### About one household, automatically
+
+These change numbers for that home only, never Tote's rules, so they need no review.
 
 | What | How | Where it is kept |
 |---|---|---|
-| Your pace | After you buy the same thing twice, the gap between purchases replaces the estimate | per item |
-| Your dishes | When you confirm what went into a dish ("Yes, that's right", or "That's everything"), Tote remembers it and next time asks "Last time you made pasta you used… Same again?" It still asks before changing anything | `settings`, up to 60 dishes |
-| Its mistakes | "Not right?" under a reply, an Undo, or a rejected guess is recorded with private details removed. `/evals.html` lists them and copies them as test cases | `feedback`, last 300 |
+| Your pace | Every purchase is one observation of how long that amount lasted: until someone said it ran out, or else until it was bought again. The typical (median) of the last five is used, so one odd week does not move it. A bigger purchase is expected to last longer, up to twice as long. Known after the second purchase, or the first run-out | `purchases`, `paceFrom` |
+| That your pace was wrong | "Still have it" pushes the next reminder back by half as long again; the next purchase then measures the real gap | `finish_days` |
+| When you answer | After five answers, reminders move to the hour you most often answer at (between 7 am and 9 pm) | `remind:hours` in `settings` |
+| What you do not want to hear about | Three reminders in a row with no answer and Tote stops asking about that item. It can be turned back on, or off by hand, in the item's panel | `reminders` |
+| Your dishes | When you confirm what went into a dish, Tote remembers it and next time asks "Last time you made pasta you used… Same again?" It still asks before changing anything | `settings`, up to 60 dishes |
 
-The loop is: a real miss is flagged, it becomes a test case, the prompt or router is fixed, and the evals confirm the fix. A person reviews every step; flagged text is never fed back into a prompt automatically, because that would let anyone steer the agent by flagging.
+The first time Tote knows a pace it says so ("I have noticed you buy milk about every 3 days"), and For you lists everything it has learned.
+
+### About Tote itself, with a person in the loop
+
+| Step | What happens | Where |
+|---|---|---|
+| 1. Keep | Every chat turn is stored with private details removed: what was said, how it was routed, what was changed, the reply. The newest 1,500 are kept | `noteTurn`, `turns` |
+| 2. Notice | A turn is marked as a miss when someone taps "Not right?", undoes a change, rejects a guess, corrects Tote in the next message, says the same thing again within three minutes, or names something Tote could not find | `/api/feedback`, `noteTurn` |
+| 3. Review | `/evals.html` groups the misses by kind, says where in the code to look, and shows the share of turns missed for each of the last four weeks. The bell in the app says when there is something to look at | `review` |
+| 4. Decide | A person says what should have happened: changed nothing, updated the home, gone on the list, or not a mistake | `/api/review` |
+| 5. Test | That verdict becomes a test case straight away. It runs with the built-in cases on the next eval run. "Copy for the repository" exports the cases for `public/evals/cases.json` and the phrasings for `evals/corpus/real.json`, which the offline router test picks up | `cases` |
+| 6. Fix | Change the router or a prompt, then run the evals. The fix is done when the new case passes and the old ones still do | you |
+
+Step 4 is deliberate. Flagged text is never fed back into a prompt automatically, because that would let anyone steer the agent by typing and flagging.
+
+## Reminders
+
+Off until someone taps Turn on (under For you, or in the bell). On an iPhone, Stocker must be added to the Home Screen first; that is an iOS rule.
+
+| Rule | Detail |
+|---|---|
+| What is worth a reminder | Something whose pace is the household's own, or an essential, that is about to run out; and anything that wants using today. The same rules as the app's "Might be running low", so the phone and the screen agree |
+| How often | One notification per phone per day at most, and only when there is something to say. An item is raised every other day at most |
+| When | Five in the afternoon, local time, until the household's own hour is learned |
+| Answering | On Android and desktop the notification has "Add to list" and "Still have it". On iPhone, tapping it opens the list of things that need you, with the same answers |
+| What decides | Code. An hourly Worker cron (`tick`) checks whether any phone is due. No model is called |
+| The key | The signing key is made on first use and kept in `settings`. It is never sent to the browser and can do nothing except send to phones that subscribed |
 
 ## App audit
 
@@ -111,10 +149,11 @@ The loop is: a real miss is flagged, it becomes a test case, the prompt or route
 
 ## Evals
 
-Two layers, both in this repository.
+Three layers, all in this repository.
 
 1. **Household simulation** (`npm test`, no network). Generates 1,000 varied households, including hostile input, and checks the profile, starter-list, allergen and label logic against fixed rules. It exits with an error if a hard rule breaks.
-2. **Agent evals** (`/evals.html` on the deployed app, signed in). Sends 31 cases to the live models through `/api/eval`, a dry-run that uses a made-up inventory and never touches the real one. Cases cover reading receipts, photos of what is at home, cooking updates, plain updates, questions, allergies, privacy, safety and personality. Each case is scored by fixed checks, not by another model. Add a case by editing `public/evals/cases.json`.
+2. **Learning test** (`npm test`, no network). Runs the Worker's real code and real SQL against an in-memory database, with stand-ins for the model and the push service. 46 checks: the pace estimate, what Tote says when it learns one, undo, reminders (when, how often, when to stop, the answers), the sealed and signed push message, and the review loop. `evals/learning.mjs`.
+3. **Agent evals** (`/evals.html` on the deployed app, signed in). Sends 52 cases, plus any made from your own conversations, to the live models through `/api/eval`, a dry-run that uses a made-up inventory and never touches the real one. Cases cover reading receipts, photos of what is at home, cooking updates, plain updates, questions, allergies, privacy, safety and personality. Each case is scored by fixed checks, not by another model. Add a case by editing `public/evals/cases.json`.
 
 Run the agent evals after changing a prompt, a model name or a guardrail, and compare the score with the last run.
 

@@ -23,5 +23,6 @@
     "SPEECH_MODEL": "@cf/openai/whisper-large-v3-turbo",
     "IMAGE_MODEL": "@cf/black-forest-labs/flux-1-schnell"
   },
+  "triggers": { "crons": ["0 * * * *"] },
   "observability": { "enabled": true }
 }

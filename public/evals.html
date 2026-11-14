@@ -9,16 +9,20 @@ h1{font-size:1.5rem;margin:0 0 4px}p{color:var(--muted);margin:4px 0 14px}button
 .pill{font-size:12px;font-weight:700;border-radius:999px;padding:2px 10px;border:1px solid currentColor;white-space:nowrap}.pass{color:var(--ok)}.fail{color:var(--bad)}.stretch{color:var(--warn)}
 .q{color:var(--muted);font-size:13.5px;margin:4px 0;white-space:pre-wrap;overflow-wrap:anywhere}ul{margin:6px 0 0;padding-left:18px;font-size:13.5px}li.fail{color:var(--bad)}pre{font-size:12px;overflow-x:auto;background:var(--bg);border-radius:8px;padding:8px;margin:6px 0 0;white-space:pre-wrap;overflow-wrap:anywhere}
 h2{font-size:1.05rem;margin:22px 0 4px}
+.verdicts{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.verdicts button,button.ghost{padding:8px 14px;font-size:13.5px}button.ghost{background:transparent;color:var(--fg);border:1px solid var(--line)}input.item{font:inherit;margin-top:8px;padding:8px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--fg);width:min(100%,260px);box-sizing:border-box}
 </style></head><body><main>
 <h1>Stocker agent evals</h1>
 <p>Each case sends a made-up home and a message to the live agent in dry-run mode, then checks the result with fixed rules. Nothing in your real home is read or changed. You must be signed in to Stocker in this browser.</p>
-<p><strong>Cost:</strong> a full run makes about 50 model calls. On Cloudflare's free plan that is a large share of the daily AI allowance, which the app itself also needs, so run it after a change rather than routinely.</p>
+<p><strong>Cost:</strong> a full run makes one or two model calls per case, about 60 in all, plus one for each test made from your conversations. On Cloudflare's free plan that is a large share of the daily AI allowance, which the app itself also needs, so run it after a change rather than routinely.</p>
 <button id="run">Run all cases</button> <span id="state" role="status"></span>
 <div class="sum" id="sum"></div><div id="out"></div>
-<h2>From your real conversations</h2>
-<p>Replies someone marked "Not right?", guesses they rejected, and changes they undid. Private details are removed before anything is kept. Copy them as test cases, fill in what should have happened, and add them to <code>public/evals/cases.json</code>.</p>
-<button id="copy" type="button">Copy as test cases</button> <span id="copied" role="status"></span>
-<div id="real"></div>
+<h2 id="real">Learning from real conversations</h2>
+<p>Every chat turn is kept with private details removed. The ones below went wrong: someone tapped "Not right?", undid a change, rejected a guess, corrected me, had to say it twice, or named something I could not find. Say what should have happened and it becomes a test I must pass from then on. Nothing typed in a chat changes how I behave by itself.</p>
+<div class="sum" id="weeks"></div><div id="groups"></div>
+<h2>Tests made from your conversations</h2>
+<p>These run together with the built-in cases when you tap Run all cases. Copy them into the repository to keep them for good and to teach the offline router test.</p>
+<button id="copy" type="button">Copy for the repository</button> <span id="copied" role="status"></span>
+<div id="mine"></div>
 <script>
 (function(){
   var $=function(i){return document.getElementById(i)},el=function(t,c,x){var e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e};
@@ -42,15 +46,38 @@ h2{font-size:1.05rem;margin:22px 0 4px}
     if(k==='replyNot')return [!rx(v).test(reply),'reply avoids /'+v+'/'];
     if(k==='replyMax')return [reply.length<=v,'reply is at most '+v+' characters (got '+reply.length+')'];
     return [false,'unknown check '+k]}
-  var KIND={down:'Marked not right',wanted:'What they wanted instead',undo:'Undid a change',rejected:'Rejected a guess',up:'Marked helpful'},flagged=[];
-  fetch('/api/feedback',{credentials:'same-origin'}).then(function(r){return r.ok?r.json():{feedback:[]}}).then(function(d){flagged=d.feedback||[];var box=$('real');
-    if(!flagged.length){box.append(el('p','','Nothing flagged yet. In the chat, tap "Not right?" under a reply, or Undo a change, and it will appear here.'));return}
-    flagged.forEach(function(x){var c=el('div','case'),h=el('h3');h.append(el('span','',KIND[x.kind]||x.kind),el('span','pill stretch',String(x.at).slice(0,16).replace('T',' ')));c.append(h,el('div','q','They said: '+(x.said||'')),el('div','q','Tote: '+(x.reply||'')+(x.detail?'\nNote: '+x.detail:'')));box.append(c)})}).catch(function(){});
-  $('copy').onclick=function(){var seen={},cases=flagged.filter(function(x){return x.said&&!seen[x.said]&&(seen[x.said]=1)}).map(function(x,i){return {id:'real-use-'+(i+1),group:'From real use',kind:'chat',text:x.said,inventory:[],note:(KIND[x.kind]||x.kind)+(x.detail?': '+x.detail:''),checks:[]}});
-    var t=JSON.stringify(cases,null,1);(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(function(){$('copied').textContent=cases.length+' copied.'},function(){var pre=el('pre','',t);$('real').prepend(pre);$('copied').textContent='Select and copy the text below.'})};
+  // ---- the training loop: real misses, a person's verdict, a test from then on ----
+  var HOME=[{name:'Whole Milk',qty:1,unit:'L',category:'Dairy'},{name:'Eggs',qty:12,unit:'pcs',category:'Dairy'},{name:'Bread',qty:1,unit:'pcs',category:'Bakery'},{name:'Spaghetti',qty:500,unit:'g',category:'Pantry'},{name:'Tomato Pasta Sauce',qty:1,unit:'pcs',category:'Pantry'},{name:'Rice',qty:2,unit:'kg',category:'Pantry'},{name:'Chicken Breast',qty:2,unit:'lb',category:'Meat'},{name:'Baby Spinach',qty:1,unit:'pack',category:'Produce'},{name:'Coffee',qty:1,unit:'pack',category:'Pantry'},{name:'Dish Soap',qty:1,unit:'pcs',area:'Cleaning',category:'Dishes'}];
+  var OUTCOME={down:'Marked not right',undo:'They undid it',rejected:'They rejected the guess',corrected:'They corrected me',repeated:'They said it again',missed:'I could not find it'};
+  var VERDICT={nothing:'Should have changed nothing',update:'Should have updated the home',list:'Should have gone on the list',ok:'Not a mistake'};
+  var INTENT={nothing:'question',update:'stated_update',list:'list_add'},mine=[];
+  var esc=function(t){return String(t).replace(/[.*+?^${}()|[\]\\]/g,'\\$&')};
+  function toCase(c){var has=c.name?{name:esc(c.name)}:null;
+    var checks=c.expect==='nothing'?[{count:[0,0]}]:c.expect==='list'?[{has:Object.assign({action:'list'},has||{})}]:[has?{has:Object.assign({action:'add|use|set|low'},has)}:{count:[1,9]}];
+    return {id:'real-'+c.id,group:'From your conversations',kind:'chat',text:c.said,inventory:HOME,note:VERDICT[c.expect]+(c.name?': '+c.name:''),checks:checks}}
+  function send(method,path,body){return fetch(path,{method:method,credentials:'same-origin',headers:{'content-type':'application/json'},body:body?JSON.stringify(body):undefined}).then(function(r){if(!r.ok)throw r.status;return r.json()})}
+  function draw(d){mine=d.cases||[];var W=$('weeks'),G=$('groups'),M=$('mine');W.textContent='';G.textContent='';M.textContent='';
+    (d.weeks||[]).forEach(function(w,i){var b=el('div');b.append(el('b','',w.turns?Math.round(w.missed/w.turns*100)+'%':'–'),document.createTextNode((i===0?'missed this week':i===1?'last week':i+' weeks ago')+' ('+w.missed+' of '+w.turns+')'));W.append(b)});
+    if(!(d.groups||[]).length)G.append(el('p','','Nothing needs a look. Misses from the chat will appear here.'));
+    (d.groups||[]).forEach(function(g){G.append(el('h2','',g.title+' ('+g.count+')'),el('p','','Where to look: '+g.fix));
+      g.examples.forEach(function(x){var c=el('div','case'),h=el('h3');h.append(el('span','',OUTCOME[x.outcome]||x.outcome),el('span','pill stretch',String(x.at).slice(0,16).replace('T',' ')+(x.times>1?' ×'+x.times:'')));
+        c.append(h,el('div','q','They said: '+x.said),el('div','q','Tote: '+(x.reply||'(nothing)')+(x.did?'\nWhat I did: '+x.did:'\nWhat I did: changed nothing')+(x.wanted?'\nThey wanted: '+x.wanted:'')));
+        var name=el('input');name.type='text';name.maxLength=40;name.placeholder='Which item? Optional';name.setAttribute('aria-label','Which item it should have been about');name.className='item';
+        var bar=el('div','verdicts');Object.keys(VERDICT).forEach(function(k){var b=el('button',k===g.suggest?'':'ghost',VERDICT[k]);b.type='button';
+          b.onclick=function(){bar.querySelectorAll('button').forEach(function(z){z.disabled=true});send('POST','/api/review',{id:x.id,label:k,name:name.value.trim()}).then(load,function(){$('copied').textContent='Could not save that. Sign in to Stocker and try again.';bar.querySelectorAll('button').forEach(function(z){z.disabled=false})})};bar.append(b)});
+        c.append(name,bar);G.append(c)})});
+    if(!mine.length)M.append(el('p','','None yet.'));
+    mine.forEach(function(c){var k=el('div','case'),h=el('h3'),rm=el('button','ghost','Remove');rm.type='button';rm.setAttribute('aria-label','Remove this test: '+c.said);
+      rm.onclick=function(){rm.disabled=true;send('DELETE','/api/review?case='+c.id).then(load,function(){rm.disabled=false})};
+      h.append(el('span','',VERDICT[c.expect]+(c.name?': '+c.name:'')),rm);k.append(h,el('div','q',c.said));M.append(k)})}
+  function load(){return send('GET','/api/review').then(draw,function(){$('groups').textContent='Sign in to Stocker in this browser to see this.'})}
+  load();
+  $('copy').onclick=function(){var t=JSON.stringify({cases:mine.map(toCase),corpus:mine.map(function(c){return {text:c.said,persona:'real conversation',intent:INTENT[c.expect],items:c.name?[c.name]:[]}})},null,1);
+    (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(function(){$('copied').textContent=mine.length+' copied. Paste "cases" into public/evals/cases.json and "corpus" into evals/corpus/real.json.'},function(){var pre=el('pre','',t);$('mine').prepend(pre);$('copied').textContent='Select and copy the text below.'})};
   $('run').onclick=async function(){
     $('run').disabled=true;$('out').textContent='';$('sum').textContent='';
     var data;try{data=await (await fetch('/evals/cases.json',{cache:'no-store'})).json()}catch(e){$('state').textContent='Could not load the cases.';$('run').disabled=false;return}
+    data.cases=data.cases.concat(mine.map(toCase));
     var pass=0,fail=0,sp=0,sf=0,groups={},results=[],t0=Date.now();
     for(var i=0;i<data.cases.length;i++){var c=data.cases[i];$('state').textContent='Running '+(i+1)+' of '+data.cases.length+': '+c.id;
       var r,err='';try{var res=await fetch('/api/eval',{method:'POST',credentials:'same-origin',headers:{'content-type':'application/json'},body:JSON.stringify({kind:c.kind,text:c.text,inventory:c.inventory||[],profile:c.profile||null,today:data.today})});

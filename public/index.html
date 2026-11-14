@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-title" content="Stocker">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" href="/icon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="/icon.svg">
+<link rel="apple-touch-icon" href="/icon-180.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Instrument+Sans:wght@400;500;600&display=swap">
 <style>
 :root{
@@ -652,6 +652,43 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     if(!(await ask(r.text+' is already on your shopping list. Do you want another one?')))return 'kept';
     await api('/api/extras',{method:'POST',body:JSON.stringify({text:text,again:true})});return 'again'}
   var LISTMSG={added:' is on your shopping list.',again:': one more on your shopping list.',kept:' is already on your list. Left as it is.'};
+  /* ---- reminders on this phone, and what the helper has learned ---- */
+  var learnt={hour:17,hourLearned:false,muted:[],dishes:[],phones:0},reviewN=0,pushOn=false,swReg=null;
+  var pushCan='serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window;
+  var isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+  var homeScreen=(window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches)||navigator.standalone===true;
+  function every(n){return n<=1?'day':n===7?'week':n===14?'two weeks':n+' days'}
+  function hourText(h){return (h%12||12)+(h<12?' am':' pm')}
+  function learntLine(changes){var ln=(changes||[]).filter(function(c){return c.learnt}).slice(0,2);if(!ln.length)return '';
+    return ' I have noticed you buy '+ln.map(function(c){return c.name.toLowerCase()+' about every '+every(c.learnt)}).join(' and ')+'. I will let you know when '+(ln.length===1?'it is':'they are')+' due.'}
+  function pushWhy(){return pushCan?'':isIOS&&!homeScreen?'On an iPhone, add Stocker to your Home Screen first: tap Share, then Add to Home Screen, and open it from there.':'This browser cannot show reminders.'}
+  function keyBytes(t){var raw=atob((t+'==='.slice((t.length+3)%4)).replace(/-/g,'+').replace(/_/g,'/')),out=new Uint8Array(raw.length);for(var i=0;i<raw.length;i++)out[i]=raw.charCodeAt(i);return out}
+  function pushState(){if(!pushCan)return Promise.resolve(false);
+    return navigator.serviceWorker.getRegistration('/').then(function(r){swReg=r||null;return r?r.pushManager.getSubscription():null}).then(function(s){pushOn=!!s&&Notification.permission==='granted';return s}).catch(function(){return null})}
+  async function pushSave(s,quiet){var j=s.toJSON(),tz='UTC';try{tz=Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC'}catch(e){}
+    return api('/api/push',{method:'POST',body:JSON.stringify({endpoint:j.endpoint,keys:j.keys,tz:tz,quiet:!!quiet})})}
+  async function pushEnable(){
+    if(!pushCan){toast(pushWhy());return false}
+    var perm=await Notification.requestPermission();
+    if(perm!=='granted'){toast('Reminders are blocked for Stocker. Allow notifications for it in your phone or browser settings, then try again.');return false}
+    swReg=await navigator.serviceWorker.register('/sw.js');await navigator.serviceWorker.ready;
+    var k=keyBytes((await api('/api/push')).key),s=await swReg.pushManager.getSubscription();
+    if(!s){try{s=await swReg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:k})}catch(e){var old=await swReg.pushManager.getSubscription();if(old)await old.unsubscribe();s=await swReg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:k})}}
+    var r=await pushSave(s);pushOn=true;try{localStorage.setItem('stocker.pushSync',iso(today()))}catch(e){}
+    await refresh();say(r.hello?'Reminders are on. I have just sent a hello to this phone to check it works.':'Reminders are on. I will let you know when something is due.');return true}
+  async function pushDisable(){try{var s=swReg&&await swReg.pushManager.getSubscription();if(s){await api('/api/push',{method:'DELETE',body:JSON.stringify({endpoint:s.endpoint})});await s.unsubscribe()}}catch(e){}
+    pushOn=false;await refresh();toast('Reminders are off on this phone.')}
+  /* once a day, tell the server this phone is still here and which time zone it is in */
+  function pushSync(){pushState().then(function(s){if(!$('app').hidden)render();if(!s||!pushOn)return;var seen='';try{seen=localStorage.getItem('stocker.pushSync')||''}catch(e){}
+    if(seen===iso(today()))return;pushSave(s,true).then(function(){try{localStorage.setItem('stocker.pushSync',iso(today()))}catch(e){}},function(){})})}
+  /* one way to answer "is it running low?", from the bell, the list or a notification, so every answer teaches the same thing */
+  async function remindAnswer(list,ans){
+    await api('/api/remind',{method:'POST',body:JSON.stringify({ids:list.map(function(i){return i.id}),answer:ans,hour:new Date().getHours()})});await refresh();
+    var names=list.map(function(i){return i.name}).join(', ');
+    toast(ans==='add'?'On your list: '+names+'.':ans==='still'?'Got it. I will ask about '+names+' again later.':ans==='stop'?'I will not remind you about '+names+'.':'I will remind you about '+names+' again.')}
+  function openNudges(){drawNudges();if(!$('nudgeDlg').open)$('nudgeDlg').showModal()}
+  if(pushCan)navigator.serviceWorker.addEventListener('message',function(ev){if(ev.data&&ev.data.stocker==='nudges'&&!$('app').hidden)refresh().then(openNudges,openNudges)});
+  function onceOff(id){try{return localStorage.getItem('stocker.once.'+id)==='1'}catch(e){return false}}
   /* nudges: one list of what needs a person, each with a single tap to deal with it */
   function offToday(){try{var o=JSON.parse(localStorage.getItem('stocker.nudgeOff')||'{}');return o.day===iso(today())?o.ids||[]:[]}catch(e){return []}}
   function nudges(){var out=[],lc=function(x){return x.toLowerCase()},patch=function(it,body,msg){return async function(){await api('/api/items/'+it.id,{method:'PATCH',body:JSON.stringify(body)});await refresh();toast(msg)}};
@@ -661,8 +698,10 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     items.filter(function(i){return i.essential&&i.qty<=0}).forEach(function(it){out.push({id:'out:'+it.id,text:"You're out of "+lc(it.name),sub:'An essential. It is on your list.',label:'Open list',fn:function(){go('list')}})});
     items.filter(function(i){return i.unsure&&i.qty>0}).slice(0,3).forEach(function(it){out.push({id:'many:'+it.id,text:'How many '+lc(it.name)+' are there?',sub:'I could not count them in your photo',label:'Answer',fn:function(){go('today')}})});
     items.filter(function(i){return i.warn&&i.qty>0}).slice(0,3).forEach(function(it){out.push({id:'warn:'+it.id+':'+it.warn,text:'Check the label on '+lc(it.name),sub:it.warn.charAt(0).toUpperCase()+it.warn.slice(1),label:'Show me',fn:function(){query=it.name;$('search').value=it.name;go('pantry')}})});
-    items.filter(maybeLow).slice(0,2).forEach(function(it){out.push({id:'low:'+it.id,text:it.name+' might be running low',sub:'My guess from how long it usually lasts',label:'Add to list',fn:patch(it,{low:true},it.name+' is on your list.')})});
+    items.filter(maybeLow).slice(0,2).forEach(function(it){out.push({id:'low:'+it.id,text:it.name+' might be running low',sub:it.learned?'You usually buy it about every '+every(it.finish_days):'My guess from how long it usually lasts',label:'Add to list',fn:function(){return remindAnswer([it],'add')}})});
     if(profile&&profile.shopDay===DAYS[today().getDay()]&&items.filter(needsBuy).length+extras.length)out.push({id:'shop:'+iso(today()),text:"It's your shopping day",sub:(items.filter(needsBuy).length+extras.length)+' on the list',label:'Open list',fn:function(){go('list')}});
+    if(!pushOn&&!onceOff('push')&&(pushCan||(isIOS&&!homeScreen))&&items.some(function(i){return i.learned||i.essential}))out.push({id:'push',once:true,text:'Let me remind you on this phone',sub:pushCan?'When something you buy regularly is due. Once a day at most.':'Add Stocker to your Home Screen first: Share, then Add to Home Screen',label:'Turn on',fn:pushEnable});
+    if(reviewN)out.push({id:'review:'+reviewN,text:'I got '+reviewN+(reviewN===1?' thing':' things')+' wrong lately',sub:'Tell me what should have happened, and I am tested on it from then on',label:'Show me',fn:function(){location.href='/evals.html#real'}});
     if(!profile&&items.length)out.push({id:'profile',text:'Tell me about your home',sub:'Allergies, who lives here, how you eat',label:'Set up',fn:openProfile});
     var off=offToday();return out.filter(function(n){return off.indexOf(n.id)<0})}
   function drawBell(){var n=nudges().length,dot=$('bellDot');dot.hidden=!n;dot.textContent=n>9?'9+':String(n);$('bell').setAttribute('aria-label',n?n+(n===1?' thing needs you':' things need you'):'Nothing needs you right now');
@@ -670,7 +709,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
   function drawNudges(){var list=nudges(),box=$('nudgeList');box.textContent='';$('nudgeSub').textContent=list.length?'One tap deals with each. Later hides it until tomorrow.':'Nothing needs you right now. I will keep watching.';
     list.forEach(function(n){var row=el('div','nudge'),g=el('div'),bt=el('div','btns'),a=el('button','mini',n.label),l=el('button','mini','Later');a.type=l.type='button';g.append(el('div','name',n.text),el('div','sub',n.sub));
       a.onclick=async function(){a.disabled=true;try{var nav=/^(Open list|Answer|Show me|Set up)$/.test(n.label);if(nav)$('nudgeDlg').close();await n.fn();if(!nav)drawNudges()}catch(er){a.disabled=false;if(er.code!=='locked')toast(COPY[er.code]||'Could not save that. Check your connection.')}};
-      l.setAttribute('aria-label','Hide until tomorrow: '+n.text);l.onclick=function(){try{var off=offToday();off.push(n.id);localStorage.setItem('stocker.nudgeOff',JSON.stringify({day:iso(today()),ids:off}))}catch(e){}drawNudges();drawBell()};
+      l.setAttribute('aria-label','Hide until tomorrow: '+n.text);l.onclick=function(){try{var off=offToday();off.push(n.id);localStorage.setItem('stocker.nudgeOff',JSON.stringify({day:iso(today()),ids:off}));if(n.once)localStorage.setItem('stocker.once.'+n.id,'1')}catch(e){}drawNudges();drawBell()};
       bt.append(a,l);row.append(g,bt);box.append(row)})}
   $('bell').onclick=function(){drawNudges();$('nudgeDlg').showModal()};
   /* moments: a short line from the helper when something worth noticing happens */
@@ -848,7 +887,9 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     var frB=el('button','mini',it.frozen?'In the freezer':'Put in freezer'),binB=el('button','mini','Threw it away');frB.type=binB.type='button';frB.setAttribute('aria-pressed',it.frozen?'true':'false');
     frB.onclick=async function(){it.frozen=it.frozen?0:1;render();try{await api('/api/items/'+it.id,{method:'PATCH',body:JSON.stringify({frozen:!!it.frozen})});toast(it.frozen?it.name+' is frozen. I will stop counting down its date.':it.name+' is out of the freezer.')}catch(er){if(er.code!=='locked')toast('Could not save that. Check your connection.')}};
     binB.onclick=async function(){try{await api('/api/items/'+it.id,{method:'PATCH',body:JSON.stringify({binned:true})});await refresh();say('It happens. I have noted the '+it.name.toLowerCase()+' and will not nag you to rebuy it.')}catch(er){if(er.code!=='locked')toast('Could not save that. Check your connection.')}};
-    acts.append(outB,essB);if(areaOf(it)==='Kitchen')acts.append(frB);acts.append(binB);panel.append(acts);
+    var quiet=learnt.muted.indexOf(it.name_key)>-1,remB=el('button','mini',quiet?'Reminders off':'Reminders on');remB.type='button';remB.setAttribute('aria-pressed',quiet?'true':'false');remB.setAttribute('aria-label',(quiet?'Turn reminders back on for ':'Stop reminders for ')+it.name);
+    remB.onclick=async function(){remB.disabled=true;try{await remindAnswer([it],quiet?'start':'stop')}catch(er){remB.disabled=false;if(er.code!=='locked')toast('Could not save that. Check your connection.')}};
+    acts.append(outB,essB);if(areaOf(it)==='Kitchen')acts.append(frB);acts.append(binB,remB);panel.append(acts);
     var det=el('div','meta'),nl=el('label','','Size or brand'),ni=el('input');ni.type='text';ni.maxLength=40;ni.value=it.note||'';ni.placeholder='Optional';nl.append(ni);det.append(nl);
     var saveDet=async function(body){try{await api('/api/items/'+it.id,{method:'PATCH',body:JSON.stringify(body)});await refresh();toast('Saved.')}catch(er){if(er.code!=='locked')toast('Could not save that. Check your connection.')}};
     ni.onchange=function(){saveDet({note:ni.value.trim()})};
@@ -963,13 +1004,12 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     var so=el('button','btn block','Order online');so.type='button';so.onclick=function(){openShop(extras.map(function(x){return x.text}).concat(buy.map(function(i){return i.name})))};
     if(count)v.append(cp,so);
     var sug=items.filter(maybeLow).sort(function(a,b){return plan(a).days-plan(b).days});
-    if(sug.length){var ss=el('div','sec'),cs=el('div','card');ss.append(el('h2','','Might be running low'),el('p','sub','My guess from when you bought them. None of these are on your list unless you add them.'),cs);
+    if(sug.length){var ss=el('div','sec'),cs=el('div','card');ss.append(el('h2','','Might be running low'),el('p','sub','Going by your own pace where I know it, and a typical one where I do not. None of these are on your list unless you add them.'),cs);
       sug.forEach(function(it){var wrap=el('div','sec'),r=el('div','row'),g=el('div','grow'),acts=el('div','acts'),ad=el('button','mini','Add to list'),no=el('button','mini','Still have it');
-        g.append(el('div','name',it.name),el('div','sub','Bought '+fmt(it.bought||it.added)+', usually lasts about '+it.finish_days+' days'));r.append(iconFor(it),g);
+        g.append(el('div','name',it.name),el('div','sub','Bought '+fmt(it.bought||it.added)+(it.learned?'. You usually buy it about every '+every(it.finish_days):', usually lasts about '+it.finish_days+' days')));r.append(iconFor(it),g);
         ad.type=no.type='button';
-        ad.onclick=async function(){it.low=1;render();try{await api('/api/items/'+it.id,{method:'PATCH',body:JSON.stringify({low:true})})}catch(er){if(er.code!=='locked')toast('Could not save that. Check your connection.')}};
-        no.onclick=async function(){var since=-daysFrom(it.bought||it.added),nf=since+Math.max(3,Math.ceil(it.finish_days*0.5));it.finish_days=nf;render();
-          try{await api('/api/items/'+it.id,{method:'PATCH',body:JSON.stringify({finishDays:nf})});toast('Got it. I will ask about '+it.name+' again later.')}catch(er){if(er.code!=='locked')toast('Could not save that. Check your connection.')}};
+        ad.onclick=async function(){ad.disabled=no.disabled=true;try{await remindAnswer([it],'add')}catch(er){ad.disabled=no.disabled=false;if(er.code!=='locked')toast('Could not save that. Check your connection.')}};
+        no.onclick=async function(){ad.disabled=no.disabled=true;try{await remindAnswer([it],'still')}catch(er){ad.disabled=no.disabled=false;if(er.code!=='locked')toast('Could not save that. Check your connection.')}};
         acts.append(ad,no);wrap.style.gap='8px';wrap.append(r,acts);cs.append(wrap)});
       v.append(ss)}
   }
@@ -987,9 +1027,9 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
   async function restock(it){
     var s=parse(it.bought||it.added),e=parse(it.expiry),shelf=s&&e&&e>s?Math.round((e-s)/DAY):0;
     var q=it.unit==='g'||it.unit==='ml'?500:it.unit==='oz'?16:1;
-    try{await api('/api/apply',{method:'POST',body:JSON.stringify({source:'hand',store:it.store||'',bought:iso(today()),
+    try{var res=await api('/api/apply',{method:'POST',body:JSON.stringify({source:'hand',store:it.store||'',bought:iso(today()),
       actions:[{action:'add',name:it.name,quantity:q,unit:it.unit,category:it.category,area:areaOf(it),expiry:'',shelfLifeDays:shelf,finishDays:it.finish_days}]})});
-      await refresh();toast('Restocked '+it.name+' with '+q+' '+it.unit+'. Adjust the amount under At home if needed.')}
+      await refresh();var ll=learntLine(res.changes);if(ll)say(ll.trim());else toast('Restocked '+it.name+' with '+q+' '+it.unit+'. Adjust the amount under At home if needed.')}
     catch(er){if(er.code!=='locked')toast('Could not save that. Check your connection.')}
   }
 
@@ -1052,6 +1092,16 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     sk.append(grid);v.append(sk);
     starterCard(v);spendCard(v);
     if(waste){var wc2=el('div','card');wc2.append(el('div','sub','Thrown away this month'),el('div','name',waste+(waste===1?' thing':' things')),el('p','sub','Tap Threw it away on anything you bin. I use it to suggest buying less of what gets wasted.'));v.append(wc2)}
+    var kn=items.filter(function(i){return i.learned}).sort(function(a,b){return a.finish_days-b.finish_days}),sl=el('div','sec'),cl=el('div','card');
+    sl.append(el('h2','','What I have learned'),el('p','sub','Only from what you do: what you buy, what runs out, and how you answer me. Change any of it under At home.'));
+    if(!kn.length&&!learnt.dishes.length)cl.append(el('p','sub','Nothing yet. Once you have bought the same thing twice I will know your pace, and remind you when it is due.'));
+    kn.slice(0,8).forEach(function(i){var r=el('div','row'),g=el('div','grow');g.append(el('div','name',i.name),el('div','sub','You buy it about every '+every(i.finish_days)+(learnt.muted.indexOf(i.name_key)>-1?'. Reminders off':'')));r.append(iconFor(i),g);cl.append(r)});
+    if(kn.length>8)cl.append(el('p','sub','And '+(kn.length-8)+' more.'));
+    if(learnt.dishes.length)cl.append(el('p','sub','Your dishes: '+learnt.dishes.slice(0,8).join(', ')+(learnt.dishes.length>8?' and '+(learnt.dishes.length-8)+' more':'')+'.'));
+    var rr=el('div','row'),rg=el('div','grow'),rb=el('button','mini',pushOn?'Turn off':'Turn on');rb.type='button';rb.id='pushBtn';rb.setAttribute('aria-label',(pushOn?'Turn off':'Turn on')+' reminders on this phone');
+    rg.append(el('div','name','Reminders on this phone'),el('div','sub',pushOn?'On. Around '+hourText(learnt.hour)+(learnt.hourLearned?', when you usually answer me':'')+', once a day at most, and only when something is due.':pushWhy()||'Off. I can tell you when something you buy regularly is due.'));
+    rb.onclick=async function(){rb.disabled=true;try{if(pushOn)await pushDisable();else await pushEnable()}catch(er){if(er.code!=='locked')toast('Could not change reminders. Check your connection and try again.')}rb.disabled=false};
+    rr.append(rg);if(pushOn||pushCan)rr.append(rb);cl.append(rr);sl.append(cl);v.append(sl);
     var sa=el('div','sec');sa.append(el('h2','','Recent activity'));
     if(!log.length){sa.append(el('p','sub','Every change is recorded here, with who made it and when.'));v.append(sa);return}
     var c=el('div','card'),ul=el('ul','tl');
@@ -1085,7 +1135,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
   var qtyTimer={};
   function setQty(it,q){it.qty=q;render();clearTimeout(qtyTimer[it.id]);
     qtyTimer[it.id]=setTimeout(function(){api('/api/items/'+it.id,{method:'PATCH',body:JSON.stringify({qty:q})}).catch(function(e){if(e.code!=='locked')toast('Could not save that change. Check your connection.')})},500)}
-  async function refresh(){var before=items.filter(needsBuy).length+extras.length;var d=await api('/api/items');items=d.items||[];log=d.log||[];extras=d.extras||[];waste=d.waste||0;spend=d.spend||null;profile=d.profile||null;me=d.me||'';render();
+  async function refresh(){var before=items.filter(needsBuy).length+extras.length;var d=await api('/api/items');items=d.items||[];log=d.log||[];extras=d.extras||[];waste=d.waste||0;spend=d.spend||null;profile=d.profile||null;me=d.me||'';learnt=d.learnt||learnt;reviewN=d.review||0;render();
     if(before>0&&items.filter(needsBuy).length+extras.length===0)say('List done. Nicely shopped.','party')}
 
   /* ---- capture ---- */
@@ -1415,7 +1465,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     done=r.changes.slice();
     var parts=[];if(r.added)parts.push('Added '+r.added+(r.added===1?' item':' items'));if(r.used||r.low)parts.push((r.added?'updated ':'Updated ')+((r.used||0)+(r.low||0)));
     $('doneTitle').textContent=parts.join(', ');
-    $('doneSub').textContent=(d.store?'From '+d.store+'. ':'')+'Saved. Tap the cross on anything I got wrong.'+(r.missed&&r.missed.length?" I couldn't find "+r.missed.join(', ')+'.':'');
+    $('doneSub').textContent=(d.store?'From '+d.store+'. ':'')+'Saved. Tap the cross on anything I got wrong.'+(r.missed&&r.missed.length?" I couldn't find "+r.missed.join(', ')+'.':'')+learntLine(r.changes);
     $('doneHeard').hidden=!d.heard&&!d.label;$('doneHeard').textContent=d.heard?'\u201c'+d.heard+'\u201d':d.label?d.label.text:'';
     drawDone();$('doneDlg').showModal();
   }
@@ -1428,7 +1478,8 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
   };
 
   async function start(){
-    try{await refresh();$('gate').hidden=true;$('app').hidden=false;$('tabbar').hidden=false;go((location.hash||'').slice(1)||tab,'start');
+    try{await refresh();$('gate').hidden=true;$('app').hidden=false;$('tabbar').hidden=false;go((location.hash||'').slice(1)||tab,'start');pushSync();
+      if(/[?&]n=1\b/.test(location.search)){try{history.replaceState(null,'',location.pathname+location.hash)}catch(e2){}openNudges()}
       var skip=false;try{skip=localStorage.getItem('stocker.profSkip')==='1'}catch(e){}if(!profile&&!skip)openProfile()}
     catch(e){if(e.code==='setup')showGate('There is no passcode yet. Set one in the Worker settings as a secret named APP_PIN.');
       else if(e.code==='locked')showGate();else showGate('Could not reach Stocker. Check your connection and reload.')}

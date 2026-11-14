@@ -26,6 +26,9 @@ CREATE UNIQUE INDEX IF NOT EXISTS items_name_key ON items(name_key);
 CREATE TABLE IF NOT EXISTS purchases (
   name_key TEXT NOT NULL,
   bought TEXT NOT NULL,
+  qty REAL,
+  unit TEXT,
+  ran_out TEXT,
   PRIMARY KEY (name_key, bought)
 );
 CREATE TABLE IF NOT EXISTS log (
@@ -66,4 +69,41 @@ CREATE TABLE IF NOT EXISTS feedback (
   reply TEXT,
   route TEXT,
   detail TEXT
+);
+CREATE TABLE IF NOT EXISTS push_subs (
+  endpoint TEXT PRIMARY KEY,
+  p256dh TEXT NOT NULL,
+  auth TEXT NOT NULL,
+  who TEXT,
+  tz TEXT NOT NULL DEFAULT 'UTC',
+  added TEXT NOT NULL,
+  last_day TEXT,
+  fails INTEGER NOT NULL DEFAULT 0
+);
+CREATE TABLE IF NOT EXISTS reminders (
+  name_key TEXT PRIMARY KEY,
+  sent INTEGER NOT NULL DEFAULT 0,
+  streak INTEGER NOT NULL DEFAULT 0,
+  muted INTEGER NOT NULL DEFAULT 0,
+  answered INTEGER NOT NULL DEFAULT 1,
+  last_day TEXT
+);
+CREATE TABLE IF NOT EXISTS turns (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  at TEXT NOT NULL,
+  said TEXT,
+  route TEXT,
+  intent TEXT,
+  did TEXT,
+  reply TEXT,
+  outcome TEXT,
+  wanted TEXT,
+  label TEXT
+);
+CREATE TABLE IF NOT EXISTS cases (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  at TEXT NOT NULL,
+  said TEXT NOT NULL UNIQUE,
+  expect TEXT NOT NULL,
+  name TEXT
 );

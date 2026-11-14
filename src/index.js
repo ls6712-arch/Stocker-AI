@@ -435,6 +435,8 @@ function chatReply(result) {
   if (listed.length) parts.push('I put ' + listOf(listed.map((c) => c.name)) + ' on your shopping list' + (listed.some((c) => c.note) ? ', with a note: ' + listed.filter((c) => c.note).map((c) => c.note).join('; ') : '') + '.');
   if (used.length) parts.push('I took off ' + listOf(used.map((c) => (c.qty <= 0 ? 'the last of the ' + c.name : qtyOf(c.prevQty - c.qty, c.unit) + ' of ' + c.name))) + '.');
   if (added.length) parts.push((used.length ? 'I also added ' : 'I added ') + listOf(added.map((c) => qtyOf(c.added, c.unit) + ' ' + c.name)) + '.');
+  const learnt = ch.filter((c) => c.learnt).slice(0, 2);
+  if (learnt.length) parts.push('I have noticed you buy ' + listOf(learnt.map((c) => c.name.toLowerCase() + ' about every ' + everyDays(c.learnt))) + '. I will let you know when ' + (learnt.length === 1 ? 'it is' : 'they are') + ' due.');
   if (low.length) parts.push('I marked ' + listOf(low.map((c) => c.name)) + ' as running low and put ' + (low.length === 1 ? 'it' : 'them') + ' on your list.');
   const out = used.filter((c) => c.qty <= 0).map((c) => c.name);
   if (out.length) parts.push('You are now out of ' + listOf(out) + ', so ' + (out.length === 1 ? 'it is' : 'they are') + ' on your shopping list.');
@@ -552,7 +554,7 @@ async function chatAnswer(env, text, history, rows, today, profile, missed) {
     'When you name things, name at most three, the most urgent first, and then say how many others there are instead of listing them. ' +
     'Say dates the way a person would (tomorrow, Wednesday, 18 Nov), exactly as written in the inventory, never as numbers with dashes. ' +
     'A date marked "my estimate" is your own guess from how long that kind of thing usually keeps, because no date was printed on the receipt; a "printed date" came from the pack or the receipt. If asked how you know a date, explain that honestly, and call estimates estimates. ' +
-    'You can put things on the shopping list and update what is at home when they tell you; if they ask for something you cannot do, such as a timed reminder, say so plainly and offer the nearest thing you can do. ' +
+    'You can put things on the shopping list and update what is at home when they tell you. You also learn how often they buy things and remind them, by yourself, when something is due or about to go off; you cannot set a reminder for a time or date they choose. If they ask for something you cannot do, say so plainly and offer the nearest thing you can do. ' +
     (first.length ? 'Use first, in this order: ' + first.join('; ') + (tied > 3 ? '. ' + (tied - 3) + ' more share about the same date' : '') + '. ' : '') +
     'If the message is only the name of a thing, tell them how much of it they have (or that it is not tracked) and offer to put it on the list. ' +
     'If they ask whether you have something that is not in the inventory, say plainly that it is not tracked at home. ' +
@@ -668,6 +670,30 @@ async function recallDish(env, text, rows) {
 }
 const proposeText = (p) => 'Sounds good. My guess is you used ' + listOf(p.map((a) => qtyOf(a.quantity, a.unit) + ' of ' + a.name)) + '. Is that right? If anything else went in, tell me and I will take that off too.';
 
+// ---------- learning a household's own pace ----------
+// Every purchase is one observation of how long that amount lasted: until they said it ran out, or else until they bought it again.
+// The typical (median) of the last five is used, so one odd week does not move the estimate, and a bigger purchase is expected to last longer, up to twice as long.
+const dayGap = (a, b) => Math.round((Date.parse(b + 'T00:00:00Z') - Date.parse(a + 'T00:00:00Z')) / DAY);
+function paceFrom(history, qty, unit) {
+  const seen = [];
+  history.forEach((h, i) => {
+    const next = history[i + 1];
+    const end = isDate(h.ran_out) && h.ran_out > h.bought && (!next || h.ran_out <= next.bought) ? h.ran_out : next ? next.bought : '';
+    if (!end || dayGap(h.bought, end) < 1) return;
+    const scale = h.qty > 0 && qty > 0 && h.unit === unit ? clamp(qty / h.qty, 0.5, 2) : 1; // capped: a receipt read as "12 eggs" one week and "1 box" the next must not swing the pace
+    seen.push(dayGap(h.bought, end) * scale);
+  });
+  const last = seen.slice(-5).sort((a, b) => a - b);
+  if (!last.length) return null;
+  const mid = last.length % 2 ? last[(last.length - 1) / 2] : (last[last.length / 2 - 1] + last[last.length / 2]) / 2;
+  return { days: clamp(Math.round(mid), 1, 365), seen: last.length };
+}
+const everyDays = (n) => (n <= 1 ? 'day' : n === 7 ? 'week' : n === 14 ? 'two weeks' : n + ' days');
+// "We are out of milk" closes the current purchase: that is exactly how long it lasted. Putting the amount back reopens it.
+const noteOut = (env, key, today) => env.DB.prepare('UPDATE purchases SET ran_out = ? WHERE name_key = ? AND ran_out IS NULL AND bought < ? AND bought = (SELECT MAX(bought) FROM purchases WHERE name_key = ?)').bind(today, key, today, key).run().catch(() => {});
+const noteBack = (env, key, today) => env.DB.prepare('UPDATE purchases SET ran_out = NULL WHERE name_key = ? AND ran_out = ?').bind(key, today).run().catch(() => {});
+const answered = (env, key) => env.DB.prepare('UPDATE reminders SET answered = 1, streak = 0 WHERE name_key = ?').bind(key).run().catch(() => {});
+
 // ---------- apply ----------
 async function apply(env, body, today, source, who) {
   const store = String(body.store || '').trim().slice(0, 40);
@@ -693,11 +719,13 @@ async function apply(env, body, today, source, who) {
       if (!r) r = await env.DB.prepare("SELECT * FROM items WHERE name_key LIKE ? ORDER BY length(name_key) LIMIT 1").bind('%' + k.replace(/[%_]/g, '') + '%').first();
       if (r) {
         await env.DB.prepare('UPDATE items SET qty = ?, unsure = 0, low = 0 WHERE id = ?').bind(a.quantity, r.id).run();
+        if (a.quantity <= 0 && r.qty > 0) await noteOut(env, r.name_key, today); else if (a.quantity > 0) await noteBack(env, r.name_key, today);
         changes.push({ id: r.id, name: r.name, action: 'set', created: false, prevQty: r.qty, qty: a.quantity, unit: r.unit, category: r.category, area: r.area });
         setN++;
         continue;
       }
       a.action = 'add'; // they told us they have something we were not tracking yet
+      a.wasSet = true; // which is not a purchase, so it teaches nothing about their pace
     }
     if (a.action === 'list') {
       const text = (a.name + (a.note ? ' (' + a.note + ')' : '')).slice(0, 80);
@@ -723,6 +751,7 @@ async function apply(env, body, today, source, who) {
       }
       const qty = a.quantity > 0 ? Math.max(0, row.qty - a.quantity) : 0;
       await env.DB.prepare('UPDATE items SET qty = ? WHERE id = ?').bind(qty, row.id).run();
+      if (qty <= 0 && row.qty > 0) await noteOut(env, row.name_key, today);
       changes.push({ id: row.id, name: row.name, action: 'use', created: false, prevQty: row.qty, qty, unit: row.unit, category: row.category, area: row.area });
       used++;
       continue;
@@ -736,33 +765,38 @@ async function apply(env, body, today, source, who) {
       }
       continue;
     }
-    let finish = a.finishDays, learned = 0;
-    if (bought) {
-      await env.DB.prepare('INSERT OR IGNORE INTO purchases (name_key, bought) VALUES (?, ?)').bind(key, bought).run();
-      const h = (await env.DB.prepare('SELECT bought FROM purchases WHERE name_key = ? ORDER BY bought').bind(key).all()).results;
-      if (h.length >= 2) {
-        const span = (Date.parse(h[h.length - 1].bought) - Date.parse(h[0].bought)) / DAY;
-        finish = clamp(Math.round(span / (h.length - 1)), 1, 365);
+    // a purchase said in chat has no receipt date, but it still happened today
+    const day = bought || (source !== 'shelf' && !a.wasSet ? today : '');
+    let finish = a.finishDays, learned = 0, learnt = 0;
+    if (day) try {
+      await env.DB.prepare('INSERT INTO purchases (name_key, bought, qty, unit) VALUES (?, ?, ?, ?) ON CONFLICT(name_key, bought) DO UPDATE SET qty = COALESCE(qty, 0) + excluded.qty, unit = excluded.unit').bind(key, day, a.quantity, a.unit).run();
+      const h = (await env.DB.prepare('SELECT bought, qty, unit, ran_out FROM purchases WHERE name_key = ? ORDER BY bought').bind(key).all()).results;
+      const pace = paceFrom(h, h.length ? h[h.length - 1].qty : a.quantity, a.unit);
+      if (pace) {
+        finish = pace.days;
         learned = 1;
+        if (!(row && row.learned)) learnt = pace.days; // the first time I know their pace, I say so
       }
-    }
-    const base = bought || today;
+      await answered(env, key);
+    } catch (e) { console.error('pace not learned', String((e && e.message) || e)); } // the purchase itself must still be saved
+    const base = day || today;
     const expiry = a.expiry || (a.shelfLifeDays > 0 ? addDays(base, a.shelfLifeDays) : null);
     const est = a.expiry ? 0 : 1;
     let itemId = row ? row.id : null;
     if (row) {
       await env.DB.prepare('UPDATE items SET qty = qty + ?, unit = ?, bought = COALESCE(?, bought), store = COALESCE(?, store), expiry = COALESCE(?, expiry), expiry_est = ?, finish_days = ?, learned = ?, source = ?, low = 0, warn = ? WHERE id = ?')
-        .bind(a.quantity, a.unit, bought || null, store || null, expiry, est, finish, learned, source, a.warn || null, row.id).run();
+        .bind(a.quantity, a.unit, day || null, store || null, expiry, est, finish, learned, source, a.warn || null, row.id).run();
       changes.push({ id: row.id, name: row.name, action: 'add', created: false, prevQty: row.qty, qty: row.qty + a.quantity, added: a.quantity, unit: a.unit, category: row.category, area: row.area, expiry, est, warn: a.warn });
     } else {
       const id = crypto.randomUUID();
       itemId = id;
       await env.DB.prepare('INSERT INTO items (id, name, name_key, qty, unit, category, bought, added, store, expiry, expiry_est, finish_days, learned, source, area, essential, warn) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
-        .bind(id, a.name, key, a.quantity, a.unit, a.category, bought || null, today, store || null, expiry, est, finish, learned, source, a.area, a.area === 'Kids' || a.area === 'Health' ? 1 : 0, a.warn || null).run();
+        .bind(id, a.name, key, a.quantity, a.unit, a.category, day || null, today, store || null, expiry, est, finish, learned, source, a.area, a.area === 'Kids' || a.area === 'Health' ? 1 : 0, a.warn || null).run();
       changes.push({ id, name: a.name, action: 'add', created: true, prevQty: 0, qty: a.quantity, added: a.quantity, unit: a.unit, category: a.category, area: a.area, expiry, est, warn: a.warn });
     }
     if (!a.sure) { await env.DB.prepare('UPDATE items SET unsure = 1 WHERE id = ?').bind(itemId).run(); changes[changes.length - 1].unsure = true; }
-    if (a.price > 0) await env.DB.prepare('INSERT INTO spend (item_id, day, area, amount, currency) VALUES (?, ?, ?, ?, ?)').bind(itemId, bought || today, a.area, a.price, currency).run();
+    if (a.price > 0) await env.DB.prepare('INSERT INTO spend (item_id, day, area, amount, currency) VALUES (?, ?, ?, ?, ?)').bind(itemId, day || today, a.area, a.price, currency).run();
+    if (learnt) changes[changes.length - 1].learnt = learnt;
     added++;
   }
   const parts = [];
@@ -917,6 +951,215 @@ async function mcp(request, env) {
   return json({ jsonrpc: '2.0', id: msg.id, error: { code: -32601, message: 'Method not found' } });
 }
 
+// ---------- storage that newer versions need ----------
+// Run once per start-up: adds what is missing and never touches what is there.
+const SCHEMA = 3;
+let ready = null;
+function migrate(env) {
+  if (!ready) ready = (async () => {
+    const v = await env.DB.prepare("SELECT v FROM settings WHERE k = 'schema'").first().catch(() => null);
+    if (v && Number(v.v) >= SCHEMA) return;
+    for (const col of ['qty REAL', 'unit TEXT', 'ran_out TEXT']) await env.DB.prepare('ALTER TABLE purchases ADD COLUMN ' + col).run().catch(() => {});
+    for (const sql of [
+      "CREATE TABLE IF NOT EXISTS push_subs (endpoint TEXT PRIMARY KEY, p256dh TEXT NOT NULL, auth TEXT NOT NULL, who TEXT, tz TEXT NOT NULL DEFAULT 'UTC', added TEXT NOT NULL, last_day TEXT, fails INTEGER NOT NULL DEFAULT 0)",
+      'CREATE TABLE IF NOT EXISTS reminders (name_key TEXT PRIMARY KEY, sent INTEGER NOT NULL DEFAULT 0, streak INTEGER NOT NULL DEFAULT 0, muted INTEGER NOT NULL DEFAULT 0, answered INTEGER NOT NULL DEFAULT 1, last_day TEXT)',
+      'CREATE TABLE IF NOT EXISTS turns (id INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT NOT NULL, said TEXT, route TEXT, intent TEXT, did TEXT, reply TEXT, outcome TEXT, wanted TEXT, label TEXT)',
+      'CREATE TABLE IF NOT EXISTS cases (id INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT NOT NULL, said TEXT NOT NULL UNIQUE, expect TEXT NOT NULL, name TEXT)',
+    ]) await env.DB.prepare(sql).run();
+    await env.DB.prepare("INSERT INTO settings (k, v) VALUES ('schema', ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v").bind(String(SCHEMA)).run();
+  })().catch((e) => { ready = null; console.error('migrate failed', String((e && e.message) || e)); });
+  return ready;
+}
+
+// ---------- reminders on the phone (Web Push) ----------
+// The only thing Stocker ever sends out by itself. It goes to the phone's own push service, only after someone taps "Turn on",
+// is sealed so that only that phone can read it, and is written by this code from fixed sentences, never by the model.
+const PUSH_HOSTS = /(^|\.)(fcm\.googleapis\.com|push\.services\.mozilla\.com|push\.apple\.com|notify\.windows\.com)$/;
+const b64u = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const unb64u = (t) => Uint8Array.from(atob(String(t).replace(/-/g, '+').replace(/_/g, '/')), (c) => c.charCodeAt(0));
+const bytes = (t) => new TextEncoder().encode(t);
+const cat = (...parts) => { const out = new Uint8Array(parts.reduce((n, p) => n + p.length, 0)); let at = 0; for (const p of parts) { out.set(p, at); at += p.length; } return out; };
+// The key that proves a reminder comes from this Stocker. Made here on first use and kept only in the database; it can do nothing except send to phones that subscribed.
+async function vapid(env) {
+  let row = await env.DB.prepare("SELECT v FROM settings WHERE k = 'vapid'").first();
+  if (!row) {
+    const pair = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign', 'verify']);
+    const made = JSON.stringify({ jwk: await crypto.subtle.exportKey('jwk', pair.privateKey), pub: b64u(await crypto.subtle.exportKey('raw', pair.publicKey)) });
+    await env.DB.prepare("INSERT OR IGNORE INTO settings (k, v) VALUES ('vapid', ?)").bind(made).run();
+    row = await env.DB.prepare("SELECT v FROM settings WHERE k = 'vapid'").first();
+  }
+  return JSON.parse(row.v);
+}
+// Seal a message for one phone (RFC 8291, aes128gcm).
+async function pushSeal(sub, text) {
+  const ua = unb64u(sub.p256dh), auth = unb64u(sub.auth);
+  const mine = await crypto.subtle.generateKey({ name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveBits']);
+  const minePub = new Uint8Array(await crypto.subtle.exportKey('raw', mine.publicKey));
+  const theirs = await crypto.subtle.importKey('raw', ua, { name: 'ECDH', namedCurve: 'P-256' }, false, []);
+  const shared = new Uint8Array(await crypto.subtle.deriveBits({ name: 'ECDH', public: theirs }, mine.privateKey, 256));
+  const hkdf = async (salt, ikm, info, len) => new Uint8Array(await crypto.subtle.deriveBits({ name: 'HKDF', hash: 'SHA-256', salt, info }, await crypto.subtle.importKey('raw', ikm, 'HKDF', false, ['deriveBits']), len * 8));
+  const ikm = await hkdf(auth, shared, cat(bytes('WebPush: info\0'), ua, minePub), 32);
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const cek = await hkdf(salt, ikm, bytes('Content-Encoding: aes128gcm\0'), 16);
+  const nonce = await hkdf(salt, ikm, bytes('Content-Encoding: nonce\0'), 12);
+  const sealed = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv: nonce }, await crypto.subtle.importKey('raw', cek, 'AES-GCM', false, ['encrypt']), cat(bytes(text), new Uint8Array([2]))));
+  return cat(salt, new Uint8Array([0, 0, 16, 0, 65]), minePub, sealed);
+}
+async function pushSign(env, endpoint, origin) {
+  const v = await vapid(env);
+  const key = await crypto.subtle.importKey('jwk', v.jwk, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign']);
+  const head = b64u(bytes('{"typ":"JWT","alg":"ES256"}'));
+  const claims = b64u(bytes(JSON.stringify({ aud: new URL(endpoint).origin, exp: Math.floor(Date.now() / 1000) + 12 * 3600, sub: origin })));
+  const sig = b64u(await crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, key, bytes(head + '.' + claims)));
+  return 'vapid t=' + head + '.' + claims + '.' + sig + ', k=' + v.pub;
+}
+async function pushSend(env, sub, payload, origin) {
+  let host = '';
+  try { const u = new URL(sub.endpoint); host = u.protocol === 'https:' ? u.hostname : ''; } catch (e) {}
+  if (!PUSH_HOSTS.test(host)) return 410;
+  const res = await fetch(sub.endpoint, {
+    method: 'POST',
+    headers: { authorization: await pushSign(env, sub.endpoint, origin), 'content-encoding': 'aes128gcm', 'content-type': 'application/octet-stream', ttl: '43200', urgency: 'normal' },
+    body: await pushSeal(sub, JSON.stringify(payload)),
+  });
+  return res.status;
+}
+// what the date and hour are where that phone lives
+function localNow(tz, now) {
+  try {
+    const p = Object.fromEntries(new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', hourCycle: 'h23' }).formatToParts(now).map((x) => [x.type, x.value]));
+    return { day: p.year + '-' + p.month + '-' + p.day, hour: Number(p.hour) % 24 };
+  } catch (e) { return { day: now.toISOString().slice(0, 10), hour: now.getUTCHours() }; }
+}
+const okZone = (tz) => { try { new Intl.DateTimeFormat('en', { timeZone: tz }); return String(tz).slice(0, 60); } catch (e) { return 'UTC'; } };
+
+// ---------- deciding what is worth a reminder ----------
+// Same rules as the app's own "might be running low", so the phone and the screen never disagree.
+function runOutDay(it, p) {
+  const total = p ? Math.max(1, num(p.adults, 1) + num(p.kids, 0)) : 1, away = p ? Math.min(total - 1, (p.members || []).filter((m) => m.away).length) : 0;
+  const out = p && p.eatOut ? Math.min(6, p.eatOut) : 0, kitchen = !it.area || it.area === 'Kitchen';
+  return addDays(it.bought || it.added, Math.round(it.finish_days * (total / (total - away)) * (kitchen ? 7 / (7 - out * 0.5) : 1)));
+}
+const dueSoon = (it, p, today) => it.qty > 0 && !it.low && dayGap(today, runOutDay(it, p)) <= (it.essential ? 3 : 1) && dayGap(it.bought || it.added, today) >= 2;
+// The hour reminders go out: five in the afternoon until people have answered a few, then whenever they usually answer.
+async function remindHour(env) {
+  const row = await env.DB.prepare("SELECT v FROM settings WHERE k = 'remind:hours'").first();
+  let h = []; try { h = JSON.parse((row && row.v) || '[]'); } catch (e) {}
+  const total = h.reduce((t, n) => t + (n || 0), 0);
+  if (total < 5) return { hour: 17, learned: false };
+  return { hour: clamp(h.indexOf(Math.max(...h.map((n) => n || 0))), 7, 21), learned: true };
+}
+// Only what the household's own pace says is due, or an essential, is worth interrupting someone for. An item is raised every other day at most;
+// three reminders in a row with no answer and I stop asking about it.
+async function digest(env, today, commit) {
+  const items = (await env.DB.prepare('SELECT * FROM items').all()).results, p = await getProfile(env);
+  const rem = new Map((await env.DB.prepare('SELECT * FROM reminders').all()).results.map((r) => [r.name_key, r]));
+  const low = [];
+  for (const it of items.filter((i) => (i.learned || i.essential) && dueSoon(i, p, today)).sort((a, b) => (runOutDay(a, p) < runOutDay(b, p) ? -1 : 1))) {
+    const r = rem.get(it.name_key);
+    if (r && r.muted) continue;
+    if (r && r.last_day === today) { low.push(it); continue; } // already raised today, on another phone
+    if (r && r.last_day && dayGap(r.last_day, today) < 2) continue;
+    const streak = r && !r.answered ? r.streak + 1 : 0;
+    if (commit) {
+      await env.DB.prepare('INSERT INTO reminders (name_key, sent, streak, muted, answered, last_day) VALUES (?, 1, 0, 0, 0, ?) ON CONFLICT(name_key) DO UPDATE SET sent = sent + ?, streak = ?, muted = ?, answered = 0, last_day = ?')
+        .bind(it.name_key, today, streak >= 3 ? 0 : 1, streak, streak >= 3 ? 1 : 0, streak >= 3 ? r.last_day : today).run();
+    }
+    if (streak < 3) low.push(it);
+  }
+  const use = items.filter((i) => i.qty > 0 && !i.frozen && i.expiry === today);
+  return { low: low.slice(0, 6), use: use.slice(0, 6) };
+}
+function remindText(d, today) {
+  if (!d.low.length && !d.use.length) return null;
+  const lc = (t) => t.toLowerCase();
+  let title = '', body = '';
+  if (d.low.length === 1) {
+    const it = d.low[0], since = dayGap(it.bought || it.added, today);
+    title = it.name + ' is probably running low';
+    body = (it.learned ? 'You usually buy it about every ' + everyDays(it.finish_days) + ', and it has been ' + since + (since === 1 ? ' day' : ' days') + '.' : 'It has been ' + since + ' days since you bought it.') + ' Shall I put it on your list?';
+  } else if (d.low.length > 1) {
+    title = listOf(d.low.slice(0, 2).map((i) => i.name).concat(d.low.length > 2 ? [d.low.length - 2 + ' more'] : [])) + ' are probably running low';
+    body = 'Going by your usual pace. I can put them on your list, or tell me you still have them.';
+  }
+  if (d.use.length) {
+    const u = 'he ' + lc(d.use[0].name) + (d.use.length > 1 ? ' and ' + (d.use.length - 1) + ' more want' : ' wants') + ' using today';
+    if (!title) { title = 'T' + u; body = 'Or it can go in the freezer.'; } else body += ' Also, t' + u + '.';
+  }
+  return {
+    title, body, url: '/?n=1', ids: d.low.map((i) => i.id),
+    actions: d.low.length === 1 ? [{ action: 'add', title: 'Add to list' }, { action: 'still', title: 'Still have it' }] : d.low.length ? [{ action: 'add', title: 'Add all to list' }, { action: 'open', title: 'Show me' }] : [],
+  };
+}
+// Runs every hour. Each phone hears from me at most once a day, at its own local time, and only when there is something to say.
+async function tick(env, now) {
+  await migrate(env);
+  const subs = (await env.DB.prepare('SELECT * FROM push_subs').all()).results;
+  if (!subs.length) return { sent: 0 };
+  const at = await remindHour(env), origin = ((await env.DB.prepare("SELECT v FROM settings WHERE k = 'origin'").first()) || {}).v || 'https://stocker.invalid';
+  const byDay = {};
+  let sent = 0;
+  for (const sub of subs) {
+    const t = localNow(sub.tz, now);
+    if (sub.last_day === t.day || t.hour < at.hour || t.hour > 21) continue;
+    const msg = remindText(byDay[t.day] || (byDay[t.day] = await digest(env, t.day, true)), t.day);
+    await env.DB.prepare('UPDATE push_subs SET last_day = ? WHERE endpoint = ?').bind(t.day, sub.endpoint).run();
+    if (!msg) continue;
+    const status = await pushSend(env, sub, msg, origin).catch(() => 0);
+    if (status === 404 || status === 410 || sub.fails >= 8) await env.DB.prepare('DELETE FROM push_subs WHERE endpoint = ?').bind(sub.endpoint).run();
+    else if (status >= 200 && status < 300) { sent++; if (sub.fails) await env.DB.prepare('UPDATE push_subs SET fails = 0 WHERE endpoint = ?').bind(sub.endpoint).run(); }
+    else await env.DB.prepare('UPDATE push_subs SET fails = fails + 1 WHERE endpoint = ?').bind(sub.endpoint).run();
+  }
+  return { sent };
+}
+
+// ---------- learning from real conversations ----------
+// Every turn is kept with private details removed, so a weekly look shows where I went wrong. Nothing here changes how I behave:
+// a person decides what each miss should have been, and that becomes a test I must pass from then on.
+const cutText = (v, n) => scrub(String(v || '')).replace(/[<>]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, n);
+async function noteTurn(env, t) {
+  try {
+    const said = cutText(t.said, 300), now = Date.now();
+    if (!said) return;
+    const prev = await env.DB.prepare('SELECT id, said, at, outcome FROM turns ORDER BY id DESC LIMIT 1').first();
+    if (prev && !prev.outcome && now - Date.parse(prev.at) < 600000) {
+      // two quiet signs that the last reply missed: they corrected me, or they had to say the same thing again
+      const sign = t.route === 'correct' ? 'corrected' : prev.said.toLowerCase() === said.toLowerCase() && now - Date.parse(prev.at) < 180000 ? 'repeated' : '';
+      if (sign) await env.DB.prepare('UPDATE turns SET outcome = ? WHERE id = ?').bind(sign, prev.id).run();
+    }
+    const did = (t.changes || []).map((c) => c.action + ' ' + c.name).concat((t.proposal || []).map((a) => 'guess ' + a.name)).join('; ').slice(0, 200);
+    await env.DB.prepare('INSERT INTO turns (at, said, route, intent, did, reply, outcome) VALUES (?, ?, ?, ?, ?, ?, ?)')
+      .bind(new Date(now).toISOString(), said, word(t.route, 12), word(t.intent, 12), cutText(did, 200), cutText(t.reply, 300), t.missed && t.missed.length ? 'missed' : '').run();
+    if (Math.random() < 0.05) await env.DB.prepare('DELETE FROM turns WHERE id <= (SELECT MAX(id) FROM turns) - 1500').run();
+  } catch (e) { console.error('turn not kept', String((e && e.message) || e)); }
+}
+const MISSES = ['down', 'undo', 'rejected', 'corrected', 'repeated', 'missed'];
+const MISS_KINDS = {
+  guess: ['Guessed the wrong ingredients', 'The dish guess. Teach the household dish, or tighten what a dish may assume.', 'nothing'],
+  missed: ['Could not find the thing they named', 'Name matching. They probably call it something else than the name it is stored under.', 'update'],
+  repeat: ['They had to say it twice', 'The first reply did not do what they wanted.', 'update'],
+  quiet: ['Replied without changing anything, and it was not right', 'The router or the model took an update for a question.', 'update'],
+  wrong: ['Changed something, and they took it back', 'The wrong item or amount, or a question taken for an update.', 'nothing'],
+  refused: ['Refused, and it was not right', 'The guardrails were too strict for an ordinary request.', 'update'],
+};
+const missKind = (r) => (r.outcome === 'rejected' ? 'guess' : r.outcome === 'missed' ? 'missed' : r.outcome === 'repeated' ? 'repeat' : r.route === 'refuse' || r.route === 'wipe' ? 'refused' : r.route === 'update' ? 'wrong' : 'quiet');
+async function review(env, today) {
+  const rows = (await env.DB.prepare('SELECT * FROM turns WHERE at >= ? ORDER BY id DESC LIMIT 1500').bind(addDays(today, -27)).all()).results;
+  const weeks = [0, 1, 2, 3].map((w) => {
+    const from = addDays(today, -7 * w - 6), to = addDays(today, -7 * w), mine = rows.filter((r) => r.at.slice(0, 10) >= from && r.at.slice(0, 10) <= to);
+    return { from, to, turns: mine.length, missed: mine.filter((r) => MISSES.includes(r.outcome)).length };
+  });
+  const groups = {};
+  for (const r of rows.filter((x) => MISSES.includes(x.outcome) && !x.label)) {
+    const k = missKind(r), g = groups[k] || (groups[k] = { kind: k, title: MISS_KINDS[k][0], fix: MISS_KINDS[k][1], suggest: MISS_KINDS[k][2], count: 0, examples: [] });
+    g.count++;
+    const twin = g.examples.find((e) => e.said.toLowerCase() === r.said.toLowerCase());
+    if (twin) twin.times++; else if (g.examples.length < 12) g.examples.push({ id: r.id, at: r.at, said: r.said, reply: r.reply, did: r.did, outcome: r.outcome, wanted: r.wanted || '', route: r.route, times: 1 });
+  }
+  const cases = (await env.DB.prepare('SELECT id, at, said, expect, name FROM cases ORDER BY id DESC LIMIT 200').all()).results;
+  return { weeks, groups: Object.values(groups).sort((a, b) => b.count - a.count), cases };
+}
+
 async function api(request, env, url) {
   const path = url.pathname, method = request.method;
   if (!env.APP_PIN) return json({ error: 'setup', message: 'Set a passcode first: npx wrangler secret put APP_PIN' }, 503);
@@ -924,6 +1167,7 @@ async function api(request, env, url) {
   const origin = request.headers.get('origin');
   if (method !== 'GET' && path !== '/api/mcp' && origin && origin !== url.origin) return json({ error: 'forbidden' }, 403);
   if (Number(request.headers.get('content-length') || 0) > 9_000_000) return json({ error: 'too_large' }, 413);
+  await migrate(env);
 
   if (path === '/api/login' && method === 'POST') {
     const body = await request.json().catch(() => ({}));
@@ -955,15 +1199,39 @@ async function api(request, env, url) {
     const cur = await env.DB.prepare('SELECT currency FROM spend WHERE currency IS NOT NULL ORDER BY id DESC LIMIT 1').first();
     const spend = { total: byArea.reduce((t, r) => t + r.amount, 0), byArea, currency: (cur && cur.currency) || '' };
     const binned = await env.DB.prepare("SELECT COUNT(*) AS n FROM log WHERE summary LIKE 'threw away %' AND at >= ?").bind(today.slice(0, 8) + '01').first();
-    return json({ items, log, extras, me, spend, waste: (binned && binned.n) || 0, profile: await getProfile(env) });
+    // what has been learned so far; the app must still open if this part cannot be read
+    let learnt = { hour: 17, hourLearned: false, muted: [], dishes: [], phones: 0 }, misses = 0;
+    try {
+      const at = await remindHour(env);
+      const [muted, dishes, phones, missed] = await env.DB.batch([
+        env.DB.prepare('SELECT name_key FROM reminders WHERE muted > 0'),
+        env.DB.prepare("SELECT k FROM settings WHERE k LIKE 'dish:%' ORDER BY k LIMIT 60"),
+        env.DB.prepare('SELECT COUNT(*) AS n FROM push_subs'),
+        env.DB.prepare("SELECT COUNT(DISTINCT lower(said)) AS n FROM turns WHERE label IS NULL AND outcome IN ('down','undo','rejected','corrected','repeated','missed') AND at >= ?").bind(addDays(today, -27)),
+      ]);
+      learnt = { hour: at.hour, hourLearned: at.learned, muted: muted.results.map((r) => r.name_key), dishes: dishes.results.map((r) => r.k.slice(5)), phones: (phones.results[0] || {}).n || 0 };
+      misses = (missed.results[0] || {}).n || 0;
+    } catch (e) { console.error('learnt not read', String((e && e.message) || e)); }
+    return json({ items, log, extras, me, spend, waste: (binned && binned.n) || 0, profile: await getProfile(env), learnt, review: misses });
   }
   const m = path.match(/^\/api\/items\/([0-9a-f-]{36})$/);
   if (m && method === 'PATCH') {
     const body = await request.json().catch(() => ({}));
-    if (body.qty !== undefined) await env.DB.prepare('UPDATE items SET qty = ?, unsure = 0 WHERE id = ?').bind(Math.max(0, num(body.qty, 0)), m[1]).run();
+    const cur = await env.DB.prepare('SELECT name_key, qty FROM items WHERE id = ?').bind(m[1]).first();
+    if (!cur) return json({ ok: true });
+    if (body.qty !== undefined) {
+      const q = Math.max(0, num(body.qty, 0));
+      await env.DB.prepare('UPDATE items SET qty = ?, unsure = 0 WHERE id = ?').bind(q, m[1]).run();
+      if (q <= 0 && cur.qty > 0 && !body.binned) await noteOut(env, cur.name_key, today); else if (q > 0) await noteBack(env, cur.name_key, today);
+    }
     if (body.low !== undefined) await env.DB.prepare('UPDATE items SET low = ? WHERE id = ?').bind(body.low ? 1 : 0, m[1]).run();
     if (body.finishDays !== undefined) await env.DB.prepare('UPDATE items SET finish_days = ? WHERE id = ?').bind(clamp(Math.round(num(body.finishDays, 14)), 1, 365), m[1]).run();
-    if (body.undo) await env.DB.prepare('DELETE FROM spend WHERE id = (SELECT MAX(id) FROM spend WHERE item_id = ?)').bind(m[1]).run();
+    if (body.low || body.finishDays !== undefined) await answered(env, cur.name_key);
+    if (body.undo) {
+      await env.DB.prepare('DELETE FROM spend WHERE id = (SELECT MAX(id) FROM spend WHERE item_id = ?)').bind(m[1]).run();
+      await env.DB.prepare('DELETE FROM purchases WHERE name_key = ? AND bought = ?').bind(cur.name_key, today).run(); // an undone purchase must not teach a pace
+      await env.DB.prepare('UPDATE items SET bought = COALESCE((SELECT MAX(bought) FROM purchases WHERE name_key = ?), bought) WHERE id = ?').bind(cur.name_key, m[1]).run();
+    }
     if (body.essential !== undefined) await env.DB.prepare('UPDATE items SET essential = ? WHERE id = ?').bind(body.essential ? 1 : 0, m[1]).run();
     if (body.frozen !== undefined) await env.DB.prepare('UPDATE items SET frozen = ? WHERE id = ?').bind(body.frozen ? 1 : 0, m[1]).run();
     if (body.binned) {
@@ -983,8 +1251,91 @@ async function api(request, env, url) {
     return json({ ok: true });
   }
   if (m && method === 'DELETE') {
+    const gone = await env.DB.prepare('SELECT name_key FROM items WHERE id = ?').bind(m[1]).first();
     await env.DB.prepare('DELETE FROM items WHERE id = ?').bind(m[1]).run();
-    if (url.searchParams.get('undo')) await env.DB.prepare('DELETE FROM spend WHERE item_id = ?').bind(m[1]).run();
+    if (gone) await env.DB.prepare('DELETE FROM reminders WHERE name_key = ?').bind(gone.name_key).run();
+    if (url.searchParams.get('undo')) {
+      await env.DB.prepare('DELETE FROM spend WHERE item_id = ?').bind(m[1]).run();
+      if (gone) await env.DB.prepare('DELETE FROM purchases WHERE name_key = ? AND bought = ?').bind(gone.name_key, today).run();
+    }
+    return json({ ok: true });
+  }
+
+  // ---- reminders on this phone ----
+  if (path === '/api/push' && method === 'GET') {
+    const n = await env.DB.prepare('SELECT COUNT(*) AS n FROM push_subs').first();
+    return json({ key: (await vapid(env)).pub, phones: (n && n.n) || 0 });
+  }
+  if (path === '/api/push' && method === 'POST') {
+    const body = (await request.json().catch(() => null)) || {}, keys = body.keys || {};
+    if (!(await allow(env, 'push', 10, 10))) return json({ error: 'slow_down' }, 429);
+    let host = '', sizes = [0, 0];
+    try { const u = new URL(String(body.endpoint)); host = u.protocol === 'https:' ? u.hostname : ''; sizes = [unb64u(keys.p256dh).length, unb64u(keys.auth).length]; } catch (e) {}
+    if (!PUSH_HOSTS.test(host) || String(body.endpoint).length > 700 || sizes[0] !== 65 || sizes[1] !== 16) return json({ error: 'bad_phone' }, 400);
+    const n = await env.DB.prepare('SELECT COUNT(*) AS n FROM push_subs WHERE endpoint <> ?').bind(body.endpoint).first();
+    if (n && n.n >= 10) return json({ error: 'full' }, 400);
+    const sub = { endpoint: String(body.endpoint), p256dh: String(keys.p256dh), auth: String(keys.auth) };
+    await env.DB.prepare('INSERT INTO push_subs (endpoint, p256dh, auth, who, tz, added) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(endpoint) DO UPDATE SET p256dh = excluded.p256dh, auth = excluded.auth, who = excluded.who, tz = excluded.tz, fails = 0')
+      .bind(sub.endpoint, sub.p256dh, sub.auth, me || null, okZone(body.tz), new Date().toISOString()).run();
+    await env.DB.prepare("INSERT INTO settings (k, v) VALUES ('origin', ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v").bind(url.origin).run();
+    const hello = body.quiet ? 0 : await pushSend(env, sub, { title: 'Reminders are on', body: 'I will let you know when something is running out. Once a day at most.', url: '/', ids: [], actions: [] }, url.origin).catch(() => 0);
+    return json({ ok: true, hello: hello >= 200 && hello < 300 });
+  }
+  if (path === '/api/push' && method === 'DELETE') {
+    const body = (await request.json().catch(() => null)) || {};
+    await env.DB.prepare('DELETE FROM push_subs WHERE endpoint = ?').bind(String(body.endpoint || '')).run();
+    return json({ ok: true });
+  }
+  // what I would raise today, without sending or recording anything
+  if (path === '/api/remind' && method === 'GET') {
+    return json({ ...(await remindHour(env)), preview: remindText(await digest(env, today, false), today) });
+  }
+  // an answer to a reminder, from the notification itself or from inside the app
+  if (path === '/api/remind' && method === 'POST') {
+    const body = (await request.json().catch(() => null)) || {};
+    const ids = (Array.isArray(body.ids) ? body.ids : []).filter((id) => /^[0-9a-f-]{36}$/.test(String(id))).slice(0, 12);
+    const ans = ['add', 'still', 'stop', 'start'].includes(body.answer) ? body.answer : '';
+    if (!ans || !ids.length) return json({ error: 'empty' }, 400);
+    const done = [];
+    for (const id of ids) {
+      const it = await env.DB.prepare('SELECT * FROM items WHERE id = ?').bind(id).first();
+      if (!it) continue;
+      if (ans === 'add') await env.DB.prepare('UPDATE items SET low = 1 WHERE id = ?').bind(id).run();
+      // "still have it" means my estimate was short: give it half as long again before I ask
+      if (ans === 'still') await env.DB.prepare('UPDATE items SET finish_days = ? WHERE id = ?').bind(clamp(dayGap(it.bought || it.added, today) + Math.max(3, Math.ceil(it.finish_days * 0.5)), 1, 365), id).run();
+      if (ans === 'stop') await env.DB.prepare('INSERT INTO reminders (name_key, muted, answered) VALUES (?, 2, 1) ON CONFLICT(name_key) DO UPDATE SET muted = 2, answered = 1, streak = 0').bind(it.name_key).run();
+      else await env.DB.prepare('INSERT INTO reminders (name_key, answered) VALUES (?, 1) ON CONFLICT(name_key) DO UPDATE SET answered = 1, streak = 0, muted = CASE WHEN muted = 1 OR ? = 1 THEN 0 ELSE muted END').bind(it.name_key, ans === 'start' ? 1 : 0).run();
+      done.push(it.name);
+    }
+    const hour = Number(body.hour);
+    if ((ans === 'add' || ans === 'still') && Number.isInteger(hour) && hour >= 0 && hour <= 23 && done.length) {
+      const row = await env.DB.prepare("SELECT v FROM settings WHERE k = 'remind:hours'").first();
+      let h = []; try { h = JSON.parse((row && row.v) || '[]'); } catch (e) {}
+      h = Array.from({ length: 24 }, (_, i) => Math.min(999, num(h[i], 0)));
+      h[hour]++;
+      await env.DB.prepare("INSERT INTO settings (k, v) VALUES ('remind:hours', ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v").bind(JSON.stringify(h)).run();
+    }
+    return json({ ok: true, done });
+  }
+
+  // ---- the weekly look at where I went wrong ----
+  if (path === '/api/review' && method === 'GET') return json(await review(env, today));
+  if (path === '/api/review' && method === 'POST') {
+    const body = (await request.json().catch(() => null)) || {};
+    const label = ['nothing', 'update', 'list', 'ok'].includes(body.label) ? body.label : '';
+    const t = await env.DB.prepare('SELECT said FROM turns WHERE id = ?').bind(Math.round(num(body.id, 0))).first();
+    if (!label || !t || !t.said) return json({ error: 'empty' }, 400);
+    await env.DB.prepare('UPDATE turns SET label = ? WHERE lower(said) = lower(?)').bind(label, t.said).run();
+    if (label === 'ok') await env.DB.prepare('DELETE FROM cases WHERE said = ?').bind(t.said).run();
+    else await env.DB.prepare('INSERT INTO cases (at, said, expect, name) VALUES (?, ?, ?, ?) ON CONFLICT(said) DO UPDATE SET expect = excluded.expect, name = excluded.name').bind(new Date().toISOString(), t.said, label, word(body.name, 40) || null).run();
+    return json({ ok: true });
+  }
+  if (path === '/api/review' && method === 'DELETE') {
+    const c = await env.DB.prepare('SELECT said FROM cases WHERE id = ?').bind(Math.round(num(url.searchParams.get('case'), 0))).first();
+    if (c) {
+      await env.DB.prepare('DELETE FROM cases WHERE said = ?').bind(c.said).run();
+      await env.DB.prepare('UPDATE turns SET label = NULL WHERE lower(said) = lower(?)').bind(c.said).run();
+    }
     return json({ ok: true });
   }
 
@@ -1052,13 +1403,17 @@ async function api(request, env, url) {
       const profile = await getProfile(env);
       const history = (Array.isArray(body.history) ? body.history : []).slice(-4).map((h) => ({ role: h && h.role === 'assistant' ? 'assistant' : 'user', content: String((h && h.text) || '').slice(0, 400) })).filter((h) => h.content);
       const turn = await converse(env, text, history, rows, profile, today, true);
-      if (turn.reply) return json({ heard, reply: turn.reply, changes: [], missed: [], blocked: turn.blocked, route: turn.route });
+      if (turn.reply) {
+        await noteTurn(env, { said: text, route: turn.route, reply: turn.reply });
+        return json({ heard, reply: turn.reply, changes: [], missed: [], blocked: turn.blocked, route: turn.route });
+      }
       const out = turn.out;
       const result = out.actions.length ? await apply(env, { store: out.store, bought: out.bought, currency: out.currency, actions: out.actions }, today, 'voice', me) : { changes: [], missed: [] };
       const ask = !turn.proposal.length ? '' : turn.remembered ? 'Last time you made ' + turn.remembered + ' you used ' + listOf(turn.proposal.map((a) => qtyOf(a.quantity, a.unit) + ' of ' + a.name)) + '. Same again?' : proposeText(turn.proposal);
       const reply = result.changes.length ? chatReply(result).replace(ask ? ' Tap Undo on anything I got wrong.' : '\u0000', '') + (ask ? ' ' + ask : '') : ask || await chatAnswer(env, text, history, rows, today, profile, result.missed || []);
       const q = result.changes.length ? questionPart(text) : '';
       const extra = q ? ' ' + (await chatAnswer(env, q, history, (await env.DB.prepare('SELECT name, qty, unit, expiry, expiry_est, frozen, low, area, category FROM items ORDER BY name').all()).results, today, profile, [])) : '';
+      await noteTurn(env, { said: text, route: turn.route, intent: out.intent, reply: reply + extra, changes: result.changes, proposal: turn.proposal, missed: result.missed });
       return json({ heard, reply: reply + extra, changes: result.changes, missed: result.missed || [], proposal: turn.proposal, remembered: turn.remembered || '', route: turn.route });
     } catch (e) {
       return aiFail(env, e, 'chat');
@@ -1107,6 +1462,9 @@ async function api(request, env, url) {
     const cut = (v, n2) => scrub(String(v || '')).replace(/[<>]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, n2);
     await env.DB.prepare('INSERT INTO feedback (at, kind, said, reply, route, detail) VALUES (?, ?, ?, ?, ?, ?)').bind(new Date().toISOString(), kind, cut(body.said, 300), cut(body.reply, 300), word(body.route, 12), cut(body.detail, 200)).run();
     await env.DB.prepare('DELETE FROM feedback WHERE id NOT IN (SELECT id FROM feedback ORDER BY id DESC LIMIT 300)').run();
+    // the same moment, marked on the turn it belongs to, so the weekly look can count and group it
+    const mark = kind === 'wanted' ? ['UPDATE turns SET wanted = ? WHERE id = (SELECT MAX(id) FROM turns WHERE said = ?)', cut(body.detail, 200)] : kind === 'up' ? ["UPDATE turns SET outcome = ? WHERE outcome = '' AND id = (SELECT MAX(id) FROM turns WHERE said = ?)", 'up'] : ['UPDATE turns SET outcome = ? WHERE id = (SELECT MAX(id) FROM turns WHERE said = ?)', kind];
+    await env.DB.prepare(mark[0]).bind(mark[1], cut(body.said, 300)).run().catch(() => {});
     return json({ ok: true });
   }
   if (path === '/api/feedback' && method === 'GET') {
@@ -1168,5 +1526,9 @@ export default {
       catch (e) { console.error(e); return json({ error: 'server' }, 500); }
     }
     return env.ASSETS.fetch(request);
+  },
+  // every hour: see whether any phone is due its one reminder of the day
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(tick(env, new Date(event.scheduledTime || Date.now())).catch((e) => console.error('reminders failed', String((e && e.message) || e))));
   },
 };
