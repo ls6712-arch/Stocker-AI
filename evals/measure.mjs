@@ -10,7 +10,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { fileURLToPath, pathToFileURL } from 'url';
 
 const ROOT = fileURLToPath(new URL('../', import.meta.url));
-const NAMES = ['migrate', 'queueRun', 'stepRun', 'autoRuns', 'summarize', 'scorecard', 'health', 'gradeCheck', 'simApply', 'simRows', 'evalCase', 'evalCases', 'apply', 'bump', 'weekOf', 'onVoice', 'noteTurn'];
+const NAMES = ['migrate', 'queueRun', 'stepRun', 'autoRuns', 'summarize', 'scorecard', 'health', 'gradeCheck', 'simApply', 'simRows', 'evalCase', 'evalCases', 'apply', 'bump', 'weekOf', 'onVoice', 'noteTurn', 'route', 'converse', 'chatAnswer'];
 const src = fs.readFileSync(path.join(ROOT, 'src/index.js'), 'utf8');
 const tmp = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'tote-measure-')), 'agent.mjs');
 fs.writeFileSync(tmp, src + '\nexport { ' + NAMES.join(', ') + ' };\n');
@@ -176,6 +176,33 @@ async function finish(e, cap = 50) { let r; for (let i = 0; i < cap; i++) { r = 
   ok('health: eight weeks, newest first', (await T.health(e, today)).length === 8);
   await T.noteTurn(e, { said: 'we need milk', route: 'update', reply: 'ok', t0: Date.now() - 1200 });
   ok('health: each turn keeps how long it took', ((await db.prepare("SELECT ms FROM turns WHERE said = 'we need milk'").first()) || {}).ms >= 1000);
+}
+
+// ---- what this round taught Tote (the live model is graded on the scorecard; this checks the plumbing) ----
+{
+  for (const t of ['thinking of making pasta tomorrow', 'might grab milk later', 'planning to bake on sunday'])
+    ok('router: a plan or a maybe changes nothing', T.route(t) === 'answer', t);
+  for (const t of ['I made pasta tonight', 'used the last of the milk, will buy more tomorrow', 'need eggs tomorrow', 'bought milk, going to need more soon'])
+    ok('router: something that happened, or a list request, still reaches the update step', T.route(t) === 'update', t);
+  const seen = [];
+  const spy = { run: async (m, input) => { seen.push(input.messages[input.messages.length - 1].content); return { response: { intent: 'update', actions: [] } }; } };
+  const rows = T.simRows(HOME), e = { DB: null, AI: spy };
+  await T.converse(e, 'and bread too', [{ role: 'user', content: 'put eggs on the list' }, { role: 'assistant', content: 'I put Eggs on your list.' }], rows, null, '2026-11-13');
+  ok('follow-up: the model sees the earlier turns, marked as context', /Earlier in this chat[\s\S]*put eggs on the list[\s\S]*Newest message: and bread too/.test(seen[0] || ''), seen[0]);
+  seen.length = 0;
+  const fix = await T.converse(e, 'sorry, 2 not 3', [{ role: 'user', content: 'I used 3 eggs' }, { role: 'assistant', content: 'I took 3 Eggs.' }], rows, null, '2026-11-13');
+  ok('follow-up: a correction with a number, right after a change, goes to the model', seen.length === 1 && fix.route === 'update', fix.route);
+  const flat = await T.converse(e, 'I did NOT use the eggs', [{ role: 'user', content: 'I used 3 eggs' }], rows, null, '2026-11-13');
+  ok('follow-up: "I did not" still gets the plain undo answer', flat.route === 'correct' && /Undo/.test(flat.reply), flat);
+  for (const t of ['make that two', 'ok put it on the list', 'yes add them']) { seen.length = 0; await T.converse(e, t, [{ role: 'user', content: 'x' }], rows, null, '2026-11-13'); ok('follow-up: a short follow-up reaches the model', seen.length === 1, t); }
+  seen.length = 0; await T.converse(e, 'and bread too', [], rows, null, '2026-11-13');
+  ok('follow-up: the same words with nothing before them are still not acted on', seen.length === 0);
+  const cold = await T.converse(e, 'sorry, 2 not 3', [], rows, null, '2026-11-13');
+  ok('follow-up: with nothing before it, a correction is not guessed at', cold.route === 'correct', cold.route);
+  let sys = '';
+  const talk = { run: async (m, input) => { sys = input.messages[0].content; return { response: 'ok' }; } };
+  await T.chatAnswer({ DB: null, AI: talk }, 'how often do I buy milk?', [], T.simRows([{ name: 'Whole Milk', qty: 1, unit: 'L', pace: 3, bought: '2026-11-11' }]), '2026-11-13', null, []);
+  ok('pace: answers can see the learned pace and when it is next due', /usually bought every 3 days, last bought [^,]+, likely needed again tomorrow/i.test(sys), sys.split('Inventory:')[1]);
 }
 
 // ---- the real cases file is well formed ----
