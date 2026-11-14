@@ -429,6 +429,9 @@ function chatReply(result) {
   const setTo = ch.filter((c) => c.action === 'set'), unlisted = ch.filter((c) => c.action === 'unlist');
   if (setTo.length) parts.push('I set ' + listOf(setTo.map((c) => c.name + ' to ' + qtyOf(c.qty, c.unit))) + '.');
   if (unlisted.length) parts.push('I took ' + listOf(unlisted.map((c) => c.name)) + ' off your shopping list.');
+  const already = listed.filter((c) => c.kept);
+  if (already.length) parts.push(listOf(already.map((c) => c.name)) + (already.length === 1 ? ' is' : ' are') + ' already on your shopping list. Do you want another? Tap Add another if so.');
+  listed.splice(0, listed.length, ...listed.filter((c) => !c.kept));
   if (listed.length) parts.push('I put ' + listOf(listed.map((c) => c.name)) + ' on your shopping list' + (listed.some((c) => c.note) ? ', with a note: ' + listed.filter((c) => c.note).map((c) => c.note).join('; ') : '') + '.');
   if (used.length) parts.push('I took off ' + listOf(used.map((c) => (c.qty <= 0 ? 'the last of the ' + c.name : qtyOf(c.prevQty - c.qty, c.unit) + ' of ' + c.name))) + '.');
   if (added.length) parts.push((used.length ? 'I also added ' : 'I added ') + listOf(added.map((c) => qtyOf(c.added, c.unit) + ' ' + c.name)) + '.');
@@ -699,7 +702,7 @@ async function apply(env, body, today, source, who) {
     if (a.action === 'list') {
       const text = (a.name + (a.note ? ' (' + a.note + ')' : '')).slice(0, 80);
       const n = await env.DB.prepare('SELECT COUNT(*) AS n FROM extras').first();
-      const dup = await env.DB.prepare('SELECT id FROM extras WHERE lower(text) = lower(?)').bind(text).first();
+      const dup = await env.DB.prepare("SELECT id FROM extras WHERE lower(text) = lower(?) OR lower(text) LIKE lower(?) || ' \u00d7%'").bind(text, text).first();
       if (dup || (n && n.n >= 100)) { if (!dup) missed.push(a.name); else changes.push({ id: dup.id, name: a.name, note: a.note, action: 'list', created: false, kept: true }); continue; }
       const id = crypto.randomUUID();
       await env.DB.prepare('INSERT INTO extras (id, text, who, added) VALUES (?, ?, ?, ?)').bind(id, text, who || null, new Date().toISOString()).run();
@@ -999,10 +1002,18 @@ async function api(request, env, url) {
   }
 
   if (path === '/api/extras' && method === 'POST') {
-    const text = scrub(String((await request.json().catch(() => ({}))).text || '')).replace(/[<>]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80);
+    const sent = (await request.json().catch(() => ({}))) || {};
+    const text = scrub(String(sent.text || '')).replace(/[<>]/g, ' ').replace(/\s+/g, ' ').replace(/\s*\u00d7\s*\d+$/, '').trim().slice(0, 76);
     if (!text) return json({ error: 'empty' }, 400);
     const n = await env.DB.prepare('SELECT COUNT(*) AS n FROM extras').first();
-    if (await env.DB.prepare('SELECT id FROM extras WHERE lower(text) = lower(?)').bind(text).first()) return json({ ok: true, already: true });
+    // already there: never add silently and never drop silently. The app asks, and "again" raises the count on the same line.
+    const same = await env.DB.prepare("SELECT id, text FROM extras WHERE lower(text) = lower(?) OR lower(text) LIKE lower(?) || ' \u00d7%'").bind(text, text).first();
+    if (same) {
+      if (!sent.again) return json({ ok: true, already: true, id: same.id, text: same.text });
+      const m2 = same.text.match(/^(.*) \u00d7(\d+)$/), next = (m2 ? m2[1] : same.text) + ' \u00d7' + Math.min(99, (m2 ? Number(m2[2]) : 1) + 1);
+      await env.DB.prepare('UPDATE extras SET text = ? WHERE id = ?').bind(next, same.id).run();
+      return json({ ok: true, bumped: true, id: same.id, text: next });
+    }
     if (n && n.n >= 100) return json({ error: 'full' }, 400);
     await env.DB.prepare('INSERT INTO extras (id, text, who, added) VALUES (?, ?, ?, ?)').bind(crypto.randomUUID(), text, me || null, new Date().toISOString()).run();
     return json({ ok: true });

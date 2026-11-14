@@ -284,6 +284,16 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
   </div>
 </dialog>
 
+<dialog class="sheet" id="askDlg" aria-labelledby="askH">
+  <div class="pad">
+    <div class="grab"></div>
+    <h2 id="askH">Already on your list</h2>
+    <p id="askText"></p>
+    <button type="button" class="btn primary block" id="askYes">Add another</button>
+    <button type="button" class="btn block" id="askNo">Leave it as it is</button>
+  </div>
+</dialog>
+
 <dialog class="sheet" id="nudgeDlg" aria-labelledby="nudgeH">
   <div class="pad">
     <div class="grab"></div>
@@ -634,6 +644,14 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     var lines=WAIT[msg]||WAIT[Object.keys(WAIT).filter(function(k){return msg.indexOf(k)===0})[0]]||[msg],i=0;$('busyMsg').textContent=lines[0];
     waitTimer=setInterval(function(){i=Math.min(lines.length-1,i+1);$('busyMsg').textContent=lines[i]},3800);
     var live=window.Tote&&Tote.mount($('toteBusy'),128,buddy()+' is working');$('toteBusy').hidden=!live;$('busyDoc').hidden=!!live;if(live){Tote.onTap=null;Tote.mood('think')}}
+  /* adding to the list: if it is already there, ask instead of guessing */
+  function ask(text){return new Promise(function(done){var d=$('askDlg'),ans=false;$('askText').textContent=text;
+    $('askYes').onclick=function(){ans=true;d.close()};$('askNo').onclick=function(){d.close()};d.addEventListener('close',function(){done(ans)},{once:true});d.showModal()})}
+  async function addToList(text,quiet){var r=await api('/api/extras',{method:'POST',body:JSON.stringify({text:text})});
+    if(!r.already)return 'added';if(quiet)return 'kept';
+    if(!(await ask(r.text+' is already on your shopping list. Do you want another one?')))return 'kept';
+    await api('/api/extras',{method:'POST',body:JSON.stringify({text:text,again:true})});return 'again'}
+  var LISTMSG={added:' is on your shopping list.',again:': one more on your shopping list.',kept:' is already on your list. Left as it is.'};
   /* nudges: one list of what needs a person, each with a single tap to deal with it */
   function offToday(){try{var o=JSON.parse(localStorage.getItem('stocker.nudgeOff')||'{}');return o.day===iso(today())?o.ids||[]:[]}catch(e){return []}}
   function nudges(){var out=[],lc=function(x){return x.toLowerCase()},patch=function(it,body,msg){return async function(){await api('/api/items/'+it.id,{method:'PATCH',body:JSON.stringify(body)});await refresh();toast(msg)}};
@@ -732,7 +750,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
         hb.onclick=function(){try{localStorage.setItem('stocker.starterHide','1')}catch(e){}render()};
         sh.append(el('h3','',pers().length===1?PERSONA[pers()[0]][0]+' staples':'Staples for your home'),hb);sc.append(sh,el('p','sub','A starter list picked for your kind of home. Tap what you want on your shopping list.'));
         var wc=el('div','wrapchips');picks.forEach(function(n){var b=el('button','mini','+ '+n);b.type='button';
-          b.onclick=async function(){b.disabled=true;try{await api('/api/extras',{method:'POST',body:JSON.stringify({text:n})});await refresh();toast(n+' is on your shopping list.')}catch(er){b.disabled=false;if(er.code!=='locked')toast('Could not add that. Check your connection.')}};wc.append(b)});
+          b.onclick=async function(){b.disabled=true;try{var how=await addToList(n);await refresh();toast(n+LISTMSG[how])}catch(er){b.disabled=false;if(er.code!=='locked')toast('Could not add that. Check your connection.')}};wc.append(b)});
         sc.append(wc);v.append(sc)}}
   }
   function renderToday(){
@@ -923,7 +941,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     inp.type='text';inp.id='extraText';inp.maxLength=80;inp.style.flex='1';inp.placeholder='Add anything, like birthday candles';inp.setAttribute('aria-label','Add something to the list');
     add.type='submit';f.append(inp,add);
     f.addEventListener('submit',async function(ev){ev.preventDefault();var t=inp.value.trim();if(!t)return;
-      try{await api('/api/extras',{method:'POST',body:JSON.stringify({text:t})});await refresh();var n=$('extraText');if(n)n.focus()}
+      try{var how=await addToList(t);await refresh();if(how!=='added')toast(t+LISTMSG[how]);var n=$('extraText');if(n)n.focus()}
       catch(er){if(er.code!=='locked')toast(er.code==='full'?'The list is full. Tick a few things off first.':'Could not add that. Check your connection.')}});
     v.append(f);
     if(!count)v.append(emptyCard('Pantry','Nothing to buy','Things land here when you run out, say they are low, or add them yourself.'));
@@ -1012,10 +1030,10 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
       list.forEach(function(n){var st=kitState(n),li=el('li','row'),g=el('span','grow');g.append(el('span','name',n));li.append(g);
         if(st==='home')li.append(el('span','pill ok','At home'));else if(st==='list')li.append(el('span','pill warn','On your list'));
         else{var b=el('button','mini','+ Add');b.type='button';b.setAttribute('aria-label','Add '+n+' to the shopping list');b.onclick=async function(){b.disabled=true;
-          try{await api('/api/extras',{method:'POST',body:JSON.stringify({text:n})});await refresh();draw()}catch(e){b.disabled=false;if(e.code!=='locked')toast('Could not add that. Check your connection.')}};li.append(b)}
+          try{var how=await addToList(n);await refresh();draw();if(how!=='added')toast(n+LISTMSG[how])}catch(e){b.disabled=false;if(e.code!=='locked')toast('Could not add that. Check your connection.')}};li.append(b)}
         ul.append(li)});
       var all=$('kitAll');all.hidden=!need.length;all.textContent='Add all '+need.length+' missing to my list';
-      all.onclick=async function(){all.disabled=true;try{for(var i=0;i<need.length;i++)await api('/api/extras',{method:'POST',body:JSON.stringify({text:need[i]})});await refresh();draw();toast(need.length+' added to your shopping list.')}
+      all.onclick=async function(){all.disabled=true;try{var kept=0;for(var i=0;i<need.length;i++)if((await addToList(need[i],true))==='kept')kept++;await refresh();draw();toast((need.length-kept)+' added to your shopping list.'+(kept?' '+kept+(kept===1?' was':' were')+' already there.':''))}
         catch(e){if(e.code!=='locked')toast('Could not add everything. Check your connection.')}finally{all.disabled=false}};
     }
     draw();$('kitDlg').showModal();
@@ -1243,7 +1261,9 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
   var chatHist=[],chatBusy=false;
   function bubble(cls,text){var m=el('div','msg '+cls,text);$('chatLog').append(m);$('chatLog').scrollTop=$('chatLog').scrollHeight;return m}
   function chatChanges(host,changes){changes.forEach(function(c){var row=el('div','chg'),t=el('span','',c.action==='unlist'?'Off your list: '+c.name:c.action==='set'?c.name+': now '+(c.qty<=0?'none':amount(c.qty,c.unit))+' (was '+amount(c.prevQty,c.unit)+')':c.action==='list'?'On your list: '+c.name+(c.note?' ('+c.note+')':''):c.name+': '+(c.action==='low'?'running low':amount(c.prevQty,c.unit)+' \u2192 '+(c.qty<=0?'none':amount(c.qty,c.unit)))),u=el('button','mini','Undo');u.type='button';
-      u.setAttribute('aria-label','Undo the change to '+c.name);if(c.action==='list'&&!c.created){t.textContent='Already on your list: '+c.name;row.append(t);host.append(row);return}
+      u.setAttribute('aria-label','Undo the change to '+c.name);if(c.action==='list'&&!c.created){t.textContent='Already on your list: '+c.name;var more=el('button','mini','Add another');more.type='button';more.setAttribute('aria-label','Add another '+c.name+' to the list');
+        more.onclick=async function(){more.disabled=true;try{var r2=await api('/api/extras',{method:'POST',body:JSON.stringify({text:c.name,again:true})});t.textContent='On your list: '+(r2.text||c.name);more.remove();await refresh()}catch(er){more.disabled=false;if(er.code!=='locked')toast('Could not add that. Check your connection.')}};
+        row.append(t,more);host.append(row);return}
       u.onclick=async function(){u.disabled=true;try{await takeBack(c);tell('undo',{said:(lastTurn&&lastTurn.text)||'',reply:t.textContent,route:'update'});cookUsed=cookUsed.filter(function(a){return a.name!==c.name});await refresh();var st=el('s','',t.textContent);t.textContent='';t.append(st);u.textContent='Undone'}catch(er){u.disabled=false;if(er.code!=='locked')toast('Could not undo that. Check your connection.')}};
       row.append(t,u);host.append(row)})}
   /* suggestions: built from what is at home, the time of day and the last reply, never the same few lines twice */
@@ -1364,7 +1384,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
       var u=el('p');u.append(el('b','','Uses '),document.createTextNode(m.uses.map(function(x){return x.name+' ('+amount(x.quantity,x.unit)+')'}).join(', ')));li.append(u);
       if(m.missing.length){var need=el('p','sub','You would also need '+m.missing.join(', ')+'.');li.append(need);
         var ad=el('button','mini','Add those to my list');ad.type='button';ad.onclick=async function(){ad.disabled=true;
-          try{for(var i=0;i<m.missing.length;i++)await api('/api/extras',{method:'POST',body:JSON.stringify({text:m.missing[i]})});await refresh();ad.textContent='Added to your list'}
+          try{var kept=0;for(var i=0;i<m.missing.length;i++)if((await addToList(m.missing[i],true))==='kept')kept++;await refresh();ad.textContent=kept===m.missing.length?'Already on your list':'Added to your list'}
           catch(e){ad.disabled=false;if(e.code!=='locked')toast('Could not add those. Check your connection.')}};acts.append(ad)}
       yes.type='button';yes.style.minHeight='40px';yes.style.padding='8px 16px';
       yes.onclick=async function(){yes.disabled=true;
