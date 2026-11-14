@@ -14,6 +14,10 @@ h2{font-size:1.05rem;margin:22px 0 4px}
 <p>Each case sends a made-up home and a message to the live agent in dry-run mode, then checks the result with fixed rules. Nothing in your real home is read or changed. You must be signed in to Stocker in this browser.</p>
 <button id="run">Run all cases</button> <span id="state" role="status"></span>
 <div class="sum" id="sum"></div><div id="out"></div>
+<h2>From your real conversations</h2>
+<p>Replies someone marked "Not right?", guesses they rejected, and changes they undid. Private details are removed before anything is kept. Copy them as test cases, fill in what should have happened, and add them to <code>public/evals/cases.json</code>.</p>
+<button id="copy" type="button">Copy as test cases</button> <span id="copied" role="status"></span>
+<div id="real"></div>
 <script>
 (function(){
   var $=function(i){return document.getElementById(i)},el=function(t,c,x){var e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e};
@@ -37,6 +41,12 @@ h2{font-size:1.05rem;margin:22px 0 4px}
     if(k==='replyNot')return [!rx(v).test(reply),'reply avoids /'+v+'/'];
     if(k==='replyMax')return [reply.length<=v,'reply is at most '+v+' characters (got '+reply.length+')'];
     return [false,'unknown check '+k]}
+  var KIND={down:'Marked not right',wanted:'What they wanted instead',undo:'Undid a change',rejected:'Rejected a guess',up:'Marked helpful'},flagged=[];
+  fetch('/api/feedback',{credentials:'same-origin'}).then(function(r){return r.ok?r.json():{feedback:[]}}).then(function(d){flagged=d.feedback||[];var box=$('real');
+    if(!flagged.length){box.append(el('p','','Nothing flagged yet. In the chat, tap "Not right?" under a reply, or Undo a change, and it will appear here.'));return}
+    flagged.forEach(function(x){var c=el('div','case'),h=el('h3');h.append(el('span','',KIND[x.kind]||x.kind),el('span','pill stretch',String(x.at).slice(0,16).replace('T',' ')));c.append(h,el('div','q','They said: '+(x.said||'')),el('div','q','Tote: '+(x.reply||'')+(x.detail?'\nNote: '+x.detail:'')));box.append(c)})}).catch(function(){});
+  $('copy').onclick=function(){var seen={},cases=flagged.filter(function(x){return x.said&&!seen[x.said]&&(seen[x.said]=1)}).map(function(x,i){return {id:'real-use-'+(i+1),group:'From real use',kind:'chat',text:x.said,inventory:[],note:(KIND[x.kind]||x.kind)+(x.detail?': '+x.detail:''),checks:[]}});
+    var t=JSON.stringify(cases,null,1);(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(function(){$('copied').textContent=cases.length+' copied.'},function(){var pre=el('pre','',t);$('real').prepend(pre);$('copied').textContent='Select and copy the text below.'})};
   $('run').onclick=async function(){
     $('run').disabled=true;$('out').textContent='';$('sum').textContent='';
     var data;try{data=await (await fetch('/evals/cases.json',{cache:'no-store'})).json()}catch(e){$('state').textContent='Could not load the cases.';$('run').disabled=false;return}

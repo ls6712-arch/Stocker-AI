@@ -93,6 +93,22 @@ Known limits: the passcode is shared by the household, so anyone who has it sees
 
 The router is deliberately cautious, so on new phrasing its misses mostly hand a question to the model gate (safe) rather than losing an update.
 
+## Learning from real use
+
+Tote does not retrain itself, and nothing a person types can change its rules. It learns in three bounded ways:
+
+| What | How | Where it is kept |
+|---|---|---|
+| Your pace | After you buy the same thing twice, the gap between purchases replaces the estimate | per item |
+| Your dishes | When you confirm what went into a dish ("Yes, that's right", or "That's everything"), Tote remembers it and next time asks "Last time you made pasta you used… Same again?" It still asks before changing anything | `settings`, up to 60 dishes |
+| Its mistakes | "Not right?" under a reply, an Undo, or a rejected guess is recorded with private details removed. `/evals.html` lists them and copies them as test cases | `feedback`, last 300 |
+
+The loop is: a real miss is flagged, it becomes a test case, the prompt or router is fixed, and the evals confirm the fix. A person reviews every step; flagged text is never fed back into a prompt automatically, because that would let anyone steer the agent by flagging.
+
+## App audit
+
+`evals/app-audit.js` walks the app with automated taps (Playwright, against a local `wrangler dev`): back button, reload, scroll memory, page titles, tap-target sizes, the list badge, the bell, offline behaviour and an expired sign-in. 24 checks.
+
 ## Evals
 
 Two layers, both in this repository.

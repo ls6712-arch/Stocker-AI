@@ -112,7 +112,7 @@ input[type=text],input[type=password],input[type=number],input[type=date],input[
 .ihead[aria-expanded="true"]>svg{transform:rotate(180deg)}
 .ipanel{display:flex;flex-direction:column;gap:12px;padding:2px 0 16px}
 .ipanel .qty{align-self:flex-start}
-.hpill{align-self:flex-start;border:0;background:rgba(255,255,255,.16);color:var(--hero-fg);border-radius:999px;padding:6px 14px;font-weight:600;font-size:13.5px;min-height:38px;text-align:left}
+.hpill{align-self:flex-start;border:0;background:rgba(255,255,255,.16);color:var(--hero-fg);border-radius:999px;padding:6px 14px;font-weight:600;font-size:13.5px;min-height:44px;text-align:left}
 .tile[aria-pressed="true"]{border-color:var(--accent);box-shadow:inset 0 0 0 1.5px var(--accent)}
 .wrapchips{display:flex;flex-wrap:wrap;gap:8px}
 #profH:focus{outline:0}
@@ -132,7 +132,11 @@ html.big{zoom:1.16}
 .msg .chg s{color:var(--muted)}.msg .chg button{min-height:36px;padding:4px 12px;flex:none;white-space:nowrap}.msg .chg span{min-width:0}
 .chatbar{display:flex;gap:8px;align-items:center}.chatbar input{flex:1;min-width:0}
 .chatbar .micb{flex:none;width:48px;height:48px;border-radius:50%;border:1px solid var(--line);background:var(--surface2);display:grid;place-items:center;color:var(--accent)}
-.latest{border:0;background:none;text-align:left;padding:0 4px;font-size:13px;color:var(--muted)}
+.latest{border:0;background:none;text-align:left;padding:10px 4px;min-height:40px;font-size:13px;color:var(--muted)}
+.sechead button,.ipanel button{min-height:40px}.sechead button{padding:8px 6px}
+.iconbtn{position:relative}.iconbtn .dot{position:absolute;top:-4px;right:-4px;min-width:20px;height:20px;border-radius:10px;background:var(--bad,#b3261e);color:#fff;font-size:12px;font-weight:700;display:grid;place-items:center;padding:0 5px}
+.nudge{display:flex;gap:10px;align-items:center;justify-content:space-between;border-top:1px solid var(--line);padding:10px 0}.nudge:first-child{border-top:0}.nudge>div{min-width:0;flex:1}.nudge .btns{display:flex;gap:6px;flex:none}
+.msg .fb{display:block;border:0;background:none;color:var(--muted);font-size:12.5px;padding:6px 0 0;min-height:32px;text-decoration:underline}
 .chip.add{border-style:dashed;color:var(--accent);background:none}
 .addin{display:flex;gap:6px;flex:1 1 220px;min-width:0}.addin input{flex:1;min-width:0;min-height:40px;padding:6px 12px;border-radius:999px}
 #profDlg .tile,#profDlg .tile b{min-height:0}#profDlg .tile{padding:10px 12px;gap:2px;border-radius:14px}#profDlg .tile span{font-size:12px}
@@ -235,7 +239,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
 <div class="shell" id="app" hidden>
   <header class="appbar">
     <div><p class="sub" id="barDate"></p><h1 id="barTitle">Today</h1></div>
-    <div style="display:flex;gap:8px"><button type="button" class="iconbtn" id="shareBtn" aria-label="Share with your household"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.300 2.700-6 6-6s6 2.700 6 6M16 5.200a3.200 3.200 0 0 1 0 5.600M17.500 14.300c2 .900 3.500 3 3.500 5.700"/></svg></button>
+    <div style="display:flex;gap:8px"><button type="button" class="iconbtn" id="bell" aria-label="Things that need you"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4zM10 20a2 2 0 0 0 4 0"/></svg><span class="dot" id="bellDot" hidden></span></button><button type="button" class="iconbtn" id="shareBtn" aria-label="Share with your household"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.300 2.700-6 6-6s6 2.700 6 6M16 5.200a3.200 3.200 0 0 1 0 5.600M17.500 14.300c2 .900 3.500 3 3.500 5.700"/></svg></button>
     <button type="button" class="iconbtn" id="lockBtn" aria-label="Lock Stocker"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></button></div>
   </header>
   <div class="offline" id="offline" hidden role="status">You are offline. I am showing what I last knew, and changes will not save until you are back.</div>
@@ -277,6 +281,16 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
       <button type="button" class="tile wide" id="capType"><span class="ico" style="--h:35"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16zM13 7l4 4"/></svg></span><span style="display:flex;flex-direction:column;color:inherit"><b>Type or paste</b><span>A note, or an emailed receipt</span></span></button>
     </div>
     <button type="button" class="btn block" data-close>Cancel</button>
+  </div>
+</dialog>
+
+<dialog class="sheet" id="nudgeDlg" aria-labelledby="nudgeH">
+  <div class="pad">
+    <div class="grab"></div>
+    <h2 id="nudgeH">Needs you</h2>
+    <p class="sub" id="nudgeSub"></p>
+    <div id="nudgeList"></div>
+    <button type="button" class="btn block" data-close>Done</button>
   </div>
 </dialog>
 
@@ -620,6 +634,27 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     var lines=WAIT[msg]||WAIT[Object.keys(WAIT).filter(function(k){return msg.indexOf(k)===0})[0]]||[msg],i=0;$('busyMsg').textContent=lines[0];
     waitTimer=setInterval(function(){i=Math.min(lines.length-1,i+1);$('busyMsg').textContent=lines[i]},3800);
     var live=window.Tote&&Tote.mount($('toteBusy'),128,buddy()+' is working');$('toteBusy').hidden=!live;$('busyDoc').hidden=!!live;if(live){Tote.onTap=null;Tote.mood('think')}}
+  /* nudges: one list of what needs a person, each with a single tap to deal with it */
+  function offToday(){try{var o=JSON.parse(localStorage.getItem('stocker.nudgeOff')||'{}');return o.day===iso(today())?o.ids||[]:[]}catch(e){return []}}
+  function nudges(){var out=[],lc=function(x){return x.toLowerCase()},patch=function(it,body,msg){return async function(){await api('/api/items/'+it.id,{method:'PATCH',body:JSON.stringify(body)});await refresh();toast(msg)}};
+    items.forEach(function(it){var e=expiry(it);if(!e||it.qty<=0)return;
+      if(e.d<0)out.push({id:'gone:'+it.id,text:it.name+' is past its date',sub:'Best before '+fmt(it.expiry),label:'Threw it away',fn:patch(it,{binned:true},'Noted. It will not be put on your list.')});
+      else if(e.d===0)out.push({id:'today:'+it.id,text:'The '+lc(it.name)+' wants using today',sub:'Or put it in the freezer',label:'Used it up',fn:patch(it,{qty:0,out:true},'Marked as used up.')})});
+    items.filter(function(i){return i.essential&&i.qty<=0}).forEach(function(it){out.push({id:'out:'+it.id,text:"You're out of "+lc(it.name),sub:'An essential. It is on your list.',label:'Open list',fn:function(){go('list')}})});
+    items.filter(function(i){return i.unsure&&i.qty>0}).slice(0,3).forEach(function(it){out.push({id:'many:'+it.id,text:'How many '+lc(it.name)+' are there?',sub:'I could not count them in your photo',label:'Answer',fn:function(){go('today')}})});
+    items.filter(function(i){return i.warn&&i.qty>0}).slice(0,3).forEach(function(it){out.push({id:'warn:'+it.id+':'+it.warn,text:'Check the label on '+lc(it.name),sub:it.warn.charAt(0).toUpperCase()+it.warn.slice(1),label:'Show me',fn:function(){query=it.name;$('search').value=it.name;go('pantry')}})});
+    items.filter(maybeLow).slice(0,2).forEach(function(it){out.push({id:'low:'+it.id,text:it.name+' might be running low',sub:'My guess from how long it usually lasts',label:'Add to list',fn:patch(it,{low:true},it.name+' is on your list.')})});
+    if(profile&&profile.shopDay===DAYS[today().getDay()]&&items.filter(needsBuy).length+extras.length)out.push({id:'shop:'+iso(today()),text:"It's your shopping day",sub:(items.filter(needsBuy).length+extras.length)+' on the list',label:'Open list',fn:function(){go('list')}});
+    if(!profile&&items.length)out.push({id:'profile',text:'Tell me about your home',sub:'Allergies, who lives here, how you eat',label:'Set up',fn:openProfile});
+    var off=offToday();return out.filter(function(n){return off.indexOf(n.id)<0})}
+  function drawBell(){var n=nudges().length,dot=$('bellDot');dot.hidden=!n;dot.textContent=n>9?'9+':String(n);$('bell').setAttribute('aria-label',n?n+(n===1?' thing needs you':' things need you'):'Nothing needs you right now');
+    try{if(navigator.setAppBadge){if(n)navigator.setAppBadge(n);else navigator.clearAppBadge()}}catch(e){}}
+  function drawNudges(){var list=nudges(),box=$('nudgeList');box.textContent='';$('nudgeSub').textContent=list.length?'One tap deals with each. Later hides it until tomorrow.':'Nothing needs you right now. I will keep watching.';
+    list.forEach(function(n){var row=el('div','nudge'),g=el('div'),bt=el('div','btns'),a=el('button','mini',n.label),l=el('button','mini','Later');a.type=l.type='button';g.append(el('div','name',n.text),el('div','sub',n.sub));
+      a.onclick=async function(){a.disabled=true;try{var nav=/^(Open list|Answer|Show me|Set up)$/.test(n.label);if(nav)$('nudgeDlg').close();await n.fn();if(!nav)drawNudges()}catch(er){a.disabled=false;if(er.code!=='locked')toast(COPY[er.code]||'Could not save that. Check your connection.')}};
+      l.setAttribute('aria-label','Hide until tomorrow: '+n.text);l.onclick=function(){try{var off=offToday();off.push(n.id);localStorage.setItem('stocker.nudgeOff',JSON.stringify({day:iso(today()),ids:off}))}catch(e){}drawNudges();drawBell()};
+      bt.append(a,l);row.append(g,bt);box.append(row)})}
+  $('bell').onclick=function(){drawNudges();$('nudgeDlg').showModal()};
   /* moments: a short line from the helper when something worth noticing happens */
   var moment=null,momentTimer=null;
   function say(text,how){moment=text;clearTimeout(momentTimer);momentTimer=setTimeout(function(){moment=null;if(!$('app').hidden)renderToday()},7000);
@@ -883,7 +918,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
   function renderList(){
     var v=$('v-list');v.textContent='';
     var buy=items.filter(needsBuy).sort(function(a,b){return plan(a).days-plan(b).days});
-    var badge=$('listBadge'),count=buy.length+extras.length;badge.hidden=!count;badge.textContent=String(count);
+    var badge=$('listBadge'),count=buy.length+extras.length;badge.hidden=!count;badge.textContent=String(count);drawBell();
     var f=el('form','row'),inp=el('input'),add=el('button','btn primary','Add');
     inp.type='text';inp.id='extraText';inp.maxLength=80;inp.style.flex='1';inp.placeholder='Add anything, like birthday candles';inp.setAttribute('aria-label','Add something to the list');
     add.type='submit';f.append(inp,add);
@@ -1011,9 +1046,22 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
   var TITLES={today:'Today',pantry:'At home',list:'Shopping list',log:'For you'};
   function render(){renderToday();renderPantry();renderList();renderLog();
     $('barDate').textContent=tab==='today'?'Stocker AI':today().toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});$('barTitle').textContent=TITLES[tab]}
-  function go(t){tab=t;['today','pantry','list','log'].forEach(function(k){$('v-'+k).hidden=k!==t});
+  var TABS=['today','pantry','list','log'],TITLE={today:'Today',pantry:'At home',list:'Shopping list',log:'For you'},scrollAt={},skipPop=0,byPop=false;
+  function go(t,how){if(TABS.indexOf(t)<0)t='today';var same=t===tab;if(!same)scrollAt[tab]=window.scrollY;tab=t;TABS.forEach(function(k){$('v-'+k).hidden=k!==t});
     document.querySelectorAll('.tab').forEach(function(b){if(b.dataset.tab===t)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current')});
-    render();window.scrollTo(0,0)}
+    document.title=TITLE[t]+' \u00b7 Stocker AI';
+    try{if(how==='start'||same)history.replaceState({tab:t},'','#'+t);else if(how!=='pop')history.pushState({tab:t},'','#'+t)}catch(e){}
+    render();window.scrollTo(0,how==='pop'||how==='start'?(scrollAt[t]||0):same?0:(scrollAt[t]||0))}
+  /* the back button closes a sheet first, then steps back through tabs, and only then leaves */
+  document.querySelectorAll('dialog').forEach(function(d){var open=d.showModal.bind(d);
+    d.showModal=function(){open();try{history.pushState({dlg:d.id,tab:tab},'')}catch(e){}};
+    d.addEventListener('close',function(){if(!byPop&&history.state&&history.state.dlg===d.id){skipPop++;history.back()}})});
+  window.addEventListener('popstate',function(ev){if(skipPop){skipPop--;return}
+    var top=[].slice.call(document.querySelectorAll('dialog[open]')).pop();if(top){byPop=true;top.close();byPop=false;if(document.querySelector('dialog[open]'))return}
+    var st=ev.state||{};if(!$('app').hidden)go(st.tab||(location.hash||'').slice(1)||'today','pop')});
+  /* coming back to the app refreshes it, so another person's changes and an expired sign-in both show up */
+  var lastFresh=Date.now();document.addEventListener('visibilitychange',function(){if(!document.hidden&&!$('app').hidden&&!busy&&Date.now()-lastFresh>20000){lastFresh=Date.now();refresh().catch(function(){})}});
+  window.addEventListener('focus',function(){if(!$('app').hidden&&!busy&&Date.now()-lastFresh>20000){lastFresh=Date.now();refresh().catch(function(){})}});
   document.querySelectorAll('.tab').forEach(function(b){b.onclick=function(){go(b.dataset.tab)}});
   $('search').addEventListener('input',function(){query=$('search').value.trim();renderPantry()});
   var qtyTimer={};
@@ -1195,10 +1243,13 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
   function bubble(cls,text){var m=el('div','msg '+cls,text);$('chatLog').append(m);$('chatLog').scrollTop=$('chatLog').scrollHeight;return m}
   function chatChanges(host,changes){changes.forEach(function(c){var row=el('div','chg'),t=el('span','',c.action==='unlist'?'Off your list: '+c.name:c.action==='set'?c.name+': now '+(c.qty<=0?'none':amount(c.qty,c.unit))+' (was '+amount(c.prevQty,c.unit)+')':c.action==='list'?'On your list: '+c.name+(c.note?' ('+c.note+')':''):c.name+': '+(c.action==='low'?'running low':amount(c.prevQty,c.unit)+' \u2192 '+(c.qty<=0?'none':amount(c.qty,c.unit)))),u=el('button','mini','Undo');u.type='button';
       u.setAttribute('aria-label','Undo the change to '+c.name);if(c.action==='list'&&!c.created){t.textContent='Already on your list: '+c.name;row.append(t);host.append(row);return}
-      u.onclick=async function(){u.disabled=true;try{await takeBack(c);await refresh();var st=el('s','',t.textContent);t.textContent='';t.append(st);u.textContent='Undone'}catch(er){u.disabled=false;if(er.code!=='locked')toast('Could not undo that. Check your connection.')}};
+      u.onclick=async function(){u.disabled=true;try{await takeBack(c);tell('undo',{said:(lastTurn&&lastTurn.text)||'',reply:t.textContent,route:'update'});cookUsed=cookUsed.filter(function(a){return a.name!==c.name});await refresh();var st=el('s','',t.textContent);t.textContent='';t.append(st);u.textContent='Undone'}catch(er){u.disabled=false;if(er.code!=='locked')toast('Could not undo that. Check your connection.')}};
       row.append(t,u);host.append(row)})}
   /* suggestions: built from what is at home, the time of day and the last reply, never the same few lines twice */
-  var tipSeen={},lastTurn=null,sent={},pending=null;
+  var tipSeen={},lastTurn=null,sent={},pending=null,cookUsed=[],wanted=null;
+  function tell(kind,o){try{fetch('/api/feedback',{method:'POST',credentials:'same-origin',headers:{'content-type':'application/json'},body:JSON.stringify(Object.assign({kind:kind},o||{}))}).catch(function(){})}catch(e){}}
+  function teachDish(){var dish=sent.__cooked;if(!dish||dish==='it'||!cookUsed.length)return;var seen={},list=cookUsed.filter(function(a){var k=a.name.toLowerCase();if(seen[k])return false;seen[k]=1;return true});
+    api('/api/dish',{method:'POST',body:JSON.stringify({dish:dish,items:list})}).catch(function(){});cookUsed=[]}
   var COOKED=/\b(cook|cooking|cooked|made|making|ate|eating|had)\b/i;
   function dishOf(t){var m=String(t||'').match(/\b(?:cooking|cooked|making|made|had|ate|eating)\s+(?:some\s+|a\s+|an\s+|the\s+)?([a-z][a-z ]{2,24}?)(?:\s+(?:tonight|today|for|with|again)\b|[.,!?]|$)/i);return m?m[1].trim().toLowerCase():''}
   function chatTips(){
@@ -1256,13 +1307,13 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     if(ps.indexOf('host')>-1)add('Do we have enough for 6 guests?',7);
     if(ps.indexOf('newparents')>-1)add('How many diapers are left?',5);
     if(other.length)add('Do we have '+lc(pick(other).name)+'?',9);
-    if(kit.length)add('How much '+lc(pick(kit).name)+' is left?',10);
+    if(kit.length)add('Is there any '+lc(pick(kit).name)+' left?',10);
     // 4. a fresh home
     if(!items.length){add('I bought milk, eggs and bread',0);add('Add coffee to the list',1);add('What can you help with?',2)}
     pool=pool.filter(function(x){return !sent[key(x.t)]&&!(sent.__cooked&&/^(i'?m cooking|what can i cook tonight|dinner ideas|what can i make in 20)/i.test(x.t))});
     pool.sort(by).slice(0,3).forEach(function(x){tipSeen[x.t]=(tipSeen[x.t]||0)+1;var b=el('button','mini',x.t);b.type='button';b.onclick=function(){chatSend({text:x.t},x.t)};box.append(b)})}
   function buddy(){return profile&&profile.buddy||'Tote'}
-  function openChat(){if($('chatDlg').open)return;if(!$('chatLog').firstChild){sent={};lastTurn=null;pending=null}$('chatH').textContent='Talk to '+buddy();
+  function openChat(){if($('chatDlg').open)return;if(!$('chatLog').firstChild){sent={};lastTurn=null;pending=null;cookUsed=[];wanted=null}$('chatH').textContent='Talk to '+buddy();
     if(!$('chatLog').firstChild)bubble('bot','Hi'+(me?' '+me:'')+", I'm "+buddy()+'. I keep an eye on the house. Tell me what you cooked, used or bought and I will keep everything up to date, or ask me what you have.');
     chatTips();$('chatDlg').showModal();if(window.Tote&&Tote.mount($('toteChat'),84,buddy())){Tote.onTap=null;Tote.mood('happy');Tote.wave()}$('chatText').focus()}
   $('chatDlg').addEventListener('close',function(){if(window.Tote)Tote.talk(false);render()});
@@ -1275,18 +1326,25 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
       chatChanges(wait,r.changes||[]);
       if(r.proposal&&r.proposal.length){var pr=r.proposal.slice(),box=el('div');wait.append(box);
         var drawP=function(){box.textContent='';pr.forEach(function(a){var row=el('div','chg'),t=el('span','',a.name+': '+amount(a.quantity,a.unit)),x=el('button','mini','Not this');x.type='button';x.setAttribute('aria-label','I did not use '+a.name);
-            x.onclick=function(){pr=pr.filter(function(k){return k!==a});drawP();chatTips()};row.append(t,x);box.append(row)});
+            x.onclick=function(){tell('rejected',{said:(lastTurn&&lastTurn.text)||'',reply:a.name,route:'update',detail:'not this item'});pr=pr.filter(function(k){return k!==a});drawP();chatTips()};row.append(t,x);box.append(row)});
           var bar=el('div','chg'),yes=el('button','mini',pr.length?'Yes, update':'None of these'),no=el('button','mini','No');yes.type=no.type='button';
           yes.onclick=async function(){yes.disabled=no.disabled=true;if(!pr.length){box.textContent='';pending=null;bubble('bot','No problem. What went into it? You can tap one below or tell me.');lastTurn={text:'cooked',reply:'',changes:[]};chatTips();return}
             try{var res=await api('/api/apply',{method:'POST',body:JSON.stringify({source:'voice',actions:pr.map(function(a){return {action:'use',name:a.name,quantity:a.quantity,unit:a.unit}})})});
               box.textContent='';pending=null;var out=(res.changes||[]).filter(function(c){return c.qty<=0}).map(function(c){return c.name});
               var done=bubble('bot','Done, I took those off.'+(out.length?' You are now out of '+out.join(' and ')+', so it is on your list.':'')+' Enjoy your meal.');chatChanges(done,res.changes||[]);if(window.Tote)Tote.hop();
+              (res.changes||[]).forEach(function(c){if(c.action==='use')cookUsed.push({name:c.name,quantity:Math.max(0.01,c.prevQty-c.qty)})});teachDish();
               lastTurn={resolved:'yes',out:out,text:'',reply:'',changes:res.changes||[]};await refresh();chatTips()}
             catch(er){yes.disabled=no.disabled=false;if(er.code!=='locked')toast('Could not save that. Check your connection.')}};
-          no.onclick=function(){box.textContent='';pending=null;bubble('bot','No problem, I have not changed anything. What went into it? You can tap one below or tell me.');lastTurn={text:'cooked',reply:'',changes:[]};chatTips();$('chatText').focus()};
+          no.onclick=function(){tell('rejected',{said:(lastTurn&&lastTurn.text)||'',reply:pr.map(function(a){return a.name}).join(', '),route:'update',detail:'said no to the guess'});box.textContent='';pending=null;bubble('bot','No problem, I have not changed anything. What went into it? You can tap one below or tell me.');lastTurn={text:'cooked',reply:'',changes:[]};chatTips();$('chatText').focus()};
           if(pr.length)bar.append(yes,no);else bar.append(yes);box.append(bar);pending={pr:pr,yes:function(){yes.click()},no:function(){no.click()}}};drawP()}
       chatHist.push({role:'user',text:r.heard||payload.text||''},{role:'assistant',text:r.reply});
       lastTurn={text:r.heard||payload.text||'',reply:r.reply,changes:r.changes||[]};
+      var saidNow=r.heard||payload.text||'';
+      if(wanted){tell('wanted',{said:wanted.said,reply:wanted.reply,route:wanted.route,detail:saidNow});wanted=null}
+      if(sent.__cooked)(r.changes||[]).forEach(function(c){if(c.action==='use')cookUsed.push({name:c.name,quantity:Math.max(0.01,c.prevQty-c.qty)})});
+      if(/^that'?s (everything|all|it)\b/i.test(saidNow))teachDish();
+      if(!(r.proposal&&r.proposal.length)){var fb=el('button','fb','Not right?');fb.type='button';fb.setAttribute('aria-label','Tell Tote this reply was not right');
+        fb.onclick=function(){fb.remove();tell('down',{said:saidNow,reply:r.reply,route:r.route||''});wanted={said:saidNow,reply:r.reply,route:r.route||''};bubble('bot','Thanks for telling me. I have noted it so I can do better. What should I have done?');$('chatText').focus()};wait.append(fb)}
       if(r.changes&&r.changes.length){if(window.Tote)Tote.hop();await refresh()}
     }catch(e){if(window.Tote)Tote.mood('oops');wait.textContent=e.code==='slow_down'?COPY.slow_down:e.code==='silent'?"I couldn't hear anything in that. Try again a little closer to the phone.":e.code==='offline'?'You seem to be offline. Nothing was changed.':e.code==='locked'?'':'I could not work that out just now. Nothing was changed. Try again in a moment.'}
     if(window.Tote)Tote.talk(false);chatBusy=false;$('chatGo').disabled=false;chatTips();$('chatLog').scrollTop=$('chatLog').scrollHeight}
@@ -1349,7 +1407,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
   };
 
   async function start(){
-    try{await refresh();$('gate').hidden=true;$('app').hidden=false;$('tabbar').hidden=false;go(tab);
+    try{await refresh();$('gate').hidden=true;$('app').hidden=false;$('tabbar').hidden=false;go((location.hash||'').slice(1)||tab,'start');
       var skip=false;try{skip=localStorage.getItem('stocker.profSkip')==='1'}catch(e){}if(!profile&&!skip)openProfile()}
     catch(e){if(e.code==='setup')showGate('There is no passcode yet. Set one in the Worker settings as a secret named APP_PIN.');
       else if(e.code==='locked')showGate();else showGate('Could not reach Stocker. Check your connection and reload.')}

@@ -612,7 +612,7 @@ const ROUTE_REPLY = {
   correct: 'No problem. To take back something I just did, tap Undo next to it. Or tell me how it really is, like "we have 6 eggs", and I will set it.',
 };
 // The whole turn up to the point of writing: used by the chat, the MCP tool and the evals, so all three test the same agent.
-async function converse(env, text, history, rows, profile, today) {
+async function converse(env, text, history, rows, profile, today, learn) {
   text = scrub(text);
   const known = rows.map((r) => r.name + ' (' + Math.round(r.qty * 100) / 100 + ' ' + r.unit + ')');
   const way = route(text, profile && profile.buddy);
@@ -626,7 +626,21 @@ async function converse(env, text, history, rows, profile, today) {
   const find = (name) => rows.find((r) => r.name.toLowerCase() === name.toLowerCase()) || rows.find((r) => r.name.toLowerCase().includes(name.toLowerCase()));
   const proposal = out.actions.filter((a) => a.inferred).map((a) => { const r = find(a.name); return r && r.qty > 0 ? { ...a, name: r.name, unit: r.unit, quantity: a.quantity > 0 ? Math.min(a.quantity, r.qty) : r.qty, left: r.qty } : null; }).filter(Boolean);
   out.actions = out.actions.filter((a) => !a.inferred);
+  // what this household told me last time beats my own guess
+  const known2 = learn && way === 'update' && !out.actions.some((a) => a.action === 'use') ? await recallDish(env, text, rows) : null;
+  if (known2) return { out, proposal: known2.items, remembered: known2.dish, blocked: false, route: way, reply: '' };
   return { out, proposal, blocked: false, route: way, reply: '' };
+}
+// What a household taught Tote about its own cooking: "when we make pasta, this is what goes in".
+const dishKey = (t) => { const m = String(t || '').toLowerCase().match(/\b(?:cooking|cooked|making|made|had|ate|eating)\s+(?:some\s+|a\s+|an\s+|the\s+)?([a-z][a-z ]{2,24}?)(?:\s+(?:tonight|today|for|with|again|now)\b|[.,!?]|$)/); return m ? m[1].trim().replace(/\s+/g, ' ') : ''; };
+async function recallDish(env, text, rows) {
+  const dish = dishKey(text);
+  if (!dish || !env.DB) return null;
+  const row = await env.DB.prepare('SELECT v FROM settings WHERE k = ?').bind('dish:' + dish).first();
+  if (!row) return null;
+  let items = []; try { items = JSON.parse(row.v); } catch (e) { return null; }
+  const have = items.map((it) => { const r = rows.find((x) => x.name.toLowerCase() === String(it.name).toLowerCase()); return r && r.qty > 0 ? { action: 'use', name: r.name, unit: r.unit, quantity: Math.min(num(it.quantity, 1) || 1, r.qty), left: r.qty, inferred: true } : null; }).filter(Boolean);
+  return have.length ? { dish, items: have } : null;
 }
 const proposeText = (p) => 'Sounds good. My guess is you used ' + listOf(p.map((a) => qtyOf(a.quantity, a.unit) + ' of ' + a.name)) + '. Is that right? If anything else went in, tell me and I will take that off too.';
 
@@ -1004,15 +1018,15 @@ async function api(request, env, url) {
       const rows = (await env.DB.prepare('SELECT name, qty, unit, expiry, expiry_est, frozen, low, area, category FROM items ORDER BY name').all()).results;
       const profile = await getProfile(env);
       const history = (Array.isArray(body.history) ? body.history : []).slice(-4).map((h) => ({ role: h && h.role === 'assistant' ? 'assistant' : 'user', content: String((h && h.text) || '').slice(0, 400) })).filter((h) => h.content);
-      const turn = await converse(env, text, history, rows, profile, today);
+      const turn = await converse(env, text, history, rows, profile, today, true);
       if (turn.reply) return json({ heard, reply: turn.reply, changes: [], missed: [], blocked: turn.blocked, route: turn.route });
       const out = turn.out;
       const result = out.actions.length ? await apply(env, { store: out.store, bought: out.bought, currency: out.currency, actions: out.actions }, today, 'voice', me) : { changes: [], missed: [] };
-      const ask = turn.proposal.length ? proposeText(turn.proposal) : '';
+      const ask = !turn.proposal.length ? '' : turn.remembered ? 'Last time you made ' + turn.remembered + ' you used ' + listOf(turn.proposal.map((a) => qtyOf(a.quantity, a.unit) + ' of ' + a.name)) + '. Same again?' : proposeText(turn.proposal);
       const reply = result.changes.length ? chatReply(result).replace(ask ? ' Tap Undo on anything I got wrong.' : '\u0000', '') + (ask ? ' ' + ask : '') : ask || await chatAnswer(env, text, history, rows, today, profile, result.missed || []);
       const q = result.changes.length ? questionPart(text) : '';
       const extra = q ? ' ' + (await chatAnswer(env, q, history, (await env.DB.prepare('SELECT name, qty, unit, expiry, expiry_est, frozen, low, area, category FROM items ORDER BY name').all()).results, today, profile, [])) : '';
-      return json({ heard, reply: reply + extra, changes: result.changes, missed: result.missed || [], proposal: turn.proposal, route: turn.route });
+      return json({ heard, reply: reply + extra, changes: result.changes, missed: result.missed || [], proposal: turn.proposal, remembered: turn.remembered || '', route: turn.route });
     } catch (e) {
       console.error('chat failed', String((e && e.message) || e));
       return json({ error: 'ai_failed' }, 502);
@@ -1040,6 +1054,32 @@ async function api(request, env, url) {
       console.error('eval failed', String((e && e.message) || e));
       return json({ error: 'ai_failed', message: String((e && e.message) || e).slice(0, 200) }, 502);
     }
+  }
+
+  // A household teaches Tote what goes into its own dishes. Stored per dish, only names and amounts.
+  if (path === '/api/dish' && method === 'POST') {
+    const body = (await request.json().catch(() => null)) || {};
+    const dish = word(String(body.dish || '').toLowerCase(), 26);
+    const items = (Array.isArray(body.items) ? body.items : []).slice(0, 8).map((a) => ({ name: word(a && a.name, 60), quantity: clamp(num(a && a.quantity, 1), 0.01, 100000) })).filter((a) => a.name);
+    if (!dish || dish.length < 3 || !items.length || PROBE.test(fixTypos(String(body.dish || ''))) || /\b(ignore|instruction|system|admin|prompt|assistant|developer|rules?)\b/i.test(String(body.dish || ''))) return json({ error: 'empty' }, 400);
+    const n = await env.DB.prepare("SELECT COUNT(*) AS n FROM settings WHERE k LIKE 'dish:%'").first();
+    if (n && n.n >= 60) await env.DB.prepare("DELETE FROM settings WHERE k = (SELECT k FROM settings WHERE k LIKE 'dish:%' LIMIT 1)").run();
+    await env.DB.prepare('INSERT INTO settings (k, v) VALUES (?, ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v').bind('dish:' + dish, JSON.stringify(items)).run();
+    return json({ ok: true, dish });
+  }
+  // Moments where Tote got it wrong, flagged by the people using it. These become test cases; nothing here changes Tote's behaviour by itself.
+  if (path === '/api/feedback' && method === 'POST') {
+    const body = (await request.json().catch(() => null)) || {};
+    const kind = ['down', 'up', 'undo', 'rejected', 'wanted'].includes(body.kind) ? body.kind : '';
+    if (!kind) return json({ error: 'empty' }, 400);
+    if (!(await allow(env, 'feedback', 10, 60))) return json({ error: 'slow_down' }, 429);
+    const cut = (v, n2) => scrub(String(v || '')).replace(/[<>]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, n2);
+    await env.DB.prepare('INSERT INTO feedback (at, kind, said, reply, route, detail) VALUES (?, ?, ?, ?, ?, ?)').bind(new Date().toISOString(), kind, cut(body.said, 300), cut(body.reply, 300), word(body.route, 12), cut(body.detail, 200)).run();
+    await env.DB.prepare('DELETE FROM feedback WHERE id NOT IN (SELECT id FROM feedback ORDER BY id DESC LIMIT 300)').run();
+    return json({ ok: true });
+  }
+  if (path === '/api/feedback' && method === 'GET') {
+    return json({ feedback: (await env.DB.prepare('SELECT at, kind, said, reply, route, detail FROM feedback ORDER BY id DESC LIMIT 100').all()).results });
   }
 
   if (path === '/api/agree' && method === 'POST') {
