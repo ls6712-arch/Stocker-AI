@@ -1101,7 +1101,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     var rr=el('div','row'),rg=el('div','grow'),rb=el('button','mini',pushOn?'Turn off':'Turn on');rb.type='button';rb.id='pushBtn';rb.setAttribute('aria-label',(pushOn?'Turn off':'Turn on')+' reminders on this phone');
     rg.append(el('div','name','Reminders on this phone'),el('div','sub',pushOn?'On. Around '+hourText(learnt.hour)+(learnt.hourLearned?', when you usually answer me':'')+', once a day at most, and only when something is due.':pushWhy()||'Off. I can tell you when something you buy regularly is due.'));
     rb.onclick=async function(){rb.disabled=true;try{if(pushOn)await pushDisable();else await pushEnable()}catch(er){if(er.code!=='locked')toast('Could not change reminders. Check your connection and try again.')}rb.disabled=false};
-    rr.append(rg);if(pushOn||pushCan)rr.append(rb);cl.append(rr);sl.append(cl);v.append(sl);
+    rr.append(rg);if(pushOn||pushCan)rr.append(rb);cl.append(rr);var sc=el('div','row'),sg=el('div','grow'),sb=el('button','mini','Open');sb.type='button';sb.setAttribute('aria-label','Open how I am tested');sg.append(el('div','name','How I am doing'),el('div','sub','How I score on my tests, week by week, and where I still go wrong.'));sb.onclick=function(){location.href='/scorecard.html'};sc.append(sg,sb);cl.append(sc);sl.append(cl);v.append(sl);
     var sa=el('div','sec');sa.append(el('h2','','Recent activity'));
     if(!log.length){sa.append(el('p','sub','Every change is recorded here, with who made it and when.'));v.append(sa);return}
     var c=el('div','card'),ul=el('ul','tl');

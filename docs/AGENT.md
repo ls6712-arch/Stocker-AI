@@ -109,7 +109,7 @@ These change numbers for that home only, never Tote's rules, so they need no rev
 
 | What | How | Where it is kept |
 |---|---|---|
-| Your pace | Every purchase is one observation of how long that amount lasted: until someone said it ran out, or else until it was bought again. The typical (median) of the last five is used, so one odd week does not move it. A bigger purchase is expected to last longer, up to twice as long. Known after the second purchase, or the first run-out | `purchases`, `paceFrom` |
+| Your pace | Every purchase is one observation of how long that amount lasted: until someone said it ran out, or else until it was bought again. The typical (median) of the last eight is used, less half a day when the gap ended at the next purchase (people usually shop a little after running out), so one odd week does not move it. A bigger purchase is expected to last longer, up to twice as long. Known after the second purchase, or the first run-out | `purchases`, `paceFrom` |
 | That your pace was wrong | "Still have it" pushes the next reminder back by half as long again; the next purchase then measures the real gap | `finish_days` |
 | When you answer | After five answers, reminders move to the hour you most often answer at (between 7 am and 9 pm) | `remind:hours` in `settings` |
 | What you do not want to hear about | Three reminders in a row with no answer and Tote stops asking about that item. It can be turned back on, or off by hand, in the item's panel | `reminders` |
@@ -149,13 +149,43 @@ Off until someone taps Turn on (under For you, or in the bell). On an iPhone, St
 
 ## Evals
 
-Three layers, all in this repository.
+Five layers, all in this repository. The approach follows Anthropic's "Demystifying evals for AI agents": grade what Tote did to the home rather than the words it used, run every task more than once, keep a suite of things it already does (regression) apart from things it is learning (capability), and read the failures before trusting a score.
 
-1. **Household simulation** (`npm test`, no network). Generates 1,000 varied households, including hostile input, and checks the profile, starter-list, allergen and label logic against fixed rules. It exits with an error if a hard rule breaks.
-2. **Learning test** (`npm test`, no network). Runs the Worker's real code and real SQL against an in-memory database, with stand-ins for the model and the push service. 46 checks: the pace estimate, what Tote says when it learns one, undo, reminders (when, how often, when to stop, the answers), the sealed and signed push message, and the review loop. `evals/learning.mjs`.
-3. **Agent evals** (`/evals.html` on the deployed app, signed in). Sends 52 cases, plus any made from your own conversations, to the live models through `/api/eval`, a dry-run that uses a made-up inventory and never touches the real one. Cases cover reading receipts, photos of what is at home, cooking updates, plain updates, questions, allergies, privacy, safety and personality. Each case is scored by fixed checks, not by another model. Add a case by editing `public/evals/cases.json`.
+| Layer | Command | Network | What it checks |
+|---|---|---|---|
+| Household simulation | `npm test` | No | 1,000 generated households, including hostile input, against the profile, starter-list, allergen and label rules |
+| Router | `npm test`, `npm run test:heldout` | No | 1,000 simulated households and about 5,500 messages through routing, privacy and guardrail code |
+| Learning | `npm test` | No | 46 checks on pace, reminders, the push message and the review loop, with the real SQL in memory |
+| Measuring | `npm test` | No | 43 checks that the scorecard's own numbers are right: the grader, pass@k and pass^k worked out by hand, isolation, the allowance, the health counters |
+| Pace | `npm run test:pace` | No | Months of shopping for 1,000 households (bulk buys, holidays, shopping early or late); scores how often a reminder lands the day or two before they run out |
+| Live agent | runs itself, see below | Yes | 68 tasks against the real models, graded on the outcome |
 
-Run the agent evals after changing a prompt, a model name or a guardrail, and compare the score with the last run.
+### Live runs and the scorecard
+
+`/scorecard.html` (signed in; also linked from For you) shows it all.
+
+| Piece | How it works | Where |
+|---|---|---|
+| Tasks | `public/evals/cases.json`. Each has a `group`, a `suite` (`regression` by default, or `capability`), checks, and either `text` or several `turns`. Tests made from real conversations join as regression tasks | `evalCases` |
+| A trial | One task, run through the same `converse()` people use, against a made-up home that starts clean every time. The database is withheld, so nothing real is read or written. Multi-turn tasks carry the conversation and the home from turn to turn | `evalCase`, `simApply` |
+| Grading | Fixed checks only, no model judges. Outcome checks (`stateQty`, `onList`, `notOnList`) look at how the home ends up. Partial credit is the share of checks met. Every reply is also checked against the brand voice | `gradeCheck`, `onVoice` |
+| When runs happen | Within minutes of every deploy (one trial of every task). Then the same version again on the next two nights, so every task has three trials. Then once a week, because the hosted model can change. "Run a check now" on the scorecard starts one by hand | `autoRuns`, cron every minute |
+| Cost | A few trials a minute, at most 100 model calls a day, so the household's own chats are never short. If Cloudflare's daily AI allowance runs out, the run pauses and carries on the next UTC day | `EVAL_DAY`, `stepRun` |
+| Numbers | pass@1 (share of trials that pass), pass@k (passed at least once), pass^k (passed every time: what a household feels). Pooled across all runs of one version | `summarize`, `scorecard` |
+| What changed | Tasks that broke or got fixed since the run before, flaky tasks, and capability tasks ready to graduate (passed every trial of the current version) | `scorecard` |
+| Reading failures | Every failed trial keeps what was said, what Tote did, its reply and which checks failed. Mark each as Tote's mistake or an unfair test; the share of unfair tests is on the scorecard | `/api/scorecard/verdict` |
+| Real use | Week by week from the app: misses, undo, corrections, said twice, not found, typical reply time, reminders sent and how many led to the list, and how many days off the learned pace was when the item was bought again. Kept as counters; nothing private | `health`, `bump` |
+| Offline history | `npm run track -- --note="what changed"` runs the offline suites and appends the scores to `public/evals/history.json`, shown on the scorecard | `evals/track.mjs` |
+
+### The weekly loop
+
+1. Open the scorecard. Look at what broke, and read the failures.
+2. On `/evals.html`, give a verdict on real conversations that went wrong; each becomes a task.
+3. Fix the prompt, router or code. `npm test`, then `npm run track -- --note="..."`, then push.
+4. The deploy is checked automatically, and twice more on the following nights.
+5. When a capability task passes every trial, set its `suite` to `regression` and write a harder one. A suite at 100% only guards against going backwards; it no longer shows progress.
+
+Rules that keep the scores honest: a held-out set used to fix something stops being held out (write a fresh one); tune on `npm run test:pace -- --seed=1` and report seed 2; and a task that fails every trial is first checked for being unfair before Tote is changed.
 
 ## Harness
 

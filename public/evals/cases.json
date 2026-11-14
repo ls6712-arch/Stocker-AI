@@ -1834,6 +1834,1360 @@
      ]
     }
    ]
+  },
+  {
+   "id": "cap-followup-amount",
+   "group": "Follow-ups",
+   "suite": "capability",
+   "kind": "chat",
+   "inventory": [
+    {
+     "name": "Whole Milk",
+     "qty": 1,
+     "unit": "L",
+     "category": "Dairy"
+    },
+    {
+     "name": "Eggs",
+     "qty": 12,
+     "unit": "pcs",
+     "category": "Dairy"
+    },
+    {
+     "name": "Bread",
+     "qty": 1,
+     "unit": "pcs",
+     "category": "Bakery"
+    },
+    {
+     "name": "Spaghetti",
+     "qty": 500,
+     "unit": "g",
+     "category": "Pantry"
+    },
+    {
+     "name": "Tomato Pasta Sauce",
+     "qty": 1,
+     "unit": "pcs",
+     "category": "Pantry"
+    },
+    {
+     "name": "Rice",
+     "qty": 2,
+     "unit": "kg",
+     "category": "Pantry"
+    },
+    {
+     "name": "Baby Spinach",
+     "qty": 1,
+     "unit": "pack",
+     "category": "Produce"
+    },
+    {
+     "name": "Coffee",
+     "qty": 1,
+     "unit": "pack",
+     "category": "Pantry"
+    },
+    {
+     "name": "Diapers",
+     "qty": 20,
+     "unit": "pcs",
+     "area": "Kids",
+     "category": "Diapering"
+    },
+    {
+     "name": "Dish Soap",
+     "qty": 1,
+     "unit": "pcs",
+     "area": "Cleaning",
+     "category": "Dishes"
+    }
+   ],
+   "checks": [
+    {
+     "stateQty": [
+      "milk",
+      3,
+      3
+     ]
+    }
+   ],
+   "turns": [
+    "I bought milk",
+    "actually make that two"
+   ],
+   "text": "I bought milk / actually make that two"
+  },
+  {
+   "id": "cap-followup-and-too",
+   "group": "Follow-ups",
+   "suite": "capability",
+   "kind": "chat",
+   "inventory": [
+    {
+     "name": "Whole Milk",
+     "qty": 1,
+     "unit": "L",
+     "category": "Dairy"
+    },
+    {
+     "name": "Eggs",
+     "qty": 12,
+     "unit": "pcs",
+     "category": "Dairy"
+    },
+    {
+     "name": "Bread",
+     "qty": 1,
+     "unit": "pcs",
+     "category": "Bakery"
+    },
+    {
+     "name": "Spaghetti",
+     "qty": 500,
+     "unit": "g",
+     "category": "Pantry"
+    },
+    {
+     "name": "Tomato Pasta Sauce",
+     "qty": 1,
+     "unit": "pcs",
+     "category": "Pantry"
+    },
+    {
+     "name": "Rice",
+     "qty": 2,
+     "unit": "kg",
+     "category": "Pantry"
+    },
+    {
+     "name": "Baby Spinach",
+     "qty": 1,
+     "unit": "pack",
+     "category": "Produce"
+    },
+    {
+     "name": "Coffee",
+     "qty": 1,
+     "unit": "pack",
+     "category": "Pantry"
+    },
+    {
+     "name": "Diapers",
+     "qty": 20,
+     "unit": "pcs",
+     "area": "Kids",
+     "category": "Diapering"
+    },
+    {
+     "name": "Dish Soap",
+     "qty": 1,
+     "unit": "pcs",
+     "area": "Cleaning",
+     "category": "Dishes"
+    }
+   ],
+   "checks": [
+    {
+     "onList": "egg"
+    },
+    {
+     "onList": "bread"
+    },
+    {
+     "stateQty": [
+      "bread",
+      1,
+      1
+     ]
+    }
+   ],
+   "turns": [
+    "put eggs on the list",
+    "and bread too"
+   ],
+   "text": "put eggs on the list / and bread too"
+  },
+  {
+   "id": "cap-followup-pronoun",
+   "group": "Follow-ups",
+   "suite": "capability",
+   "kind": "chat",
+   "inventory": [
+    {
+     "name": "Whole Milk",
+     "qty": 1,
+     "unit": "L",
+     "category": "Dairy"
+    },
+    {
+     "name": "Eggs",
+     "qty": 12,
+     "unit": "pcs",
+     "category": "Dairy"
+    },
+    {
+     "name": "Bread",
+     "qty": 1,
+     "unit": "pcs",
+     "category": "Bakery"
+    },
+    {
+     "name": "Spaghetti",
+     "qty": 500,
+     "unit": "g",
+     "category": "Pantry"
+    },
+    {
+     "name": "Tomato Pasta Sauce",
+     "qty": 1,
+     "unit": "pcs",
+     "category": "Pantry"
+    },
+    {
+     "name": "Rice",
+     "qty": 2,
+     "unit": "kg",
+     "category": "Pantry"
+    },
+    {
+     "name": "Baby Spinach",
+     "qty": 1,
+     "unit": "pack",
+     "category": "Produce"
+    },
+    {
+     "name": "Coffee",
+     "qty": 1,
+     "unit": "pack",
+     "category": "Pantry"
+    },
+    {
+     "name": "Diapers",
+     "qty": 20,
+     "unit": "pcs",
+     "area": "Kids",
+     "category": "Diapering"
+    },
+    {
+     "name": "Dish Soap",
+     "qty": 1,
+     "unit": "pcs",
+     "area": "Cleaning",
+     "category": "Dishes"
+    }
+   ],
+   "checks": [
+    {
+     "onList": "spinach"
+    },
+    {
+     "stateQty": [
+      "spinach",
+      1,
+      1
+     ]
+    }
+   ],
+   "turns": [
+    "do we have spinach?",
+    "ok put it on the list"
+   ],
+   "text": "do we have spinach? / ok put it on the list"
+  },
+  {
+   "id": "cap-correct-amount",
+   "group": "Follow-ups",
+   "suite": "capability",
+   "kind": "chat",
+   "inventory": [
+    {
+     "name": "Whole Milk",
+     "qty": 1,
+     "unit": "L",
+     "category": "Dairy"
+    },
+    {
+     "name": "Eggs",
+     "qty": 12,
+     "unit": "pcs",
+     "category": "Dairy"
+    },
+    {
+     "name": "Bread",
+     "qty": 1,
+     "unit": "pcs",
+     "category": "Bakery"
+    },
+    {
+     "name": "Spaghetti",
+     "qty": 500,
+     "unit": "g",
+     "category": "Pantry"
+    },
+    {
+     "name": "Tomato Pasta Sauce",
+     "qty": 1,
+     "unit": "pcs",
+     "category": "Pantry"
+    },
+    {
+     "name": "Rice",
+     "qty": 2,
+     "unit": "kg",
+     "category": "Pantry"
+    },
+    {
+     "name": "Baby Spinach",
+     "qty": 1,
+     "unit": "pack",
+     "category": "Produce"
+    },
+    {
+     "name": "Coffee",
+     "qty": 1,
+     "unit": "pack",
+     "category": "Pantry"
+    },
+    {
+     "name": "Diapers",
+     "qty": 20,
+     "unit": "pcs",
+     "area": "Kids",
+     "category": "Diapering"
+    },
+    {
+     "name": "Dish Soap",
+     "qty": 1,
+     "unit": "pcs",
+     "area": "Cleaning",
+     "category": "Dishes"
+    }
+   ],
+   "checks": [
+    {
+     "stateQty": [
+      "egg",
+      10,
+      10
+     ]
+    }
+   ],
+   "turns": [
+    "I used 3 eggs",
+    "sorry, 2 not 3"
+   ],
+   "text": "I used 3 eggs / sorry, 2 not 3"
+  },
+  {
+   "id": "cap-only-left",
+   "group": "Follow-ups",
+   "suite": "capability",
+   "kind": "chat",
+   "inventory": [
+    {
+     "name": "Whole Milk",
+     "qty": 1,
+     "unit": "L",
+     "category": "Dairy"
+    },
+    {
+     "name": "Eggs",
+     "qty": 12,
+     "unit": "pcs",
+     "category": "Dairy"
+    },
+    {
+     "name": "Bread",
+     "qty": 1,
+     "unit": "pcs",
+     "category": "Bakery"
+    },
+    {
+     "name": "Spaghetti",
+     "qty": 500,
+     "unit": "g",
+     "category": "Pantry"
+    },
+    {
+     "name": "Tomato Pasta Sauce",
+     "qty": 1,
+     "unit": "pcs",
+     "category": "Pantry"
+    },
+    {
+     "name": "Rice",
+     "qty": 2,
+     "unit": "kg",
+     "category": "Pantry"
+    },
+    {
+     "name": "Baby Spinach",
+     "qty": 1,
+     "unit": "pack",
+     "category": "Produce"
+    },
+    {
+     "name": "Coffee",
+     "qty": 1,
+     "unit": "pack",
+     "category": "Pantry"
+    },
+    {
+     "name": "Diapers",
+     "qty": 20,
+     "unit": "pcs",
+     "area": "Kids",
+     "category": "Diapering"
+    },
+    {
+     "name": "Dish Soap",
+     "qty": 1,
+     "unit": "pcs",
+     "area": "Cleaning",
+     "category": "Dishes"
+    }
+   ],
+   "checks": [
+    {
+     "stateQty": [
+      "egg",
+      2,
+      2
+     ]
+    }
+   ],
+   "text": "only 2 eggs left"
+  },
+  {
+   "id": "cap-pace-question",
+   "group": "Knowing your pace",
+   "suite": "capability",
+   "kind": "chat",
+   "inventory": [
+    {
+     "name": "Whole Milk",
+     "qty": 1,
+     "unit": "L",
+     "category": "Dairy",
+     "pace": 3,
+     "bought": "2026-11-11"
+    },
+    {
+     "name": "Eggs",
+     "qty": 12,
+     "unit": "pcs",
+     "category": "Dairy",
+     "pace": 10,
+     "bought": "2026-11-06"
+    },
+    {
+     "name": "Bread",
+     "qty": 1,
+     "unit": "pcs",
+     "category": "Bakery"
+    },
+    {
+     "name": "Spaghetti",
+     "qty": 500,
+     "unit": "g",
+     "category": "Pantry"
+    },
+    {
+     "name": "Tomato Pasta Sauce",
+     "qty": 1,
+     "unit": "pcs",
+     "category": "Pantry"
+    },
+    {
+     "name": "Rice",
+     "qty": 2,
+     "unit": "kg",
+     "category": "Pantry"
+    },
+    {
+     "name": "Baby Spinach",
+     "qty": 1,
+     "unit": "pack",
+     "category": "Produce"
+    },
+    {
+     "name": "Coffee",
+     "qty": 1,
+     "unit": "pack",
+     "category": "Pantry"
+    },
+    {
+     "name": "Diapers",
+     "qty": 20,
+     "unit": "pcs",
+     "area": "Kids",
+     "category": "Diapering"
+    },
+    {
+     "name": "Dish Soap",
+     "qty": 1,
+     "unit": "pcs",
+     "area": "Cleaning",
+     "category": "Dishes"
+    }
+   ],
+   "checks": [
+    {
+     "count": [
+      0,
+      0
+     ]
+    },
+    {
+     "replyHas": "\\b(3|three) days\\b|every (3|three)"
+    }
+   ],
+   "text": "how often do I buy milk?"
+  },
+  {
+   "id": "cap-next-buy",
+   "group": "Knowing your pace",
+   "suite": "capability",
+   "kind": "chat",
+   "inventory": [
+    {
+     "name": "Whole Milk",
+     "qty": 1,
+     "unit": "L",
+     "category": "Dairy",
+     "pace": 3,
+     "bought": "2026-11-11"
+    },
+    {
+     "name": "Eggs",
+     "qty": 12,
+     "unit": "pcs",
+     "category": "Dairy",
+     "pace": 10,
+     "bought": "2026-11-06"
+    },
+    {
+     "name": "Bread",
+     "qty": 1,
+     "unit": "pcs",
+     "category": "Bakery"
+    },
+    {
+     "name": "Spaghetti",
+     "qty": 500,
+     "unit": "g",
+     "category": "Pantry"
+    },
+    {
+     "name": "Tomato Pasta Sauce",
+     "qty": 1,
+     "unit": "pcs",
+     "category": "Pantry"
+    },
+    {
+     "name": "Rice",
+     "qty": 2,
+     "unit": "kg",
+     "category": "Pantry"
+    },
+    {
+     "name": "Baby Spinach",
+     "qty": 1,
+     "unit": "pack",
+     "category": "Produce"
+    },
+    {
+     "name": "Coffee",
+     "qty": 1,
+     "unit": "pack",
+     "category": "Pantry"
+    },
+    {
+     "name": "Diapers",
+     "qty": 20,
+     "unit": "pcs",
+     "area": "Kids",
+     "category": "Diapering"
+    },
+    {
+     "name": "Dish Soap",
+     "qty": 1,
+     "unit": "pcs",
+     "area": "Cleaning",
+     "category": "Dishes"
+    }
+   ],
+   "checks": [
+    {
+     "count": [
+      0,
+      0
+     ]
+    },
+    {
+     "replyHas": "tomorrow|saturday|14 nov|nov(ember)? 14"
+    }
+   ],
+   "text": "when will I need milk again?"
+  },
+  {
+   "id": "cap-future-cooking",
+   "group": "Leaves the home alone",
+   "suite": "capability",
+   "kind": "chat",
+   "inventory": [
+    {
+     "name": "Whole Milk",
+     "qty": 1,
+     "unit": "L",
+     "category": "Dairy"
+    },
+    {
+     "name": "Eggs",
+     "qty": 12,
+     "unit": "pcs",
+     "category": "Dairy"
+    },
+    {
+     "name": "Bread",
+     "qty": 1,
+     "unit": "pcs",
+     "category": "Bakery"
+    },
+    {
+     "name": "Spaghetti",
+     "qty": 500,
+     "unit": "g",
+     "category": "Pantry"
+    },
+    {
+     "name": "Tomato Pasta Sauce",
+     "qty": 1,
+     "unit": "pcs",
+     "category": "Pantry"
+    },
+    {
+     "name": "Rice",
+     "qty": 2,
+     "unit": "kg",
+     "category": "Pantry"
+    },
+    {
+     "name": "Baby Spinach",
+     "qty": 1,
+     "unit": "pack",
+     "category": "Produce"
+    },
+    {
+     "name": "Coffee",
+     "qty": 1,
+     "unit": "pack",
+     "category": "Pantry"
+    },
+    {
+     "name": "Diapers",
+     "qty": 20,
+     "unit": "pcs",
+     "area": "Kids",
+     "category": "Diapering"
+    },
+    {
+     "name": "Dish Soap",
+     "qty": 1,
+     "unit": "pcs",
+     "area": "Cleaning",
+     "category": "Dishes"
+    }
+   ],
+   "checks": [
+    {
+     "count": [
+      0,
+      0
+     ]
+    },
+    {
+     "stateQty": [
+      "spaghetti",
+      500,
+      500
+     ]
+    }
+   ],
+   "text": "thinking of making pasta tomorrow"
+  },
+  {
+   "id": "cap-conditional",
+   "group": "Leaves the home alone",
+   "suite": "capability",
+   "kind": "chat",
+   "inventory": [
+    {
+     "name": "Whole Milk",
+     "qty": 1,
+     "unit": "L",
+     "category": "Dairy"
+    },
+    {
+     "name": "Eggs",
+     "qty": 12,
+     "unit": "pcs",
+     "category": "Dairy"
+    },
+    {
+     "name": "Bread",
+     "qty": 1,
+     "unit": "pcs",
+     "category": "Bakery"
+    },
+    {
+     "name": "Spaghetti",
+     "qty": 500,
+     "unit": "g",
+     "category": "Pantry"
+    },
+    {
+     "name": "Tomato Pasta Sauce",
+     "qty": 1,
+     "unit": "pcs",
+     "category": "Pantry"
+    },
+    {
+     "name": "Rice",
+     "qty": 2,
+     "unit": "kg",
+     "category": "Pantry"
+    },
+    {
+     "name": "Baby Spinach",
+     "qty": 1,
+     "unit": "pack",
+     "category": "Produce"
+    },
+    {
+     "name": "Coffee",
+     "qty": 1,
+     "unit": "pack",
+     "category": "Pantry"
+    },
+    {
+     "name": "Diapers",
+     "qty": 20,
+     "unit": "pcs",
+     "area": "Kids",
+     "category": "Diapering"
+    },
+    {
+     "name": "Dish Soap",
+     "qty": 1,
+     "unit": "pcs",
+     "area": "Cleaning",
+     "category": "Dishes"
+    }
+   ],
+   "checks": [
+    {
+     "hasNot": {
+      "action": "use",
+      "name": "coffee"
+     }
+    },
+    {
+     "stateQty": [
+      "coffee",
+      1,
+      1
+     ]
+    }
+   ],
+   "text": "if we run out of coffee this week remind me to get the good stuff"
+  },
+  {
+   "id": "cap-someone-else",
+   "group": "Leaves the home alone",
+   "suite": "capability",
+   "kind": "chat",
+   "inventory": [
+    {
+     "name": "Whole Milk",
+     "qty": 1,
+     "unit": "L",
+     "category": "Dairy"
+    },
+    {
+     "name": "Eggs",
+     "qty": 12,
+     "unit": "pcs",
+     "category": "Dairy"
+    },
+    {
+     "name": "Bread",
+     "qty": 1,
+     "unit": "pcs",
+     "category": "Bakery"
+    },
+    {
+     "name": "Spaghetti",
+     "qty": 500,
+     "unit": "g",
+     "category": "Pantry"
+    },
+    {
+     "name": "Tomato Pasta Sauce",
+     "qty": 1,
+     "unit": "pcs",
+     "category": "Pantry"
+    },
+    {
+     "name": "Rice",
+     "qty": 2,
+     "unit": "kg",
+     "category": "Pantry"
+    },
+    {
+     "name": "Baby Spinach",
+     "qty": 1,
+     "unit": "pack",
+     "category": "Produce"
+    },
+    {
+     "name": "Coffee",
+     "qty": 1,
+     "unit": "pack",
+     "category": "Pantry"
+    },
+    {
+     "name": "Diapers",
+     "qty": 20,
+     "unit": "pcs",
+     "area": "Kids",
+     "category": "Diapering"
+    },
+    {
+     "name": "Dish Soap",
+     "qty": 1,
+     "unit": "pcs",
+     "area": "Cleaning",
+     "category": "Dishes"
+    }
+   ],
+   "checks": [
+    {
+     "count": [
+      0,
+      0
+     ]
+    }
+   ],
+   "text": "my sister bought milk for her place"
+  },
+  {
+   "id": "cap-did-i-buy",
+   "group": "Leaves the home alone",
+   "suite": "capability",
+   "kind": "chat",
+   "inventory": [
+    {
+     "name": "Whole Milk",
+     "qty": 1,
+     "unit": "L",
+     "category": "Dairy"
+    },
+    {
+     "name": "Eggs",
+     "qty": 12,
+     "unit": "pcs",
+     "category": "Dairy"
+    },
+    {
+     "name": "Bread",
+     "qty": 1,
+     "unit": "pcs",
+     "category": "Bakery"
+    },
+    {
+     "name": "Spaghetti",
+     "qty": 500,
+     "unit": "g",
+     "category": "Pantry"
+    },
+    {
+     "name": "Tomato Pasta Sauce",
+     "qty": 1,
+     "unit": "pcs",
+     "category": "Pantry"
+    },
+    {
+     "name": "Rice",
+     "qty": 2,
+     "unit": "kg",
+     "category": "Pantry"
+    },
+    {
+     "name": "Baby Spinach",
+     "qty": 1,
+     "unit": "pack",
+     "category": "Produce"
+    },
+    {
+     "name": "Coffee",
+     "qty": 1,
+     "unit": "pack",
+     "category": "Pantry"
+    },
+    {
+     "name": "Diapers",
+     "qty": 20,
+     "unit": "pcs",
+     "area": "Kids",
+     "category": "Diapering"
+    },
+    {
+     "name": "Dish Soap",
+     "qty": 1,
+     "unit": "pcs",
+     "area": "Cleaning",
+     "category": "Dishes"
+    }
+   ],
+   "checks": [
+    {
+     "count": [
+      0,
+      0
+     ]
+    }
+   ],
+   "text": "did I already buy milk this week?"
+  },
+  {
+   "id": "cap-not-finished",
+   "group": "Leaves the home alone",
+   "suite": "capability",
+   "kind": "chat",
+   "inventory": [
+    {
+     "name": "Whole Milk",
+     "qty": 1,
+     "unit": "L",
+     "category": "Dairy"
+    },
+    {
+     "name": "Eggs",
+     "qty": 12,
+     "unit": "pcs",
+     "category": "Dairy"
+    },
+    {
+     "name": "Bread",
+     "qty": 1,
+     "unit": "pcs",
+     "category": "Bakery"
+    },
+    {
+     "name": "Spaghetti",
+     "qty": 500,
+     "unit": "g",
+     "category": "Pantry"
+    },
+    {
+     "name": "Tomato Pasta Sauce",
+     "qty": 1,
+     "unit": "pcs",
+     "category": "Pantry"
+    },
+    {
+     "name": "Rice",
+     "qty": 2,
+     "unit": "kg",
+     "category": "Pantry"
+    },
+    {
+     "name": "Baby Spinach",
+     "qty": 1,
+     "unit": "pack",
+     "category": "Produce"
+    },
+    {
+     "name": "Coffee",
+     "qty": 1,
+     "unit": "pack",
+     "category": "Pantry"
+    },
+    {
+     "name": "Diapers",
+     "qty": 20,
+     "unit": "pcs",
+     "area": "Kids",
+     "category": "Diapering"
+    },
+    {
+     "name": "Dish Soap",
+     "qty": 1,
+     "unit": "pcs",
+     "area": "Cleaning",
+     "category": "Dishes"
+    }
+   ],
+   "checks": [
+    {
+     "stateQty": [
+      "rice",
+      2,
+      2
+     ]
+    }
+   ],
+   "text": "we didn't finish the rice after all"
+  },
+  {
+   "id": "cap-mixed-use-list",
+   "group": "Busy-day messages",
+   "suite": "capability",
+   "kind": "chat",
+   "inventory": [
+    {
+     "name": "Whole Milk",
+     "qty": 1,
+     "unit": "L",
+     "category": "Dairy"
+    },
+    {
+     "name": "Eggs",
+     "qty": 12,
+     "unit": "pcs",
+     "category": "Dairy"
+    },
+    {
+     "name": "Bread",
+     "qty": 1,
+     "unit": "pcs",
+     "category": "Bakery"
+    },
+    {
+     "name": "Spaghetti",
+     "qty": 500,
+     "unit": "g",
+     "category": "Pantry"
+    },
+    {
+     "name": "Tomato Pasta Sauce",
+     "qty": 1,
+     "unit": "pcs",
+     "category": "Pantry"
+    },
+    {
+     "name": "Rice",
+     "qty": 2,
+     "unit": "kg",
+     "category": "Pantry"
+    },
+    {
+     "name": "Baby Spinach",
+     "qty": 1,
+     "unit": "pack",
+     "category": "Produce"
+    },
+    {
+     "name": "Coffee",
+     "qty": 1,
+     "unit": "pack",
+     "category": "Pantry"
+    },
+    {
+     "name": "Diapers",
+     "qty": 20,
+     "unit": "pcs",
+     "area": "Kids",
+     "category": "Diapering"
+    },
+    {
+     "name": "Dish Soap",
+     "qty": 1,
+     "unit": "pcs",
+     "area": "Cleaning",
+     "category": "Dishes"
+    }
+   ],
+   "checks": [
+    {
+     "stateQty": [
+      "coffee",
+      0,
+      0
+     ]
+    },
+    {
+     "onList": "filter"
+    }
+   ],
+   "text": "finished the coffee, add filters to the list"
+  },
+  {
+   "id": "cap-two-out",
+   "group": "Busy-day messages",
+   "suite": "capability",
+   "kind": "chat",
+   "inventory": [
+    {
+     "name": "Whole Milk",
+     "qty": 1,
+     "unit": "L",
+     "category": "Dairy"
+    },
+    {
+     "name": "Eggs",
+     "qty": 12,
+     "unit": "pcs",
+     "category": "Dairy"
+    },
+    {
+     "name": "Bread",
+     "qty": 1,
+     "unit": "pcs",
+     "category": "Bakery"
+    },
+    {
+     "name": "Spaghetti",
+     "qty": 500,
+     "unit": "g",
+     "category": "Pantry"
+    },
+    {
+     "name": "Tomato Pasta Sauce",
+     "qty": 1,
+     "unit": "pcs",
+     "category": "Pantry"
+    },
+    {
+     "name": "Rice",
+     "qty": 2,
+     "unit": "kg",
+     "category": "Pantry"
+    },
+    {
+     "name": "Baby Spinach",
+     "qty": 1,
+     "unit": "pack",
+     "category": "Produce"
+    },
+    {
+     "name": "Coffee",
+     "qty": 1,
+     "unit": "pack",
+     "category": "Pantry"
+    },
+    {
+     "name": "Diapers",
+     "qty": 20,
+     "unit": "pcs",
+     "area": "Kids",
+     "category": "Diapering"
+    },
+    {
+     "name": "Dish Soap",
+     "qty": 1,
+     "unit": "pcs",
+     "area": "Cleaning",
+     "category": "Dishes"
+    }
+   ],
+   "checks": [
+    {
+     "stateQty": [
+      "milk",
+      0,
+      0
+     ]
+    },
+    {
+     "stateQty": [
+      "egg",
+      0,
+      0
+     ]
+    }
+   ],
+   "text": "we're out of milk and eggs"
+  },
+  {
+   "id": "cap-busy-mom",
+   "group": "Busy-day messages",
+   "suite": "capability",
+   "kind": "chat",
+   "inventory": [
+    {
+     "name": "Whole Milk",
+     "qty": 1,
+     "unit": "L",
+     "category": "Dairy"
+    },
+    {
+     "name": "Eggs",
+     "qty": 12,
+     "unit": "pcs",
+     "category": "Dairy"
+    },
+    {
+     "name": "Bread",
+     "qty": 1,
+     "unit": "pcs",
+     "category": "Bakery"
+    },
+    {
+     "name": "Spaghetti",
+     "qty": 500,
+     "unit": "g",
+     "category": "Pantry"
+    },
+    {
+     "name": "Tomato Pasta Sauce",
+     "qty": 1,
+     "unit": "pcs",
+     "category": "Pantry"
+    },
+    {
+     "name": "Rice",
+     "qty": 2,
+     "unit": "kg",
+     "category": "Pantry"
+    },
+    {
+     "name": "Baby Spinach",
+     "qty": 1,
+     "unit": "pack",
+     "category": "Produce"
+    },
+    {
+     "name": "Coffee",
+     "qty": 1,
+     "unit": "pack",
+     "category": "Pantry"
+    },
+    {
+     "name": "Diapers",
+     "qty": 20,
+     "unit": "pcs",
+     "area": "Kids",
+     "category": "Diapering"
+    },
+    {
+     "name": "Dish Soap",
+     "qty": 1,
+     "unit": "pcs",
+     "area": "Cleaning",
+     "category": "Dishes"
+    }
+   ],
+   "checks": [
+    {
+     "stateQty": [
+      "diaper",
+      0,
+      0
+     ]
+    },
+    {
+     "stateQty": [
+      "wipe",
+      1,
+      999
+     ]
+    },
+    {
+     "stateQty": [
+      "banana",
+      2,
+      2
+     ]
+    },
+    {
+     "onList": "formula"
+    }
+   ],
+   "text": "used the last of the diapers bought wipes and 2 bananas and we need formula"
+  },
+  {
+   "id": "cap-dozens",
+   "group": "Busy-day messages",
+   "suite": "capability",
+   "kind": "chat",
+   "inventory": [
+    {
+     "name": "Whole Milk",
+     "qty": 1,
+     "unit": "L",
+     "category": "Dairy"
+    },
+    {
+     "name": "Eggs",
+     "qty": 12,
+     "unit": "pcs",
+     "category": "Dairy"
+    },
+    {
+     "name": "Bread",
+     "qty": 1,
+     "unit": "pcs",
+     "category": "Bakery"
+    },
+    {
+     "name": "Spaghetti",
+     "qty": 500,
+     "unit": "g",
+     "category": "Pantry"
+    },
+    {
+     "name": "Tomato Pasta Sauce",
+     "qty": 1,
+     "unit": "pcs",
+     "category": "Pantry"
+    },
+    {
+     "name": "Rice",
+     "qty": 2,
+     "unit": "kg",
+     "category": "Pantry"
+    },
+    {
+     "name": "Baby Spinach",
+     "qty": 1,
+     "unit": "pack",
+     "category": "Produce"
+    },
+    {
+     "name": "Coffee",
+     "qty": 1,
+     "unit": "pack",
+     "category": "Pantry"
+    },
+    {
+     "name": "Diapers",
+     "qty": 20,
+     "unit": "pcs",
+     "area": "Kids",
+     "category": "Diapering"
+    },
+    {
+     "name": "Dish Soap",
+     "qty": 1,
+     "unit": "pcs",
+     "area": "Cleaning",
+     "category": "Dishes"
+    }
+   ],
+   "checks": [
+    {
+     "stateQty": [
+      "egg",
+      36,
+      36
+     ]
+    }
+   ],
+   "text": "picked up 2 dozen eggs"
   }
  ]
 }

@@ -12,15 +12,13 @@ h2{font-size:1.05rem;margin:22px 0 4px}
 .verdicts{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.verdicts button,button.ghost{padding:8px 14px;font-size:13.5px}button.ghost{background:transparent;color:var(--fg);border:1px solid var(--line)}input.item{font:inherit;margin-top:8px;padding:8px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--fg);width:min(100%,260px);box-sizing:border-box}
 </style></head><body><main>
 <h1>Stocker agent evals</h1>
-<p>Each case sends a made-up home and a message to the live agent in dry-run mode, then checks the result with fixed rules. Nothing in your real home is read or changed. You must be signed in to Stocker in this browser.</p>
-<p><strong>Cost:</strong> a full run makes one or two model calls per case, about 60 in all, plus one for each test made from your conversations. On Cloudflare's free plan that is a large share of the daily AI allowance, which the app itself also needs, so run it after a change rather than routinely.</p>
-<button id="run">Run all cases</button> <span id="state" role="status"></span>
-<div class="sum" id="sum"></div><div id="out"></div>
+<p>Live runs, scores over time and the failures to read are on <a href="/scorecard.html">the scorecard</a>. Runs start by themselves after every deploy and stay inside a daily share of the AI allowance, so the app always has enough left.</p>
+<button id="run">Open the scorecard</button> <span id="state" role="status"></span>
 <h2 id="real">Learning from real conversations</h2>
 <p>Every chat turn is kept with private details removed. The ones below went wrong: someone tapped "Not right?", undid a change, rejected a guess, corrected me, had to say it twice, or named something I could not find. Say what should have happened and it becomes a test I must pass from then on. Nothing typed in a chat changes how I behave by itself.</p>
 <div class="sum" id="weeks"></div><div id="groups"></div>
 <h2>Tests made from your conversations</h2>
-<p>These run together with the built-in cases when you tap Run all cases. Copy them into the repository to keep them for good and to teach the offline router test.</p>
+<p>These run with the built-in tasks on every scorecard run. Copy them into the repository to keep them for good and to teach the offline router test.</p>
 <button id="copy" type="button">Copy for the repository</button> <span id="copied" role="status"></span>
 <div id="mine"></div>
 <script>
@@ -74,25 +72,6 @@ h2{font-size:1.05rem;margin:22px 0 4px}
   load();
   $('copy').onclick=function(){var t=JSON.stringify({cases:mine.map(toCase),corpus:mine.map(function(c){return {text:c.said,persona:'real conversation',intent:INTENT[c.expect],items:c.name?[c.name]:[]}})},null,1);
     (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(function(){$('copied').textContent=mine.length+' copied. Paste "cases" into public/evals/cases.json and "corpus" into evals/corpus/real.json.'},function(){var pre=el('pre','',t);$('mine').prepend(pre);$('copied').textContent='Select and copy the text below.'})};
-  $('run').onclick=async function(){
-    $('run').disabled=true;$('out').textContent='';$('sum').textContent='';
-    var data;try{data=await (await fetch('/evals/cases.json',{cache:'no-store'})).json()}catch(e){$('state').textContent='Could not load the cases.';$('run').disabled=false;return}
-    data.cases=data.cases.concat(mine.map(toCase));
-    var pass=0,fail=0,sp=0,sf=0,groups={},results=[],t0=Date.now();
-    for(var i=0;i<data.cases.length;i++){var c=data.cases[i];$('state').textContent='Running '+(i+1)+' of '+data.cases.length+': '+c.id;
-      var r,err='';try{var res=await fetch('/api/eval',{method:'POST',credentials:'same-origin',headers:{'content-type':'application/json'},body:JSON.stringify({kind:c.kind,text:c.text,inventory:c.inventory||[],profile:c.profile||null,today:data.today})});
-        r=await res.json();if(!res.ok)err=res.status===401?'Not signed in. Open Stocker, enter the passcode, then come back.':res.status===429?(r.error==='ai_quota'?'Today\'s free AI allowance is used up. It resets at 00:00 UTC.':'Rate limit reached. Wait ten minutes.'):(r.error||'error')+' '+(r.message||'')}catch(e){err='Network error';r={}}
-      var checks=err?[[false,err]]:c.checks.map(function(k){return check(k,r)}),ok=checks.every(function(x){return x[0]});
-      if(c.stretch){ok?sp++:sf++}else{ok?pass++:fail++}
-      var g=groups[c.group]=groups[c.group]||{p:0,n:0};if(!c.stretch){g.n++;if(ok)g.p++}
-      results.push({id:c.id,group:c.group,ok:ok,stretch:!!c.stretch,failed:checks.filter(function(x){return !x[0]}).map(function(x){return x[1]}),actions:(r.actions||[]).map(function(a){return a.action+' '+a.quantity+' '+a.unit+' '+a.name+(a.note?' {'+a.note+'}':'')+(a.warn?' ['+a.warn+']':'')}).concat((r.proposed||[]).map(function(a){return 'PROPOSED use '+a.quantity+' '+a.unit+' '+a.name})),reply:r.reply||'',blocked:!!r.blocked});
-      var box=el('div','case'),h=el('h3');h.append(el('span','',c.group+': '+c.id),el('span','pill '+(ok?'pass':c.stretch?'stretch':'fail'),ok?'Pass':c.stretch?'Stretch, not counted':'Fail'));box.append(h,el('div','q',c.text));
-      var ul=el('ul');checks.forEach(function(x){ul.append(el('li',x[0]?'':'fail',(x[0]?'Pass: ':'Fail: ')+x[1]))});box.append(ul);
-      if(!err)box.append(el('pre','',(r.blocked?'BLOCKED\n':'')+(results[i].actions.length?results[i].actions.join('\n'):'(no actions)')+(r.reply?'\nreply: '+r.reply:'')));
-      $('out').append(box);if(err&&/signed in|Rate limit/.test(err))break}
-    var S=$('sum');[[pass+' / '+(pass+fail),'passed'],[Math.round(pass/Math.max(1,pass+fail)*100)+'%','score'],[sp+' / '+(sp+sf),'stretch'],[Math.round((Date.now()-t0)/1000)+'s','run time']].forEach(function(x){var d=el('div');d.append(el('b','',x[0]),document.createTextNode(x[1]));S.append(d)});
-    Object.keys(groups).forEach(function(k){var d=el('div');d.append(el('b','',groups[k].p+' / '+groups[k].n),document.createTextNode(k));S.append(d)});
-    window.__evals={pass:pass,fail:fail,stretchPass:sp,stretchFail:sf,groups:groups,results:results};document.title='evals done '+pass+'/'+(pass+fail);
-    $('state').textContent='Done.';$('run').disabled=false};
+  $('run').onclick=function(){location.href='/scorecard.html'};
 })();
 </script></main></body></html>

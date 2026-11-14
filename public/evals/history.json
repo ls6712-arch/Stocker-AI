@@ -1,0 +1,81 @@
+[
+ {
+  "at": "2026-11-14T17:31:47.843Z",
+  "commit": "5cd12b1",
+  "suites": {
+   "households": {
+    "ok": true
+   },
+   "router": {
+    "pass": 18942,
+    "total": 18942,
+    "rate": 100,
+    "worst": [
+     "gate: attack changes nothing 100%",
+     "privacy: ordinary text is left alone 100%",
+     "attack: recognised as a probe or kept away from the home 100%"
+    ]
+   },
+   "routerHeldOut": {
+    "minGate": 74.2,
+    "meanGate": 92
+   },
+   "learning": {
+    "pass": 46,
+    "total": 46
+   },
+   "measuring": null,
+   "pace": {
+    "reminderOnTime": 68.1,
+    "reminderLate": 19.2,
+    "reminderEarly": 12.7,
+    "errorDays": 1.52,
+    "within2": 84.2,
+    "livingAlone": 56.6,
+    "student": 38.2
+   }
+  },
+  "note": "before: baseline"
+ },
+ {
+  "at": "2026-11-14T17:32:08.747Z",
+  "commit": "5cd12b1",
+  "note": "pace: median of last 8, half-day shopping delay; scorecard added",
+  "suites": {
+   "households": {
+    "ok": true
+   },
+   "router": {
+    "pass": 18942,
+    "total": 18942,
+    "rate": 100,
+    "worst": [
+     "gate: attack changes nothing 100%",
+     "privacy: ordinary text is left alone 100%",
+     "attack: recognised as a probe or kept away from the home 100%"
+    ]
+   },
+   "routerHeldOut": {
+    "minGate": 74.2,
+    "meanGate": 92
+   },
+   "learning": {
+    "pass": 46,
+    "total": 46
+   },
+   "measuring": {
+    "pass": 43,
+    "total": 43
+   },
+   "pace": {
+    "reminderOnTime": 70.3,
+    "reminderLate": 16.4,
+    "reminderEarly": 13.4,
+    "errorDays": 1.45,
+    "within2": 85.5,
+    "livingAlone": 58.7,
+    "student": 39.7
+   }
+  }
+ }
+]

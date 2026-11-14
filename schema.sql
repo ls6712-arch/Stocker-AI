@@ -98,7 +98,8 @@ CREATE TABLE IF NOT EXISTS turns (
   reply TEXT,
   outcome TEXT,
   wanted TEXT,
-  label TEXT
+  label TEXT,
+  ms INTEGER
 );
 CREATE TABLE IF NOT EXISTS cases (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -106,4 +107,40 @@ CREATE TABLE IF NOT EXISTS cases (
   said TEXT NOT NULL UNIQUE,
   expect TEXT NOT NULL,
   name TEXT
+);
+CREATE TABLE IF NOT EXISTS eval_runs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  at TEXT NOT NULL,
+  done TEXT,
+  status TEXT NOT NULL,
+  why TEXT,
+  trials INTEGER NOT NULL DEFAULT 1,
+  version TEXT,
+  models TEXT,
+  day TEXT,
+  cases TEXT,
+  total INTEGER NOT NULL DEFAULT 0,
+  next INTEGER NOT NULL DEFAULT 0,
+  calls INTEGER NOT NULL DEFAULT 0,
+  err TEXT,
+  wait TEXT,
+  summary TEXT
+);
+CREATE TABLE IF NOT EXISTS eval_trials (
+  run INTEGER NOT NULL,
+  case_id TEXT NOT NULL,
+  trial INTEGER NOT NULL,
+  suite TEXT NOT NULL,
+  grp TEXT,
+  pass INTEGER NOT NULL,
+  score REAL NOT NULL,
+  voice INTEGER NOT NULL DEFAULT 1,
+  failed TEXT,
+  said TEXT,
+  did TEXT,
+  reply TEXT,
+  ms INTEGER,
+  calls INTEGER,
+  verdict TEXT,
+  PRIMARY KEY (run, case_id, trial)
 );

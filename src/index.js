@@ -672,18 +672,20 @@ const proposeText = (p) => 'Sounds good. My guess is you used ' + listOf(p.map((
 
 // ---------- learning a household's own pace ----------
 // Every purchase is one observation of how long that amount lasted: until they said it ran out, or else until they bought it again.
-// The typical (median) of the last five is used, so one odd week does not move the estimate, and a bigger purchase is expected to last longer, up to twice as long.
+// The typical (median) of the last eight is used, so one odd week does not move the estimate, and a bigger purchase is expected to last longer, up to twice as long.
 const dayGap = (a, b) => Math.round((Date.parse(b + 'T00:00:00Z') - Date.parse(a + 'T00:00:00Z')) / DAY);
 function paceFrom(history, qty, unit) {
   const seen = [];
   history.forEach((h, i) => {
     const next = history[i + 1];
-    const end = isDate(h.ran_out) && h.ran_out > h.bought && (!next || h.ran_out <= next.bought) ? h.ran_out : next ? next.bought : '';
+    const told = isDate(h.ran_out) && h.ran_out > h.bought && (!next || h.ran_out <= next.bought);
+    const end = told ? h.ran_out : next ? next.bought : '';
     if (!end || dayGap(h.bought, end) < 1) return;
     const scale = h.qty > 0 && qty > 0 && h.unit === unit ? clamp(qty / h.qty, 0.5, 2) : 1; // capped: a receipt read as "12 eggs" one week and "1 box" the next must not swing the pace
-    seen.push(dayGap(h.bought, end) * scale);
+    // people usually shop a little after they run out, so a gap measured to the next purchase runs about half a day long (evals/pace.mjs)
+    seen.push(dayGap(h.bought, end) * scale - (told ? 0 : 0.5));
   });
-  const last = seen.slice(-5).sort((a, b) => a - b);
+  const last = seen.slice(-8).sort((a, b) => a - b);
   if (!last.length) return null;
   const mid = last.length % 2 ? last[(last.length - 1) / 2] : (last[last.length / 2 - 1] + last[last.length / 2]) / 2;
   return { days: clamp(Math.round(mid), 1, 365), seen: last.length };
@@ -768,6 +770,11 @@ async function apply(env, body, today, source, who) {
     // a purchase said in chat has no receipt date, but it still happened today
     const day = bought || (source !== 'shelf' && !a.wasSet ? today : '');
     let finish = a.finishDays, learned = 0, learnt = 0;
+    if (day && row && row.learned && row.bought && day > row.bought) {
+      // how good was the pace I had learned? measured the moment they buy again
+      const off = Math.abs(dayGap(row.bought, day) - row.finish_days);
+      await bump(env, 'pace_n'); await bump(env, 'pace_abs', off); if (off <= 2) await bump(env, 'pace_ok');
+    }
     if (day) try {
       await env.DB.prepare('INSERT INTO purchases (name_key, bought, qty, unit) VALUES (?, ?, ?, ?) ON CONFLICT(name_key, bought) DO UPDATE SET qty = COALESCE(qty, 0) + excluded.qty, unit = excluded.unit').bind(key, day, a.quantity, a.unit).run();
       const h = (await env.DB.prepare('SELECT bought, qty, unit, ran_out FROM purchases WHERE name_key = ? ORDER BY bought').bind(key).all()).results;
@@ -953,7 +960,7 @@ async function mcp(request, env) {
 
 // ---------- storage that newer versions need ----------
 // Run once per start-up: adds what is missing and never touches what is there.
-const SCHEMA = 3;
+const SCHEMA = 4;
 let ready = null;
 function migrate(env) {
   if (!ready) ready = (async () => {
@@ -965,7 +972,10 @@ function migrate(env) {
       'CREATE TABLE IF NOT EXISTS reminders (name_key TEXT PRIMARY KEY, sent INTEGER NOT NULL DEFAULT 0, streak INTEGER NOT NULL DEFAULT 0, muted INTEGER NOT NULL DEFAULT 0, answered INTEGER NOT NULL DEFAULT 1, last_day TEXT)',
       'CREATE TABLE IF NOT EXISTS turns (id INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT NOT NULL, said TEXT, route TEXT, intent TEXT, did TEXT, reply TEXT, outcome TEXT, wanted TEXT, label TEXT)',
       'CREATE TABLE IF NOT EXISTS cases (id INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT NOT NULL, said TEXT NOT NULL UNIQUE, expect TEXT NOT NULL, name TEXT)',
+      'CREATE TABLE IF NOT EXISTS eval_runs (id INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT NOT NULL, done TEXT, status TEXT NOT NULL, why TEXT, trials INTEGER NOT NULL DEFAULT 1, version TEXT, models TEXT, day TEXT, cases TEXT, total INTEGER NOT NULL DEFAULT 0, next INTEGER NOT NULL DEFAULT 0, calls INTEGER NOT NULL DEFAULT 0, err TEXT, wait TEXT, summary TEXT)',
+      'CREATE TABLE IF NOT EXISTS eval_trials (run INTEGER NOT NULL, case_id TEXT NOT NULL, trial INTEGER NOT NULL, suite TEXT NOT NULL, grp TEXT, pass INTEGER NOT NULL, score REAL NOT NULL, voice INTEGER NOT NULL DEFAULT 1, failed TEXT, said TEXT, did TEXT, reply TEXT, ms INTEGER, calls INTEGER, verdict TEXT, PRIMARY KEY (run, case_id, trial))',
     ]) await env.DB.prepare(sql).run();
+    await env.DB.prepare('ALTER TABLE turns ADD COLUMN ms INTEGER').run().catch(() => {});
     await env.DB.prepare("INSERT INTO settings (k, v) VALUES ('schema', ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v").bind(String(SCHEMA)).run();
   })().catch((e) => { ready = null; console.error('migrate failed', String((e && e.message) || e)); });
   return ready;
@@ -1107,7 +1117,7 @@ async function tick(env, now) {
     if (!msg) continue;
     const status = await pushSend(env, sub, msg, origin).catch(() => 0);
     if (status === 404 || status === 410 || sub.fails >= 8) await env.DB.prepare('DELETE FROM push_subs WHERE endpoint = ?').bind(sub.endpoint).run();
-    else if (status >= 200 && status < 300) { sent++; if (sub.fails) await env.DB.prepare('UPDATE push_subs SET fails = 0 WHERE endpoint = ?').bind(sub.endpoint).run(); }
+    else if (status >= 200 && status < 300) { sent++; await bump(env, 'remind_sent', (msg.ids || []).length || 1); if (sub.fails) await env.DB.prepare('UPDATE push_subs SET fails = 0 WHERE endpoint = ?').bind(sub.endpoint).run(); }
     else await env.DB.prepare('UPDATE push_subs SET fails = fails + 1 WHERE endpoint = ?').bind(sub.endpoint).run();
   }
   return { sent };
@@ -1128,8 +1138,8 @@ async function noteTurn(env, t) {
       if (sign) await env.DB.prepare('UPDATE turns SET outcome = ? WHERE id = ?').bind(sign, prev.id).run();
     }
     const did = (t.changes || []).map((c) => c.action + ' ' + c.name).concat((t.proposal || []).map((a) => 'guess ' + a.name)).join('; ').slice(0, 200);
-    await env.DB.prepare('INSERT INTO turns (at, said, route, intent, did, reply, outcome) VALUES (?, ?, ?, ?, ?, ?, ?)')
-      .bind(new Date(now).toISOString(), said, word(t.route, 12), word(t.intent, 12), cutText(did, 200), cutText(t.reply, 300), t.missed && t.missed.length ? 'missed' : '').run();
+    await env.DB.prepare('INSERT INTO turns (at, said, route, intent, did, reply, outcome, ms) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+      .bind(new Date(now).toISOString(), said, word(t.route, 12), word(t.intent, 12), cutText(did, 200), cutText(t.reply, 300), t.missed && t.missed.length ? 'missed' : '', t.t0 ? now - t.t0 : null).run();
     if (Math.random() < 0.05) await env.DB.prepare('DELETE FROM turns WHERE id <= (SELECT MAX(id) FROM turns) - 1500').run();
   } catch (e) { console.error('turn not kept', String((e && e.message) || e)); }
 }
@@ -1158,6 +1168,271 @@ async function review(env, today) {
   }
   const cases = (await env.DB.prepare('SELECT id, at, said, expect, name FROM cases ORDER BY id DESC LIMIT 200').all()).results;
   return { weeks, groups: Object.values(groups).sort((a, b) => b.count - a.count), cases };
+}
+
+// ---------- measuring Tote ----------
+// Following "Demystifying evals for AI agents": every task is run as separate trials against a made-up home that starts clean each time,
+// graded by fixed checks on what Tote did (the outcome), not the words it used, with partial credit. Scores are kept per run and per
+// version, so a change can be compared with what came before. Runs go a few trials at a time from the cron, inside a daily allowance,
+// so the household's own chats never run short.
+const EVAL_DAY = 100; // model calls per UTC day that evals may spend
+const EVAL_STEP = 6; // trials per cron minute
+const EVAL_HOME = [{ name: 'Whole Milk', qty: 1, unit: 'L', category: 'Dairy' }, { name: 'Eggs', qty: 12, unit: 'pcs', category: 'Dairy' }, { name: 'Bread', qty: 1, unit: 'pcs', category: 'Bakery' }, { name: 'Spaghetti', qty: 500, unit: 'g', category: 'Pantry' }, { name: 'Tomato Pasta Sauce', qty: 1, unit: 'pcs', category: 'Pantry' }, { name: 'Rice', qty: 2, unit: 'kg', category: 'Pantry' }, { name: 'Chicken Breast', qty: 2, unit: 'lb', category: 'Meat' }, { name: 'Baby Spinach', qty: 1, unit: 'pack', category: 'Produce' }, { name: 'Coffee', qty: 1, unit: 'pack', category: 'Pantry' }, { name: 'Dish Soap', qty: 1, unit: 'pcs', area: 'Cleaning', category: 'Dishes' }];
+const reEsc = (t) => String(t).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+// a person's verdict on a real conversation becomes a case, the same way /evals.html builds it
+function caseFromReal(c) {
+  const has = c.name ? { name: reEsc(c.name) } : null;
+  const checks = c.expect === 'nothing' ? [{ count: [0, 0] }] : c.expect === 'list' ? [{ has: { action: 'list', ...(has || {}) } }] : [has ? { has: { action: 'add|use|set|low', ...has } } : { count: [1, 9] }];
+  return { id: 'real-' + c.id, group: 'From your conversations', suite: 'regression', kind: 'chat', text: c.said, inventory: EVAL_HOME, checks };
+}
+async function evalCases(env) {
+  const res = await env.ASSETS.fetch(new Request('https://assets.local/evals/cases.json'));
+  const data = await res.json();
+  const real = (await env.DB.prepare('SELECT id, said, expect, name FROM cases ORDER BY id').all()).results.map(caseFromReal);
+  const cases = data.cases.concat(real).map((c) => ({ ...c, suite: c.suite || (c.stretch ? 'capability' : 'regression') }));
+  return { today: data.today, cases };
+}
+const evalVersion = (env) => (env.CF_VERSION && env.CF_VERSION.id ? String(env.CF_VERSION.id).slice(0, 8) : 'local');
+
+// The made-up home: the same rules as apply(), in memory, so multi-turn tasks can be graded on how the home ends up.
+function simRows(list) {
+  return (Array.isArray(list) ? list : []).slice(0, 60).map((r) => ({ name: String(r.name || '').slice(0, 60), qty: num(r.qty, 1), unit: String(r.unit || 'pcs').slice(0, 8), expiry: isDate(r.expiry) ? r.expiry : null, frozen: 0, low: r.low ? 1 : 0, area: String(r.area || 'Kitchen'), expiry_est: r.est ? 1 : 0, category: String(r.category || ''), bought: isDate(r.bought) ? r.bought : null, finish_days: r.pace ? clamp(num(r.pace, 14), 1, 365) : 14, learned: r.pace ? 1 : 0 }));
+}
+function simApply(rows, list, actions) {
+  const changes = [], missed = [];
+  const find = (n) => { const k = keyOf(n); return rows.find((r) => keyOf(r.name) === k) || rows.find((r) => keyOf(r.name).includes(k)); };
+  for (const a of actions) {
+    if (a.action === 'list') { const i = list.findIndex((x) => keyOf(x) === keyOf(a.name)); changes.push({ name: a.name, note: a.note, action: 'list', created: i < 0, kept: i >= 0 }); if (i < 0) list.push(a.name); continue; }
+    if (a.action === 'unlist') { const i = list.findIndex((x) => keyOf(x).includes(keyOf(a.name))); if (i < 0) { missed.push(a.name); continue; } changes.push({ name: list[i], action: 'unlist', removed: [list[i]] }); list.splice(i, 1); continue; }
+    const r = find(a.name);
+    if (a.action === 'use' || a.action === 'low') {
+      if (!r) { missed.push(a.name); continue; }
+      if (a.action === 'low') { r.low = 1; changes.push({ name: r.name, action: 'low', prevQty: r.qty, qty: r.qty, unit: r.unit }); continue; }
+      const prev = r.qty; r.qty = a.quantity > 0 ? Math.max(0, r.qty - a.quantity) : 0;
+      changes.push({ name: r.name, action: 'use', prevQty: prev, qty: r.qty, unit: r.unit });
+      continue;
+    }
+    if (a.action === 'set' && r) { const prev = r.qty; r.qty = a.quantity; r.low = 0; changes.push({ name: r.name, action: 'set', prevQty: prev, qty: a.quantity, unit: r.unit }); continue; }
+    if (r) { const prev = r.qty; r.qty += a.quantity; r.low = 0; changes.push({ name: r.name, action: 'add', created: false, prevQty: prev, qty: r.qty, added: a.quantity, unit: a.unit }); }
+    else { rows.push({ name: a.name, qty: a.quantity, unit: a.unit, area: a.area, category: a.category, low: 0, frozen: 0, expiry: null }); changes.push({ name: a.name, action: 'add', created: true, prevQty: 0, qty: a.quantity, added: a.quantity, unit: a.unit }); }
+  }
+  return { changes, missed };
+}
+
+// One trial of one task, through the same converse() people use. Nothing real is read or written: the database is withheld.
+async function evalCase(env, c, day) {
+  let calls = 0;
+  const ai = env.AI;
+  const e = { ...env, DB: null, AI: { run: (...a) => { calls++; return ai.run(...a); } } };
+  const profile = c.profile ? cleanProfile(c.profile) : null;
+  const rows = simRows(c.inventory), list = (c.list || []).map(String);
+  const t0 = Date.now();
+  let r = { actions: [], proposed: [], reply: '', blocked: false };
+  const said = [], history = [];
+  if (c.kind === 'receipt' || c.kind === 'shelf') {
+    const out = sanitize(await structure(e, c.kind === 'shelf' ? 'shelf' : 'bill', String(c.text).slice(0, 2000), day, rows.map((x) => x.name + ' (' + x.qty + ' ' + x.unit + ')'), profile), c.kind === 'shelf' ? 'shelf' : 'bill');
+    if (!restricted(profile)) out.actions.forEach((a) => { a.warn = ''; });
+    r = { actions: out.actions, proposed: [], reply: '', blocked: false };
+    said.push(String(c.text).slice(0, 300));
+  } else {
+    for (const text of (c.turns || [c.text]).map((t) => String(t).slice(0, 600))) {
+      said.push(text);
+      const turn = await converse(e, text, history, rows, profile, day);
+      let reply = turn.reply;
+      if (!reply) {
+        const res = turn.out.actions.length ? simApply(rows, list, turn.out.actions) : { changes: [], missed: [] };
+        const ask = turn.proposal.length ? proposeText(turn.proposal) : '';
+        reply = res.changes.length ? chatReply(res) + (ask ? ' ' + ask : '') : ask || await chatAnswer(e, text, history, rows, day, profile, res.missed);
+      }
+      r = { actions: turn.out.actions, proposed: turn.proposal, reply, blocked: turn.blocked, route: turn.route };
+      history.push({ role: 'user', content: text }, { role: 'assistant', content: reply });
+    }
+  }
+  const graded = (c.checks || []).map((k) => gradeCheck(k, r, rows, list));
+  const passed = graded.filter((g) => g[0]).length;
+  return {
+    pass: graded.length > 0 && passed === graded.length, score: graded.length ? passed / graded.length : 0, voice: onVoice(r.reply),
+    failed: graded.filter((g) => !g[0]).map((g) => g[1]), said: said.join(' → '), reply: r.reply || '', ms: Date.now() - t0, calls,
+    did: (r.blocked ? 'BLOCKED; ' : '') + (r.actions || []).map((a) => a.action + ' ' + a.quantity + ' ' + a.unit + ' ' + a.name + (a.note ? ' {' + a.note + '}' : '') + (a.warn ? ' [' + a.warn + ']' : '')).concat((r.proposed || []).map((a) => 'asks: use ' + a.quantity + ' ' + a.unit + ' ' + a.name)).join('; '),
+  };
+}
+// Fixed checks, the same ones /evals.html uses, plus checks on how the home ends up after every turn.
+function gradeCheck(c, r, rows, list) {
+  const rx = (p) => new RegExp(p, 'iu'), nm = (a, p) => rx(p).test(a.name || '');
+  const P = r.proposed || [], A = (r.actions || []).concat(P), reply = r.reply || '', k = Object.keys(c)[0], v = c[k];
+  const match = (a, w) => (!w.action || rx('^(' + w.action + ')$').test(a.action)) && (!w.name || nm(a, w.name)) && (!w.area || a.area === w.area) && (!w.category || a.category === w.category);
+  const row = (p) => rows.find((x) => rx(p).test(x.name));
+  const onList = (p) => list.some((x) => rx(p).test(x)) || rows.some((x) => rx(p).test(x.name) && (x.qty <= 0 || x.low));
+  switch (k) {
+    case 'appliedCount': return [(r.actions || []).length >= v[0] && (r.actions || []).length <= v[1], 'applies ' + v[0] + '-' + v[1] + ' changes without asking (got ' + (r.actions || []).length + ')'];
+    case 'confirm': return [(P.length > 0) === v, v ? 'asks before applying a guess' : 'applies without asking'];
+    case 'noteHas': return [A.some((a) => rx(v).test(a.note || '')), 'keeps a note about /' + v + '/'];
+    case 'has': return [A.some((a) => match(a, v)), 'has ' + JSON.stringify(v)];
+    case 'hasNot': return [!A.some((a) => match(a, v)), 'has no ' + JSON.stringify(v)];
+    case 'count': return [A.length >= v[0] && A.length <= v[1], v[0] + '-' + v[1] + ' actions (got ' + A.length + ')'];
+    case 'maxQuantity': return [A.every((a) => a.quantity <= v), 'no quantity above ' + v];
+    case 'sure': return [A.some((a) => nm(a, v) && a.sure !== false), 'counted ' + v];
+    case 'unsure': return [A.some((a) => nm(a, v) && a.sure === false), 'left the amount of ' + v + ' open'];
+    case 'warned': return [A.some((a) => nm(a, v) && a.warn), 'flags ' + v];
+    case 'notWarned': return [!A.some((a) => nm(a, v) && a.warn), 'does not flag ' + v];
+    case 'useBetween': return [A.some((a) => a.action === 'use' && nm(a, v[0]) && a.quantity >= v[1] && a.quantity <= v[2]), 'uses ' + v[1] + '-' + v[2] + ' of ' + v[0]];
+    case 'blocked': return [!!r.blocked === v, 'blocked is ' + v];
+    case 'replyHas': return [rx(v).test(reply), 'reply mentions /' + v + '/'];
+    case 'replyNot': return [!rx(v).test(reply), 'reply avoids /' + v + '/'];
+    case 'replyMax': return [reply.length <= v, 'reply at most ' + v + ' characters (got ' + reply.length + ')'];
+    case 'stateQty': { const x = row(v[0]); return [!!x && x.qty >= v[1] && x.qty <= v[2], 'ends with ' + v[1] + '-' + v[2] + ' of ' + v[0] + ' (got ' + (x ? x.qty : 'none') + ')']; }
+    case 'onList': return [onList(v), v + ' ends up on the list'];
+    case 'notOnList': return [!onList(v), v + ' is not on the list'];
+    default: return [false, 'unknown check ' + k];
+  }
+}
+// How Tote sounds, checked on every reply (brand voice): no emoji, calm, plain home words, short, never guilt.
+const onVoice = (t) => !t || (!/\p{Extended_Pictographic}/u.test(t) && (t.match(/!/g) || []).length <= 1 && !/\b(inventory|SKU|threshold|database)\b/i.test(t) && !/\b(you should have|shame|wasteful|you forgot|you wasted)\b/i.test(t) && t.length <= 420);
+
+// pass@1: share of trials that pass. pass@k: the task passed at least once in k. pass^k: it passed every time (what a household feels).
+function summarize(trials) {
+  const by = {};
+  for (const t of trials) { const c = by[t.case_id] || (by[t.case_id] = { id: t.case_id, suite: t.suite, grp: t.grp, n: 0, p: 0, score: 0 }); c.n++; c.p += t.pass ? 1 : 0; c.score += t.score; }
+  const cases = Object.values(by);
+  const k = cases.length ? Math.min(...cases.map((c) => c.n)) : 0;
+  const pct = (a, b) => (b ? Math.round((a / b) * 1000) / 10 : null);
+  const rate = (list) => ({
+    tasks: list.length,
+    pass1: pct(list.reduce((s, c) => s + c.p / c.n, 0), list.length),
+    passAtK: pct(list.filter((c) => c.p > 0).length, list.length),
+    passAllK: pct(list.filter((c) => c.p === c.n).length, list.length),
+    partial: pct(list.reduce((s, c) => s + c.score / c.n, 0), list.length),
+  });
+  const ms = trials.map((t) => t.ms || 0).sort((a, b) => a - b), q = (p) => (ms.length ? ms[Math.min(ms.length - 1, Math.floor(p * ms.length))] : null);
+  const suites = {}, groups = {};
+  for (const s of new Set(cases.map((c) => c.suite))) suites[s] = rate(cases.filter((c) => c.suite === s));
+  for (const g of new Set(cases.map((c) => c.grp))) groups[g] = rate(cases.filter((c) => c.grp === g));
+  return {
+    k, trials: trials.length, all: rate(cases), suites, groups,
+    voice: pct(trials.filter((t) => t.voice).length, trials.length),
+    p50ms: q(0.5), p95ms: q(0.95), callsPerTrial: trials.length ? Math.round((trials.reduce((s, t) => s + (t.calls || 0), 0) / trials.length) * 100) / 100 : null,
+    graderWrong: trials.filter((t) => t.verdict === 'grader').length, reviewed: trials.filter((t) => t.verdict).length,
+    cases: cases.map((c) => ({ id: c.id, suite: c.suite, grp: c.grp, n: c.n, p: c.p })),
+  };
+}
+
+async function queueRun(env, why, trials) {
+  const active = await env.DB.prepare("SELECT id FROM eval_runs WHERE status IN ('queued', 'running', 'paused')").first();
+  if (active) return { id: active.id, queued: false };
+  const r = await env.DB.prepare("INSERT INTO eval_runs (at, status, why, trials) VALUES (?, 'queued', ?, ?) RETURNING id").bind(new Date().toISOString(), word(why, 40) || 'by hand', clamp(Math.round(num(trials, 1)), 1, 5)).first();
+  return { id: r.id, queued: true };
+}
+// A new version is always checked. Then the same version is run again on the next nights until every task has three trials
+// (that is where pass^3 comes from), and after that once a week, because the hosted model can drift.
+async function autoRuns(env) {
+  if (await env.DB.prepare("SELECT id FROM eval_runs WHERE status IN ('queued', 'running', 'paused')").first()) return;
+  const ver = evalVersion(env);
+  const last = await env.DB.prepare("SELECT * FROM eval_runs WHERE status = 'done' ORDER BY id DESC LIMIT 1").first();
+  if (!last || last.version !== ver) return queueRun(env, 'new version', 1);
+  const runs = (await env.DB.prepare("SELECT COUNT(*) AS n FROM eval_runs WHERE status = 'done' AND version = ?").bind(ver).first()).n;
+  const age = Date.now() - Date.parse(last.done || last.at);
+  if (runs < 3 && last.done && last.done.slice(0, 10) < utcDay()) return queueRun(env, 'repeat for consistency', 1);
+  if (age > 7 * DAY) return queueRun(env, 'weekly', 1);
+}
+// A few trials at a time. Stops for the day when the eval allowance or the AI allowance is used up, and carries on the next UTC day.
+async function stepRun(env, max = EVAL_STEP, budgetMs = 40000) {
+  const run = await env.DB.prepare("SELECT * FROM eval_runs WHERE status IN ('queued', 'running', 'paused') ORDER BY id LIMIT 1").first();
+  if (!run) return null;
+  if (run.status === 'paused' && run.wait && run.wait > utcDay()) return { id: run.id, status: 'paused', wait: run.wait };
+  if (await quotaOut(env)) { await env.DB.prepare("UPDATE eval_runs SET status = 'paused', wait = ?, err = 'AI allowance used up for today' WHERE id = ?").bind(addDays(utcDay(), 1), run.id).run(); return { id: run.id, status: 'paused' }; }
+  let cases = null, day = run.day;
+  try { cases = run.cases ? JSON.parse(run.cases) : null; } catch (e) {}
+  if (!cases) {
+    const d = await evalCases(env);
+    cases = d.cases; day = d.today;
+    await env.DB.prepare('UPDATE eval_runs SET cases = ?, day = ?, total = ?, version = ?, models = ? WHERE id = ?').bind(JSON.stringify(cases), day, cases.length * run.trials, evalVersion(env), env.TEXT_MODEL + ' + ' + env.VISION_MODEL, run.id).run();
+  }
+  const total = cases.length * run.trials, t0 = Date.now(), rows = [];
+  let i = run.next, calls = 0, status = 'running', err = '', wait = null;
+  const used = Number(((await env.DB.prepare('SELECT v FROM settings WHERE k = ?').bind('evalcalls:' + utcDay()).first()) || {}).v || 0);
+  while (i < total && rows.length < max && Date.now() - t0 < budgetMs) {
+    if (used + calls >= EVAL_DAY) { status = 'paused'; err = 'Daily eval allowance used; carries on tomorrow'; wait = addDays(utcDay(), 1); break; }
+    const c = cases[i % cases.length], trial = Math.floor(i / cases.length) + 1;
+    try {
+      const t = await evalCase(env, c, day);
+      calls += t.calls;
+      rows.push([run.id, c.id, trial, c.suite, c.group, t.pass ? 1 : 0, t.score, t.voice ? 1 : 0, JSON.stringify(t.failed).slice(0, 1500), t.said.slice(0, 900), t.did.slice(0, 900), t.reply.slice(0, 900), t.ms, t.calls]);
+      i++;
+    } catch (e) {
+      const msg = String((e && e.message) || e);
+      if (/4006|daily free allocation|neurons/i.test(msg)) { await aiFail(env, e, 'eval run'); status = 'paused'; err = 'AI allowance used up for today'; wait = addDays(utcDay(), 1); break; }
+      calls++;
+      rows.push([run.id, c.id, trial, c.suite, c.group, 0, 0, 1, JSON.stringify(['error: ' + msg.slice(0, 200)]), String(c.text || (c.turns || []).join(' → ')).slice(0, 900), '', '', Date.now() - t0, 1]);
+      i++;
+    }
+  }
+  const ins = 'INSERT OR REPLACE INTO eval_trials (run, case_id, trial, suite, grp, pass, score, voice, failed, said, did, reply, ms, calls) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
+  const stmts = rows.map((r) => env.DB.prepare(ins).bind(...r));
+  stmts.push(env.DB.prepare("INSERT INTO settings (k, v) VALUES (?, ?) ON CONFLICT(k) DO UPDATE SET v = CAST(CAST(v AS INTEGER) + ? AS TEXT)").bind('evalcalls:' + utcDay(), String(calls), calls));
+  await env.DB.batch(stmts);
+  let summary = null;
+  if (i >= total) {
+    status = 'done';
+    summary = summarize((await env.DB.prepare('SELECT case_id, suite, grp, pass, score, voice, ms, calls, verdict FROM eval_trials WHERE run = ?').bind(run.id).all()).results);
+  }
+  await env.DB.prepare('UPDATE eval_runs SET status = ?, next = ?, calls = calls + ?, err = ?, wait = ?, done = ?, summary = COALESCE(?, summary) WHERE id = ?')
+    .bind(status, i, calls, err || null, wait, status === 'done' ? new Date().toISOString() : null, summary ? JSON.stringify(summary) : null, run.id).run();
+  return { id: run.id, status, next: i, total, ran: rows.length };
+}
+
+// ---------- how Tote is doing with real people ----------
+// Weekly counts kept as small counters, so nothing private is stored to compute them.
+const weekOf = (d) => { const t = Date.parse(d + 'T00:00:00Z'); return new Date(t - ((new Date(t).getUTCDay() + 6) % 7) * DAY).toISOString().slice(0, 10); };
+async function bump(env, name, by = 1) {
+  try { await env.DB.prepare("INSERT INTO settings (k, v) VALUES (?, ?) ON CONFLICT(k) DO UPDATE SET v = CAST(CAST(v AS REAL) + ? AS TEXT)").bind('stat:' + name + ':' + weekOf(utcDay()), String(by), by).run(); }
+  catch (e) { console.error('stat not kept', String((e && e.message) || e)); }
+}
+async function health(env, today) {
+  const weeks = Array.from({ length: 8 }, (_, i) => addDays(weekOf(today), -7 * i));
+  const turns = (await env.DB.prepare('SELECT at, route, outcome, ms FROM turns WHERE at >= ? ORDER BY id DESC LIMIT 1500').bind(weeks[7]).all()).results;
+  const stats = (await env.DB.prepare("SELECT k, v FROM settings WHERE k LIKE 'stat:%' AND substr(k, -10) >= ?").bind(weeks[7]).all()).results;
+  const stat = (name, w) => Number((stats.find((s) => s.k === 'stat:' + name + ':' + w) || {}).v || 0);
+  const pct = (a, b) => (b ? Math.round((a / b) * 1000) / 10 : null);
+  return weeks.map((w) => {
+    const mine = turns.filter((t) => weekOf(t.at.slice(0, 10)) === w), n = mine.length, o = (k) => mine.filter((t) => t.outcome === k).length;
+    const ms = mine.map((t) => t.ms).filter((x) => x > 0).sort((a, b) => a - b);
+    const paceN = stat('pace_n', w), sent = stat('remind_sent', w);
+    return {
+      week: w, turns: n,
+      missRate: pct(mine.filter((t) => MISSES.includes(t.outcome)).length, n), undoRate: pct(o('undo'), n), correctedRate: pct(o('corrected'), n), repeatRate: pct(o('repeated'), n),
+      notFoundRate: pct(o('missed'), n), refusedRate: pct(mine.filter((t) => t.route === 'refuse' || t.route === 'wipe').length, n), up: o('up'), down: o('down'),
+      p50ms: ms.length ? ms[Math.floor(ms.length / 2)] : null,
+      remindersSent: sent, remindAnswered: pct(stat('remind_add', w) + stat('remind_still', w) + stat('remind_stop', w), sent), remindUseful: pct(stat('remind_add', w), sent), remindEarly: pct(stat('remind_still', w), sent),
+      pacePurchases: paceN, paceErrorDays: paceN ? Math.round((stat('pace_abs', w) / paceN) * 10) / 10 : null, paceWithin2: pct(stat('pace_ok', w), paceN),
+    };
+  });
+}
+async function scorecard(env, today, runId) {
+  const runs = (await env.DB.prepare('SELECT id, at, done, status, why, trials, version, models, total, next, calls, err, wait, summary FROM eval_runs ORDER BY id DESC LIMIT 30').all()).results
+    .map((r) => { let s = null; try { s = JSON.parse(r.summary || 'null'); } catch (e) {} return { ...r, summary: s ? { ...s, cases: undefined } : null, caseStats: s ? s.cases : null }; });
+  // all trials of one version pooled: this is where pass^k builds up across nights
+  const versions = {};
+  for (const r of runs.filter((x) => x.status === 'done' && x.version)) (versions[r.version] = versions[r.version] || []).push(r.id);
+  const byVersion = [];
+  for (const [v, ids] of Object.entries(versions).slice(0, 6)) {
+    const t = (await env.DB.prepare('SELECT case_id, suite, grp, pass, score, voice, ms, calls, verdict FROM eval_trials WHERE run IN (' + ids.map(() => '?').join(',') + ')').bind(...ids).all()).results;
+    const s = summarize(t);
+    byVersion.push({ version: v, runs: ids.length, first: runs.find((r) => r.id === Math.min(...ids)).at, ...s, cases: s.cases });
+  }
+  const done = runs.filter((r) => r.status === 'done' && r.caseStats);
+  // what broke since the run before, and what got fixed
+  const diff = { broke: [], fixed: [] };
+  if (done.length >= 2) {
+    const prev = new Map(done[1].caseStats.map((c) => [c.id, c]));
+    for (const c of done[0].caseStats) { const p = prev.get(c.id); if (!p) continue; if (p.p === p.n && c.p < c.n) diff.broke.push(c.id); if (p.p < p.n && c.p === c.n) diff.fixed.push(c.id); }
+  }
+  // capability tasks that now pass every trial of the current version are ready to join the regression suite
+  const cur = byVersion[0];
+  const graduate = cur && cur.k >= 3 ? cur.cases.filter((c) => c.suite === 'capability' && c.p === c.n).map((c) => c.id) : [];
+  const flaky = cur ? cur.cases.filter((c) => c.p > 0 && c.p < c.n).map((c) => c.id) : [];
+  const show = runId || (runs.find((r) => r.status !== 'queued') || {}).id;
+  const trials = show ? (await env.DB.prepare('SELECT case_id, trial, suite, grp, pass, score, voice, failed, said, did, reply, ms, calls, verdict FROM eval_trials WHERE run = ? ORDER BY pass, case_id, trial').bind(show).all()).results : [];
+  return { runs: runs.map((r) => ({ ...r, caseStats: undefined })), byVersion: byVersion.map((v) => ({ ...v, cases: undefined })), diff, graduate, flaky, run: show || null, trials, health: await health(env, today), allowance: { evalPerDay: EVAL_DAY, usedToday: Number(((await env.DB.prepare('SELECT v FROM settings WHERE k = ?').bind('evalcalls:' + utcDay()).first()) || {}).v || 0) } };
 }
 
 async function api(request, env, url) {
@@ -1307,6 +1582,7 @@ async function api(request, env, url) {
       else await env.DB.prepare('INSERT INTO reminders (name_key, answered) VALUES (?, 1) ON CONFLICT(name_key) DO UPDATE SET answered = 1, streak = 0, muted = CASE WHEN muted = 1 OR ? = 1 THEN 0 ELSE muted END').bind(it.name_key, ans === 'start' ? 1 : 0).run();
       done.push(it.name);
     }
+    if (done.length && ans !== 'start') await bump(env, 'remind_' + ans, done.length);
     const hour = Number(body.hour);
     if ((ans === 'add' || ans === 'still') && Number.isInteger(hour) && hour >= 0 && hour <= 23 && done.length) {
       const row = await env.DB.prepare("SELECT v FROM settings WHERE k = 'remind:hours'").first();
@@ -1395,6 +1671,7 @@ async function api(request, env, url) {
   if (path === '/api/chat' && method === 'POST') {
     const body = (await request.json().catch(() => null)) || {};
     if (!(await aiBudget(env))) return limited(env);
+    const t0 = Date.now();
     try {
       let text = String(body.text || '').replace(/\s+/g, ' ').trim().slice(0, 600), heard = '';
       if (!text && typeof body.audio === 'string' && body.audio.length <= 8_000_000) { text = heard = (await hearAudio(env, body.audio)).slice(0, 600); if (!text) return json({ error: 'silent' }, 422); }
@@ -1404,7 +1681,7 @@ async function api(request, env, url) {
       const history = (Array.isArray(body.history) ? body.history : []).slice(-4).map((h) => ({ role: h && h.role === 'assistant' ? 'assistant' : 'user', content: String((h && h.text) || '').slice(0, 400) })).filter((h) => h.content);
       const turn = await converse(env, text, history, rows, profile, today, true);
       if (turn.reply) {
-        await noteTurn(env, { said: text, route: turn.route, reply: turn.reply });
+        await noteTurn(env, { said: text, route: turn.route, reply: turn.reply, t0 });
         return json({ heard, reply: turn.reply, changes: [], missed: [], blocked: turn.blocked, route: turn.route });
       }
       const out = turn.out;
@@ -1413,7 +1690,7 @@ async function api(request, env, url) {
       const reply = result.changes.length ? chatReply(result).replace(ask ? ' Tap Undo on anything I got wrong.' : '\u0000', '') + (ask ? ' ' + ask : '') : ask || await chatAnswer(env, text, history, rows, today, profile, result.missed || []);
       const q = result.changes.length ? questionPart(text) : '';
       const extra = q ? ' ' + (await chatAnswer(env, q, history, (await env.DB.prepare('SELECT name, qty, unit, expiry, expiry_est, frozen, low, area, category FROM items ORDER BY name').all()).results, today, profile, [])) : '';
-      await noteTurn(env, { said: text, route: turn.route, intent: out.intent, reply: reply + extra, changes: result.changes, proposal: turn.proposal, missed: result.missed });
+      await noteTurn(env, { said: text, route: turn.route, intent: out.intent, reply: reply + extra, changes: result.changes, proposal: turn.proposal, missed: result.missed, t0 });
       return json({ heard, reply: reply + extra, changes: result.changes, missed: result.missed || [], proposal: turn.proposal, remembered: turn.remembered || '', route: turn.route });
     } catch (e) {
       return aiFail(env, e, 'chat');
@@ -1440,6 +1717,29 @@ async function api(request, env, url) {
     } catch (e) {
       return aiFail(env, e, 'eval');
     }
+  }
+
+  // ---- the scorecard: eval runs over time, and how Tote is doing with real people ----
+  if (path === '/api/scorecard' && method === 'GET') return json(await scorecard(env, today, Number(url.searchParams.get('run')) || 0));
+  if (path === '/api/scorecard/run' && method === 'POST') {
+    const body = (await request.json().catch(() => null)) || {};
+    return json(await queueRun(env, 'by hand' + (body.note ? ': ' + body.note : ''), body.trials));
+  }
+  if (path === '/api/scorecard/step' && method === 'POST') {
+    if (!(await allow(env, 'evalstep', 10, 60))) return json({ error: 'slow_down' }, 429);
+    return json((await stepRun(env, 3, 20000)) || { status: 'idle' });
+  }
+  if (path === '/api/scorecard/stop' && method === 'POST') {
+    await env.DB.prepare("UPDATE eval_runs SET status = 'stopped', done = ? WHERE status IN ('queued', 'running', 'paused')").bind(new Date().toISOString()).run();
+    return json({ ok: true });
+  }
+  // reading a failed trial: was it Tote's mistake, or was the test unfair? The second kind is a bug in the grader to fix.
+  if (path === '/api/scorecard/verdict' && method === 'POST') {
+    const body = (await request.json().catch(() => null)) || {};
+    const v = ['agent', 'grader', ''].includes(body.verdict) ? body.verdict : null;
+    if (v === null) return json({ error: 'empty' }, 400);
+    await env.DB.prepare('UPDATE eval_trials SET verdict = ? WHERE run = ? AND case_id = ? AND trial = ?').bind(v || null, Number(body.run) || 0, word(body.case, 80), Number(body.trial) || 0).run();
+    return json({ ok: true });
   }
 
   // A household teaches Tote what goes into its own dishes. Stored per dish, only names and amounts.
@@ -1527,8 +1827,11 @@ export default {
     }
     return env.ASSETS.fetch(request);
   },
-  // every hour: see whether any phone is due its one reminder of the day
+  // every minute: reminders on the hour, and the next few eval trials when a run is open
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(tick(env, new Date(event.scheduledTime || Date.now())).catch((e) => console.error('reminders failed', String((e && e.message) || e))));
+    const now = new Date(event.scheduledTime || Date.now());
+    // reminders are checked at the top of each hour; evals take a few steps every minute while a run is open
+    if (now.getUTCMinutes() === 0) ctx.waitUntil(tick(env, now).catch((e) => console.error('reminders failed', String((e && e.message) || e))));
+    ctx.waitUntil(migrate(env).then(() => autoRuns(env)).then(() => stepRun(env)).catch((e) => console.error('eval step failed', String((e && e.message) || e))));
   },
 };

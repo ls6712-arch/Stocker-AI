@@ -1,0 +1,115 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Tote scorecard</title>
+<style>
+:root{--bg:#eef3f0;--fg:#10231d;--muted:#52655e;--card:#fff;--line:#d9e3de;--ok:#0f6b5c;--bad:#b3261e;--warn:#8a5a00;--a:#0f6b5c;--b:#c46a1a;--c:#5b5bd6}
+@media (prefers-color-scheme:dark){:root{--bg:#0d1412;--fg:#e8f0ec;--muted:#9fb3ab;--card:#16201d;--line:#26342f;--ok:#5fd0b8;--bad:#ff8a80;--warn:#f6c453;--a:#5fd0b8;--b:#f0a35e;--c:#a5a5ff}button{color:#0d1412}button.ghost{color:var(--fg)}}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.45 system-ui,sans-serif}main{max-width:920px;margin:0 auto;padding:24px 16px 60px}
+h1{font-size:1.5rem;margin:0 0 4px}h2{font-size:1.1rem;margin:28px 0 4px}p{color:var(--muted);margin:4px 0 12px}a{color:var(--ok)}
+button{font:inherit;font-weight:600;border:0;border-radius:999px;padding:10px 18px;background:var(--ok);color:#fff;cursor:pointer;min-height:44px}button:disabled{opacity:.5}button.ghost{background:transparent;color:var(--fg);border:1px solid var(--line);padding:6px 12px;font-size:13.5px;min-height:36px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin:12px 0}
+.tile{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 14px}.tile b{display:block;font-size:1.5rem;font-variant-numeric:tabular-nums}.tile span{font-size:13px;color:var(--muted)}.tile small{display:block;font-size:12px;color:var(--muted)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin:8px 0}.wrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13.5px;font-variant-numeric:tabular-nums}th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap}th{color:var(--muted);font-weight:600}td.l{white-space:normal;min-width:180px}
+.pill{font-size:12px;font-weight:700;border-radius:999px;padding:2px 10px;border:1px solid currentColor;white-space:nowrap}.pass{color:var(--ok)}.fail{color:var(--bad)}.warnc{color:var(--warn)}
+.q{color:var(--muted);font-size:13.5px;margin:4px 0;white-space:pre-wrap;overflow-wrap:anywhere}.q b{color:var(--fg)}ul{margin:6px 0 0;padding-left:18px;font-size:13.5px}li{margin:2px 0}
+svg text{fill:var(--muted);font-size:11px}.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:var(--muted)}.legend i{display:inline-block;width:12px;height:3px;border-radius:2px;margin-right:6px;vertical-align:middle}
+.status{font-size:13.5px;color:var(--muted)}
+</style></head><body><main>
+<h1>Tote scorecard</h1>
+<p>How well Tote does its job, measured the same way every time, so a change can be compared with what came before. Live runs send made-up homes to the real models and grade what Tote <em>did</em> to the home, not the words it used. Nothing in your real home is read or changed.</p>
+<div class="row"><button id="run" type="button">Run a check now</button><button id="stop" class="ghost" type="button">Stop the current run</button><span id="state" class="status" role="status"></span></div>
+
+<h2>The current version</h2>
+<p id="verinfo">Every trial of the version that is live now, pooled across nights.</p>
+<div class="tiles" id="tiles"></div>
+
+<h2>Over time</h2>
+<p>Each point is one finished run. Regression tasks are things Tote already does and should stay near 100%. Capability tasks are things it is learning to do, so they start low: that line is the hill to climb.</p>
+<div class="card"><div class="legend" id="legend"></div><div class="wrap" id="chart"></div></div>
+
+<h2>What changed</h2>
+<div class="card" id="changes"></div>
+
+<h2>By kind of task</h2>
+<p>From the most recent run.</p>
+<div class="card wrap" id="groups"></div>
+
+<h2>Read the failures</h2>
+<p>Scores are only as good as the tests. For each failure, say whether Tote got it wrong or the test was unfair. Unfair tests are bugs in the test to fix, and the share of them is shown above as "tests found unfair".</p>
+<div class="row"><label class="status" for="pick">Run</label><select id="pick"></select></div>
+<div id="trials"></div>
+
+<h2>With real people</h2>
+<p>From everyday use of the app, week by week. A miss is an undo, a correction, saying the same thing twice, a "Not right?" or something Tote could not find. Reminders are useful when they lead to the item going on the list. Pace error is how many days off Tote's learned "you buy this every N days" was, measured when the item was bought again.</p>
+<div class="card wrap" id="health"></div>
+
+<h2>Offline scores</h2>
+<p>Recorded with <code>npm run track</code> before each change is pushed: the router on phrasings it was never taught, and how well the learned pace times reminders across 1,000 simulated households.</p>
+<div class="card wrap" id="offline"></div>
+
+<h2>The weekly loop</h2>
+<div class="card"><ol style="margin:0;padding-left:20px">
+<li>Open this page. Look at what broke, and read the failures. Mark each one as Tote's mistake or an unfair test.</li>
+<li>On <a href="/evals.html">the review page</a>, say what should have happened for real conversations that went wrong. Each becomes a task here.</li>
+<li>Fix the prompt, router or code. Run <code>npm test</code> and <code>npm run track</code>, then push.</li>
+<li>The new version is checked automatically within minutes of the deploy, and again on the next two nights for consistency.</li>
+<li>When a capability task passes every trial, move it to the regression suite (set <code>"suite": "regression"</code> in <code>public/evals/cases.json</code>) and write a harder one.</li>
+</ol></div>
+
+<script>
+(function(){
+  var $=function(i){return document.getElementById(i)},el=function(t,c,x){var e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e};
+  var pc=function(v){return v==null?'–':Math.round(v)+'%'},num=function(v,u){return v==null?'–':v+(u||'')};
+  var data=null,stepping=false,showAll=false;
+  function send(m,p,b){return fetch(p,{method:m,credentials:'same-origin',headers:{'content-type':'application/json'},body:b?JSON.stringify(b):undefined}).then(function(r){if(!r.ok)throw r.status;return r.json()})}
+  function tile(box,value,label,sub){var d=el('div','tile');d.append(el('b','',value),el('span','',label));if(sub)d.append(el('small','',sub));box.append(d)}
+  function table(box,head,rows){var t=el('table'),h=el('tr');head.forEach(function(x){h.append(el('th','',x))});t.append(h);rows.forEach(function(r){var tr=el('tr');r.forEach(function(x,i){var td=el('td',i===0&&typeof x==='string'&&x.length>24?'l':'');if(x&&x.nodeType)td.append(x);else td.textContent=x==null?'–':x;tr.append(td)});t.append(tr)});box.textContent='';box.append(t)}
+  function chart(runs,hist){var W=Math.max(320,Math.min(860,innerWidth-64)),H=200,P=30,box=$('chart');box.textContent='';
+    var pts=runs.filter(function(r){return r.status==='done'&&r.summary}).reverse();
+    var series=[['Regression, pass@1','--a',pts.map(function(r){return (r.summary.suites.regression||{}).pass1})],['Capability, pass@1','--b',pts.map(function(r){return (r.summary.suites.capability||{}).pass1})],['Capability, partial credit','--c',pts.map(function(r){return (r.summary.suites.capability||{}).partial})]];
+    var lg=$('legend');lg.textContent='';series.forEach(function(s){var x=el('span');var i=el('i');i.style.background='var('+s[1]+')';x.append(i,document.createTextNode(s[0]));lg.append(x)});
+    if(!pts.length){box.append(el('p','','No finished runs yet. The first one starts by itself after a deploy.'));return}
+    var ns='http://www.w3.org/2000/svg',svg=document.createElementNS(ns,'svg');svg.setAttribute('viewBox','0 0 '+W+' '+H);svg.setAttribute('width',W);svg.setAttribute('height',H);svg.setAttribute('role','img');svg.setAttribute('aria-label','Pass rates by run');
+    var X=function(i){return P+(pts.length<2?(W-2*P)/2:i*(W-2*P)/(pts.length-1))},Y=function(v){return H-P-(v/100)*(H-2*P)};
+    [0,50,100].forEach(function(v){var l=document.createElementNS(ns,'line');l.setAttribute('x1',P);l.setAttribute('x2',W-8);l.setAttribute('y1',Y(v));l.setAttribute('y2',Y(v));l.setAttribute('stroke','var(--line)');svg.append(l);var t=document.createElementNS(ns,'text');t.setAttribute('x',2);t.setAttribute('y',Y(v)+4);t.textContent=v+'%';svg.append(t)});
+    pts.forEach(function(r,i){if(pts.length>8&&i%Math.ceil(pts.length/8))return;var t=document.createElementNS(ns,'text');t.setAttribute('x',X(i)-14);t.setAttribute('y',H-8);t.textContent=String(r.done||r.at).slice(5,10);svg.append(t)});
+    series.forEach(function(s){var d='';s[2].forEach(function(v,i){if(v==null)return;d+=(d?'L':'M')+X(i)+' '+Y(v)});var p=document.createElementNS(ns,'path');p.setAttribute('d',d);p.setAttribute('fill','none');p.setAttribute('stroke','var('+s[1]+')');p.setAttribute('stroke-width','2.5');svg.append(p);
+      s[2].forEach(function(v,i){if(v==null)return;var c=document.createElementNS(ns,'circle');c.setAttribute('cx',X(i));c.setAttribute('cy',Y(v));c.setAttribute('r',3.5);c.setAttribute('fill','var('+s[1]+')');var tt=document.createElementNS(ns,'title');tt.textContent=s[0]+': '+v+'% (run '+pts[i].id+', '+(pts[i].why||'')+')';c.append(tt);svg.append(c)})});
+    box.append(svg)}
+  function draw(d){data=d;var v=(d.byVersion||[])[0],T=$('tiles');T.textContent='';
+    var active=(d.runs||[]).find(function(r){return r.status==='queued'||r.status==='running'||r.status==='paused'});
+    $('state').textContent=active?('Run '+active.id+' ('+active.why+'): '+active.next+' of '+(active.total||'?')+' trials'+(active.status==='paused'?', paused. '+(active.err||'')+(active.wait?' Carries on '+active.wait+'.':''):'')):'No run in progress.';
+    $('state').textContent+=' Evals used '+d.allowance.usedToday+' of '+d.allowance.evalPerDay+' model calls today.';
+    if(v){var reg=v.suites.regression||{},cap=v.suites.capability||{};
+      $('verinfo').textContent='Version '+v.version+', '+v.runs+' run'+(v.runs>1?'s':'')+', '+v.k+' trial'+(v.k>1?'s':'')+' of every task so far. pass@1 is the share of trials that pass; pass^'+v.k+' is the share of tasks that passed every time, which is what a household feels.';
+      tile(T,pc(reg.pass1),'Regression, pass@1',reg.tasks+' tasks');tile(T,pc(reg.passAllK),'Regression, pass^'+v.k,'passed every trial');
+      tile(T,pc(cap.pass1),'Capability, pass@1',cap.tasks+' tasks');tile(T,pc(cap.partial),'Capability, partial','share of checks met');
+      tile(T,pc(v.voice),'On voice','no emoji, calm, short');tile(T,num(v.p50ms&&Math.round(v.p50ms/100)/10,'s'),'Typical time','95%: '+num(v.p95ms&&Math.round(v.p95ms/100)/10,'s'));
+      tile(T,num(v.callsPerTrial),'Model calls per task','cost');tile(T,v.reviewed?pc(v.graderWrong/v.reviewed*100):'–','Tests found unfair',v.reviewed+' failures read')}
+    else T.append(el('p','','Nothing measured yet for this version.'));
+    chart(d.runs||[],[]);
+    var C=$('changes');C.textContent='';
+    [['Broke since the run before',d.diff.broke,'fail'],['Fixed since the run before',d.diff.fixed,'pass'],['Flaky (passes some trials, not all)',d.flaky,'warnc'],['Ready to graduate to regression',d.graduate,'pass']].forEach(function(x){var p=el('div','q');p.append(el('b','',x[0]+': '));if(!x[1].length)p.append(document.createTextNode('none'));x[1].forEach(function(id,i){p.append(el('span','pill '+x[2],id),document.createTextNode(' '))});C.append(p)});
+    var last=(d.runs||[]).find(function(r){return r.status==='done'&&r.summary});
+    if(last){var K=last.summary.k;table($('groups'),K>1?['Kind of task','Tasks','pass@1','pass@'+K,'pass^'+K,'Partial']:['Kind of task','Tasks','Passed','Partial'],Object.keys(last.summary.groups).sort().map(function(g){var s=last.summary.groups[g];return K>1?[g,s.tasks,pc(s.pass1),pc(s.passAtK),pc(s.passAllK),pc(s.partial)]:[g,s.tasks,pc(s.pass1),pc(s.partial)]}))}else $('groups').textContent='No finished run yet.';
+    var pick=$('pick');pick.textContent='';(d.runs||[]).filter(function(r){return r.status!=='queued'}).forEach(function(r){var o=el('option','','Run '+r.id+', '+String(r.at).slice(0,10)+', '+r.why+(r.version?', '+r.version:'')+(r.status!=='done'?' ('+r.status+')':''));o.value=r.id;if(r.id===d.run)o.selected=true;pick.append(o)});
+    var TR=$('trials');TR.textContent='';var bad=(d.trials||[]).filter(function(t){return !t.pass});
+    if(!d.trials||!d.trials.length)TR.append(el('p','','No trials yet.'));else if(!bad.length)TR.append(el('p','','Every trial in this run passed.'));
+    var shown=bad.slice(0,showAll?bad.length:8);if(bad.length>8&&!showAll){var more=el('button','ghost','Show all '+bad.length+' failures');more.type='button';more.onclick=function(){showAll=true;draw(data)};setTimeout(function(){TR.append(more)})}
+    shown.forEach(function(t){var c=el('div','card'),h=el('div','row');h.style.justifyContent='space-between';h.append(el('b','',t.case_id+' · trial '+t.trial),el('span','pill '+(t.suite==='capability'?'warnc':'fail'),t.suite+' · '+Math.round(t.score*100)+'% of checks'));c.append(h);
+      c.append(el('div','q','They said: '+t.said),el('div','q','Tote did: '+(t.did||'changed nothing')),el('div','q','Tote replied: '+(t.reply||'(nothing)')));
+      var f=[];try{f=JSON.parse(t.failed||'[]')}catch(e){}var ul=el('ul');f.forEach(function(x){ul.append(el('li','fail','Failed: '+x))});c.append(ul);
+      var bar=el('div','row');bar.style.marginTop='8px';[['agent',"Tote's mistake"],['grader','The test was unfair'],['','Not sure']].forEach(function(v){var b=el('button',(t.verdict||'')===v[0]?'':'ghost',v[1]);b.type='button';b.setAttribute('aria-pressed',String((t.verdict||'')===v[0]));b.style.minHeight='36px';b.style.padding='6px 12px';
+        b.onclick=function(){send('POST','/api/scorecard/verdict',{run:d.run,case:t.case_id,trial:t.trial,verdict:v[0]}).then(function(){t.verdict=v[0]||null;draw(data)})};bar.append(b)});c.append(bar);TR.append(c)});
+    table($('health'),['Week of','Turns','Missed','Undone','Corrected','Said twice','Not found','Typical time','Reminders','Useful','Too early','Pace error'],(d.health||[]).map(function(w){return [w.week,w.turns,pc(w.missRate),pc(w.undoRate),pc(w.correctedRate),pc(w.repeatRate),pc(w.notFoundRate),w.p50ms?Math.round(w.p50ms/100)/10+'s':'–',w.remindersSent,pc(w.remindUseful),pc(w.remindEarly),w.paceErrorDays==null?'–':w.paceErrorDays+' days ('+w.pacePurchases+')']}))}
+  function offline(){fetch('/evals/history.json',{cache:'no-store'}).then(function(r){return r.json()}).then(function(h){
+    table($('offline'),['When','Change','Router, held-out','Reminders on time','Too late','Pace off by','Living alone','Learning','Measuring'],h.slice().reverse().map(function(e){var s=e.suites||{},p=s.pace||{},rh=s.routerHeldOut||{};
+      return [String(e.at).slice(0,10)+(e.commit?' '+e.commit:''),e.note||'',rh.meanGate!=null?rh.meanGate+'% (worst '+rh.minGate+'%)':'–',pc(p.reminderOnTime),pc(p.reminderLate),p.errorDays!=null?p.errorDays+' days':'–',pc(p.livingAlone),s.learning?s.learning.pass+'/'+s.learning.total:'–',s.measuring?s.measuring.pass+'/'+s.measuring.total:'–']}))},function(){$('offline').textContent='No offline scores recorded yet.'})}
+  function load(run){return send('GET','/api/scorecard'+(run?'?run='+run:'')).then(draw,function(e){$('state').textContent=e===401?'Sign in to Stocker in this browser first.':'Could not load the scorecard.'})}
+  // while this page is open, an open run moves faster than the background pace of a few trials a minute
+  function step(){if(stepping)return;stepping=true;send('POST','/api/scorecard/step').then(function(r){stepping=false;load($('pick').value);if(r&&r.status==='running')setTimeout(step,1500)},function(){stepping=false})}
+  $('pick').onchange=function(){showAll=false;load(this.value)};
+  $('run').onclick=function(){$('run').disabled=true;send('POST','/api/scorecard/run',{trials:1}).then(function(r){$('run').disabled=false;$('state').textContent=r.queued?'Started run '+r.id+'.':'Run '+r.id+' is already going.';step()},function(){$('run').disabled=false;$('state').textContent='Could not start a run.'})};
+  $('stop').onclick=function(){send('POST','/api/scorecard/stop').then(function(){load()})};
+  load().then(function(){var a=data&&(data.runs||[]).find(function(r){return r.status==='queued'||r.status==='running'});if(a)step()});offline();
+})();
+</script></main></body></html>
