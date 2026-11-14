@@ -263,20 +263,27 @@ async function picture(env, name) {
   const key = keyOf(name).slice(0, 60);
   if (!key) return null;
   const hit = await env.DB.prepare('SELECT data FROM pics WHERE name_key = ?').bind(key).first();
-  if (hit && hit.data) return new Uint8Array(hit.data);
+  if (hit) return hit.data && hit.data.byteLength > 100 ? new Uint8Array(hit.data) : null; // an empty row means "tried, no picture": do not try again
   // Only draw things that are actually in the inventory, so the endpoint cannot be used as a free image generator.
-  const item = await env.DB.prepare('SELECT name FROM items WHERE name_key = ?').bind(key).first();
-  if (!item) return null;
+  const item = await env.DB.prepare('SELECT name, category FROM items WHERE name_key = ?').bind(key).first();
+  if (!item || (await quotaOut(env))) return null;
+  const style = ', household product, close-up filling most of the frame, soft matte 3D clay render, centered, three-quarter view, plain very light warm grey background, soft studio lighting, gentle shadow, pastel colours, no text, no labels, no people, no hands';
   const subject = item.name.replace(/[^\p{L}\p{N} '&-]/gu, ' ').replace(/\s+/g, ' ').trim().slice(0, 60);
-  const r = await env.AI.run(env.IMAGE_MODEL || '@cf/black-forest-labs/flux-1-schnell', {
-    prompt: 'A single ' + subject + ', household product, close-up filling most of the frame, soft matte 3D clay render, centered, three-quarter view, plain very light warm grey background, soft studio lighting, gentle shadow, pastel colours, no text, no labels, no logos, no people, no hands',
-    steps: 4,
-  });
-  if (!r || !r.image) return null;
-  const bytes = Uint8Array.from(atob(r.image), (c) => c.charCodeAt(0));
-  if (bytes.length < 2_000_000) {
-    await env.DB.prepare('INSERT OR REPLACE INTO pics (name_key, data, made) VALUES (?, ?, ?)').bind(key, bytes.buffer, new Date().toISOString()).run();
+  // the image filter sometimes objects to ordinary grocery words (chicken breast, thighs, rump); the second try names only the kind of thing
+  const tries = ['A single ' + subject + style, 'A single grocery item from the ' + String(item.category || 'pantry').toLowerCase() + ' aisle in its packaging' + style];
+  let r = null;
+  for (const prompt of tries) {
+    try { r = await env.AI.run(env.IMAGE_MODEL || '@cf/black-forest-labs/flux-1-schnell', { prompt, steps: 4 }); if (r && r.image) break; }
+    catch (e) {
+      const msg = String((e && e.message) || e);
+      if (/4006|daily free allocation|neurons/i.test(msg)) { await env.DB.prepare("INSERT INTO settings (k, v) VALUES ('aiq', ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v").bind(utcDay()).run().catch(() => {}); return null; }
+      if (!/8007|NSFW/i.test(msg)) throw e;
+      r = null;
+    }
   }
+  if (!r || !r.image) { await env.DB.prepare('INSERT OR REPLACE INTO pics (name_key, data, made) VALUES (?, ?, ?)').bind(key, new Uint8Array(0).buffer, new Date().toISOString()).run(); return null; }
+  const bytes = Uint8Array.from(atob(r.image), (c) => c.charCodeAt(0));
+  if (bytes.length < 2_000_000) await env.DB.prepare('INSERT OR REPLACE INTO pics (name_key, data, made) VALUES (?, ?, ?)').bind(key, bytes.buffer, new Date().toISOString()).run();
   return bytes;
 }
 
@@ -455,7 +462,21 @@ async function allow(env, name, mins, limit) {
   return Number(row && row.v) <= limit;
 }
 // every model call passes through here: a burst limit and a daily ceiling, so a loop or a stranger cannot run up a bill
-const aiBudget = async (env) => (await allow(env, 'ai', 10, 40)) && (await allow(env, 'aiday', 1440, 400));
+const utcDay = () => new Date().toISOString().slice(0, 10);
+const quotaOut = async (env) => { const r = await env.DB.prepare("SELECT v FROM settings WHERE k = 'aiq'").first(); return !!r && r.v === utcDay(); };
+const aiBudget = async (env) => !(await quotaOut(env)) && (await allow(env, 'ai', 10, 40)) && (await allow(env, 'aiday', 1440, 400));
+// turn a model failure into the right answer for the app; the daily allowance running out is remembered until the day ends (UTC)
+async function aiFail(env, e, what) {
+  const msg = String((e && e.message) || e);
+  if (/4006|daily free allocation|neurons/i.test(msg)) {
+    await env.DB.prepare("INSERT INTO settings (k, v) VALUES ('aiq', ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v").bind(utcDay()).run().catch(() => {});
+    console.error(what + ' stopped: daily AI allowance used up');
+    return json({ error: 'ai_quota' }, 429);
+  }
+  console.error(what + ' failed', msg);
+  return json({ error: 'ai_failed' }, 502);
+}
+const limited = async (env) => json({ error: (await quotaOut(env)) ? 'ai_quota' : 'slow_down' }, 429);
 // the reply is checked after the model writes it, because a prompt alone is not a guarantee
 function guardReply(text, profile) {
   let out = String(text || '').replace(/[*_#`<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, 500);
@@ -972,15 +993,16 @@ async function api(request, env, url) {
   }
 
   if (path === '/api/meals' && method === 'POST') {
-    if (!(await aiBudget(env))) return json({ error: 'slow_down' }, 429);
+    if (!(await aiBudget(env))) return limited(env);
     try { return json(await meals(env, today, await getProfile(env))); }
-    catch (e) { console.error('meals failed', String((e && e.message) || e)); return json({ error: 'ai_failed' }, 502); }
+    catch (e) { return aiFail(env, e, 'meals'); }
   }
 
   if (path === '/api/extras' && method === 'POST') {
     const text = scrub(String((await request.json().catch(() => ({}))).text || '')).replace(/[<>]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80);
     if (!text) return json({ error: 'empty' }, 400);
     const n = await env.DB.prepare('SELECT COUNT(*) AS n FROM extras').first();
+    if (await env.DB.prepare('SELECT id FROM extras WHERE lower(text) = lower(?)').bind(text).first()) return json({ ok: true, already: true });
     if (n && n.n >= 100) return json({ error: 'full' }, 400);
     await env.DB.prepare('INSERT INTO extras (id, text, who, added) VALUES (?, ?, ?, ?)').bind(crypto.randomUUID(), text, me || null, new Date().toISOString()).run();
     return json({ ok: true });
@@ -1010,7 +1032,7 @@ async function api(request, env, url) {
 
   if (path === '/api/chat' && method === 'POST') {
     const body = (await request.json().catch(() => null)) || {};
-    if (!(await aiBudget(env))) return json({ error: 'slow_down' }, 429);
+    if (!(await aiBudget(env))) return limited(env);
     try {
       let text = String(body.text || '').replace(/\s+/g, ' ').trim().slice(0, 600), heard = '';
       if (!text && typeof body.audio === 'string' && body.audio.length <= 8_000_000) { text = heard = (await hearAudio(env, body.audio)).slice(0, 600); if (!text) return json({ error: 'silent' }, 422); }
@@ -1028,8 +1050,7 @@ async function api(request, env, url) {
       const extra = q ? ' ' + (await chatAnswer(env, q, history, (await env.DB.prepare('SELECT name, qty, unit, expiry, expiry_est, frozen, low, area, category FROM items ORDER BY name').all()).results, today, profile, [])) : '';
       return json({ heard, reply: reply + extra, changes: result.changes, missed: result.missed || [], proposal: turn.proposal, remembered: turn.remembered || '', route: turn.route });
     } catch (e) {
-      console.error('chat failed', String((e && e.message) || e));
-      return json({ error: 'ai_failed' }, 502);
+      return aiFail(env, e, 'chat');
     }
   }
 
@@ -1051,8 +1072,7 @@ async function api(request, env, url) {
       const reply = turn.reply ? turn.reply : turn.out.actions.length || turn.proposal.length ? '' : await chatAnswer(env, text.slice(0, 600), [], rows, day, profile, []);
       return json({ actions: turn.out.actions, proposed: turn.proposal, reply, blocked: turn.blocked, route: turn.route });
     } catch (e) {
-      console.error('eval failed', String((e && e.message) || e));
-      return json({ error: 'ai_failed', message: String((e && e.message) || e).slice(0, 200) }, 502);
+      return aiFail(env, e, 'eval');
     }
   }
 
@@ -1089,7 +1109,7 @@ async function api(request, env, url) {
 
   if (path.startsWith('/api/scan/') && (method === 'POST' || method === 'GET')) {
     const kind = path.slice('/api/scan/'.length);
-    if (kind !== 'barcode' && !(await aiBudget(env))) return json({ error: 'slow_down' }, 429);
+    if (!(await aiBudget(env))) return limited(env);
     const known = (await env.DB.prepare('SELECT name, qty, unit FROM items ORDER BY name').all()).results.map((r) => r.name + ' (' + Math.round(r.qty * 100) / 100 + ' ' + r.unit + ')');
     try {
       let text = '', heard = '', product = null;
@@ -1123,8 +1143,7 @@ async function api(request, env, url) {
     } catch (e) {
       const msg = String((e && e.message) || e);
       if (/agree/i.test(msg)) return json({ error: 'licence' }, 409);
-      console.error('scan failed', kind, msg);
-      return json({ error: 'ai_failed', message: msg.slice(0, 300) }, 502);
+      return aiFail(env, e, 'scan ' + kind);
     }
   }
   return json({ error: 'not_found' }, 404);
