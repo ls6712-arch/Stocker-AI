@@ -142,6 +142,7 @@ CREATE TABLE IF NOT EXISTS eval_trials (
   ms INTEGER,
   calls INTEGER,
   tokens INTEGER,
+  cost REAL,
   verdict TEXT,
   PRIMARY KEY (run, case_id, trial)
 );

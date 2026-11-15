@@ -503,8 +503,8 @@ const isQuota = (e) => /4006|daily free allocation|neurons/i.test(String((e && e
 const markQuota = (env) => env.DB.prepare("INSERT INTO settings (k, v) VALUES ('aiq', ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v").bind(utcDay()).run().catch(() => {});
 // counts the model calls and tokens one request spends, for the weekly numbers
 function meter(env) {
-  const m = { calls: 0, tokens: 0 };
-  m.env = { ...env, AI: { run: async (model, input) => { m.calls++; const r = await env.AI.run(model, input); m.tokens += tokensOf(input, r); return r; } } };
+  const m = { calls: 0, tokens: 0, cost: 0 };
+  m.env = { ...env, AI: { run: async (model, input) => { m.calls++; const r = await env.AI.run(model, input); m.tokens += tokensOf(input, r); m.cost += costOf(model, input, r); return r; } } };
   return m;
 }
 const limited = async (env) => json({ error: (await quotaOut(env)) ? 'ai_quota' : 'slow_down' }, 429);
@@ -1665,7 +1665,7 @@ async function mcp(request, env) {
 
 // ---------- storage that newer versions need ----------
 // Run once per start-up: adds what is missing and never touches what is there.
-const SCHEMA = 5;
+const SCHEMA = 6;
 let ready = null;
 function migrate(env) {
   if (!ready) ready = (async () => {
@@ -1682,6 +1682,7 @@ function migrate(env) {
     ]) await env.DB.prepare(sql).run();
     await env.DB.prepare('ALTER TABLE turns ADD COLUMN ms INTEGER').run().catch(() => {});
     await env.DB.prepare('ALTER TABLE eval_trials ADD COLUMN tokens INTEGER').run().catch(() => {});
+    await env.DB.prepare('ALTER TABLE eval_trials ADD COLUMN cost REAL').run().catch(() => {});
     await env.DB.prepare('CREATE TABLE IF NOT EXISTS facts (name_key TEXT PRIMARY KEY, name TEXT NOT NULL, unit TEXT, area TEXT, category TEXT, shelf_days INTEGER, finish_days INTEGER, seen INTEGER NOT NULL DEFAULT 1, at TEXT NOT NULL)').run();
     await env.DB.prepare('CREATE TABLE IF NOT EXISTS memo (k TEXT PRIMARY KEY, actions TEXT NOT NULL, hits INTEGER NOT NULL DEFAULT 0, at TEXT NOT NULL, used TEXT, bad INTEGER NOT NULL DEFAULT 0)').run();
     await env.DB.prepare("INSERT INTO settings (k, v) VALUES ('schema', ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v").bind(String(SCHEMA)).run();
@@ -1939,18 +1940,35 @@ function tokensOf(input, res) {
   const said = JSON.stringify((input && (input.messages || input.prompt)) || '').length, back = JSON.stringify((res && res.response) || '').length;
   return Math.round((said + back) / 4);
 }
+// What a model call cost in US dollars, from Cloudflare's published per-token prices (checked 15 Nov 2026). A model not listed is
+// priced as the large text model, so a cost is never under-counted.
+const PRICE = {
+  '@cf/meta/llama-3.3-70b-instruct-fp8-fast': [0.293, 2.253],
+  '@cf/meta/llama-3.1-8b-instruct-fp8-fast': [0.045, 0.384],
+  '@cf/meta/llama-3.1-8b-instruct': [0.282, 0.827],
+  '@cf/meta/llama-3.2-11b-vision-instruct': [0.049, 0.676],
+  '@cf/meta/llama-3.2-3b-instruct': [0.051, 0.335],
+};
+function costOf(model, input, res) {
+  if (/whisper/.test(model)) return 0.0005 / 4; // about 15 seconds of audio
+  if (/flux/.test(model)) return 0.0005;
+  const p = PRICE[model] || PRICE['@cf/meta/llama-3.3-70b-instruct-fp8-fast'], u = (res && res.usage) || {};
+  const total = tokensOf(input, res), out = u.completion_tokens != null ? Number(u.completion_tokens) : Math.round(JSON.stringify((res && res.response) || '').length / 4);
+  return (Math.max(0, total - out) * p[0] + out * p[1]) / 1e6;
+}
 // A phrase this home has said before, written the same way however it was typed: "Tote, we're OUT of milk!!" = "we're out of milk"
 const memoKey = (t) => unhail(String(t || '').toLowerCase().normalize('NFKC'), '').replace(/[^\p{L}\p{N}%' ]+/gu, ' ').replace(/\s+/g, ' ').trim().slice(0, 200);
 // A task marked "offline" runs as if the day's AI allowance were used up: any model call fails, as it would for a household.
 const NO_CREDITS = 'simulated: no AI credits';
 async function evalCase(env, c, day) {
-  let calls = 0, tokens = 0;
+  let calls = 0, tokens = 0, cost = 0;
   const ai = env.AI;
   const e = { ...env, DB: null, MEMO: new Map(), AI: { run: async (...a) => {
     calls++;
     if (c.offline) throw new Error(NO_CREDITS);
     const res = await ai.run(...a);
     tokens += tokensOf(a[1], res);
+    cost += costOf(a[0], a[1], res);
     return res;
   } } };
   // what this home taught Tote before the task starts (phrases it already understood), so recall can be tested
@@ -1978,12 +1996,12 @@ async function evalCase(env, c, day) {
       history.push({ role: 'user', content: text }, { role: 'assistant', content: r.reply });
     }
   }
-  r.calls = calls;
+  r.calls = calls; r.cost = cost;
   const graded = (c.checks || []).map((k) => gradeCheck(k, r, rows, list));
   const passed = graded.filter((g) => g[0]).length;
   return {
     pass: graded.length > 0 && passed === graded.length, score: graded.length ? passed / graded.length : 0, voice: onVoice(r.reply),
-    failed: graded.filter((g) => !g[0]).map((g) => g[1]), said: said.join(' → '), reply: r.reply || '', ms: Date.now() - t0, calls, tokens,
+    failed: graded.filter((g) => !g[0]).map((g) => g[1]), said: said.join(' → '), reply: r.reply || '', ms: Date.now() - t0, calls, tokens, cost,
     did: (r.blocked ? 'BLOCKED; ' : '') + (r.actions || []).map((a) => a.action + ' ' + a.quantity + ' ' + a.unit + ' ' + a.name + (a.note ? ' {' + a.note + '}' : '') + (a.warn ? ' [' + a.warn + ']' : '')).concat((r.proposed || []).map((a) => 'asks: use ' + a.quantity + ' ' + a.unit + ' ' + a.name)).join('; '),
   };
 }
@@ -2011,6 +2029,7 @@ function gradeCheck(c, r, rows, list) {
     case 'replyHas': return [rx(v).test(reply), 'reply mentions /' + v + '/'];
     case 'replyNot': return [!rx(v).test(reply), 'reply avoids /' + v + '/'];
     case 'replyMax': return [reply.length <= v, 'reply at most ' + v + ' characters (got ' + reply.length + ')'];
+    case 'maxCost': return [(r.cost || 0) <= v, 'cost at most $' + v + ' (got $' + (Math.round((r.cost || 0) * 1e6) / 1e6) + ')'];
     case 'maxCalls': return [(r.calls || 0) <= v, 'at most ' + v + ' model call' + (v === 1 ? '' : 's') + ' (got ' + (r.calls || 0) + ')'];
     case 'stateQty': { const x = row(v[0]); return [!!x && x.qty >= v[1] && x.qty <= v[2], 'ends with ' + v[1] + '-' + v[2] + ' of ' + v[0] + ' (got ' + (x ? x.qty : 'none') + ')']; }
     case 'onList': return [onList(v), v + ' ends up on the list'];
@@ -2046,6 +2065,8 @@ function summarize(trials) {
     // tokens per task, and the share of tasks done without any model call (what still works when the allowance runs out)
     tokensPerTrial: trials.some((t) => t.tokens) ? Math.round(trials.reduce((s, t) => s + (t.tokens || 0), 0) / trials.length) : null,
     noModel: pct(trials.filter((t) => !t.calls).length, trials.length),
+    // US dollars per 1,000 tasks, at Cloudflare's published prices
+    costPer1000: trials.some((t) => t.cost) ? Math.round((trials.reduce((s, t) => s + (t.cost || 0), 0) / trials.length) * 1000 * 1000) / 1000 : null,
     graderWrong: trials.filter((t) => t.verdict === 'grader').length, reviewed: trials.filter((t) => t.verdict).length,
     cases: cases.map((c) => ({ id: c.id, suite: c.suite, grp: c.grp, n: c.n, p: c.p })),
   };
@@ -2091,24 +2112,24 @@ async function stepRun(env, max = EVAL_STEP, budgetMs = 40000) {
     try {
       const t = await evalCase(env, c, day);
       calls += t.calls;
-      rows.push([run.id, c.id, trial, c.suite, c.group, t.pass ? 1 : 0, t.score, t.voice ? 1 : 0, JSON.stringify(t.failed).slice(0, 1500), t.said.slice(0, 900), t.did.slice(0, 900), t.reply.slice(0, 900), t.ms, t.calls, t.tokens || 0]);
+      rows.push([run.id, c.id, trial, c.suite, c.group, t.pass ? 1 : 0, t.score, t.voice ? 1 : 0, JSON.stringify(t.failed).slice(0, 1500), t.said.slice(0, 900), t.did.slice(0, 900), t.reply.slice(0, 900), t.ms, t.calls, t.tokens || 0, t.cost || 0]);
       i++;
     } catch (e) {
       const msg = String((e && e.message) || e);
       if (/4006|daily free allocation|neurons/i.test(msg)) { await aiFail(env, e, 'eval run'); status = 'paused'; err = 'AI allowance used up for today'; wait = addDays(utcDay(), 1); break; }
       calls++;
-      rows.push([run.id, c.id, trial, c.suite, c.group, 0, 0, 1, JSON.stringify(['error: ' + msg.slice(0, 200)]), String(c.text || (c.turns || []).join(' → ')).slice(0, 900), '', '', Date.now() - t0, 1, 0]);
+      rows.push([run.id, c.id, trial, c.suite, c.group, 0, 0, 1, JSON.stringify(['error: ' + msg.slice(0, 200)]), String(c.text || (c.turns || []).join(' → ')).slice(0, 900), '', '', Date.now() - t0, 1, 0, 0]);
       i++;
     }
   }
-  const ins = 'INSERT OR REPLACE INTO eval_trials (run, case_id, trial, suite, grp, pass, score, voice, failed, said, did, reply, ms, calls, tokens) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
+  const ins = 'INSERT OR REPLACE INTO eval_trials (run, case_id, trial, suite, grp, pass, score, voice, failed, said, did, reply, ms, calls, tokens, cost) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
   const stmts = rows.map((r) => env.DB.prepare(ins).bind(...r));
   stmts.push(env.DB.prepare("INSERT INTO settings (k, v) VALUES (?, ?) ON CONFLICT(k) DO UPDATE SET v = CAST(CAST(v AS INTEGER) + ? AS TEXT)").bind('evalcalls:' + utcDay(), String(calls), calls));
   await env.DB.batch(stmts);
   let summary = null;
   if (i >= total) {
     status = 'done';
-    summary = summarize((await env.DB.prepare('SELECT case_id, suite, grp, pass, score, voice, ms, calls, tokens, verdict FROM eval_trials WHERE run = ?').bind(run.id).all()).results);
+    summary = summarize((await env.DB.prepare('SELECT case_id, suite, grp, pass, score, voice, ms, calls, tokens, cost, verdict FROM eval_trials WHERE run = ?').bind(run.id).all()).results);
   }
   await env.DB.prepare('UPDATE eval_runs SET status = ?, next = ?, calls = calls + ?, err = ?, wait = ?, done = ?, summary = COALESCE(?, summary) WHERE id = ?')
     .bind(status, i, calls, err || null, wait, status === 'done' ? new Date().toISOString() : null, summary ? JSON.stringify(summary) : null, run.id).run();
@@ -2141,6 +2162,7 @@ async function health(env, today) {
       pacePurchases: paceN, paceErrorDays: paceN ? Math.round((stat('pace_abs', w) / paceN) * 10) / 10 : null, paceWithin2: pct(stat('pace_ok', w), paceN),
       // chat turns that needed no model call (code or a remembered phrase), and tokens spent per chat turn
       noModel: pct(stat('turn_free', w), stat('turn_free', w) + stat('turn_model', w)), tokensPerTurn: stat('turn_free', w) + stat('turn_model', w) ? Math.round(stat('turn_tokens', w) / (stat('turn_free', w) + stat('turn_model', w))) : null,
+      costPer1000Turns: stat('turn_free', w) + stat('turn_model', w) ? Math.round(stat('turn_microusd', w) / (stat('turn_free', w) + stat('turn_model', w))) / 1000 : null,
     };
   });
 }
@@ -2152,7 +2174,7 @@ async function scorecard(env, today, runId) {
   for (const r of runs.filter((x) => x.status === 'done' && x.version)) (versions[r.version] = versions[r.version] || []).push(r.id);
   const byVersion = [];
   for (const [v, ids] of Object.entries(versions).slice(0, 6)) {
-    const t = (await env.DB.prepare('SELECT case_id, suite, grp, pass, score, voice, ms, calls, tokens, verdict FROM eval_trials WHERE run IN (' + ids.map(() => '?').join(',') + ')').bind(...ids).all()).results;
+    const t = (await env.DB.prepare('SELECT case_id, suite, grp, pass, score, voice, ms, calls, tokens, cost, verdict FROM eval_trials WHERE run IN (' + ids.map(() => '?').join(',') + ')').bind(...ids).all()).results;
     const s = summarize(t);
     byVersion.push({ version: v, runs: ids.length, first: runs.find((r) => r.id === Math.min(...ids)).at, ...s, cases: s.cases });
   }
@@ -2459,7 +2481,7 @@ async function api(request, env, url) {
       try { t = await go(ai); }
       catch (e) { if (!isQuota(e)) throw e; await markQuota(env); ai = false; t = await go(false); } // nothing is applied before the model has read the message
       await noteTurn(env, { said: text, route: t.route, intent: t.intent, reply: t.reply, changes: t.changes, proposal: t.proposal, missed: t.missed, t0 });
-      await bump(env, m.calls ? 'turn_model' : 'turn_free'); if (m.tokens) await bump(env, 'turn_tokens', m.tokens);
+      await bump(env, m.calls ? 'turn_model' : 'turn_free'); if (m.tokens) await bump(env, 'turn_tokens', m.tokens); if (m.cost) await bump(env, 'turn_microusd', Math.round(m.cost * 1e6));
       return json({ heard, reply: t.reply, changes: t.changes, missed: t.missed, proposal: t.proposal, remembered: t.remembered, route: t.route, blocked: t.blocked, offline: !ai, via: t.via });
     } catch (e) {
       return aiFail(env, e, 'chat');
