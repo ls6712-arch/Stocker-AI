@@ -1,0 +1,886 @@
+[
+{
+"store": "Subzi Mandi",
+"line": "SWAD MASOOR DAL 4LB 6.99",
+"name": "masoor|lentil",
+"place": "Kitchen/Pantry",
+"keep": [
+180,
+730
+],
+"allergens": [],
+"tags": [],
+"clean": "Masoor Dal"
+},
+{
+"store": "Subzi Mandi",
+"line": "DEEP SAMOSA PUNJABI 12PC 5.99",
+"name": "samosa",
+"place": "Kitchen/Frozen",
+"keep": [
+60,
+365
+],
+"allergens": [
+"W"
+],
+"tags": [
+"frozen"
+],
+"clean": "Punjabi Samosa"
+},
+{
+"store": "Subzi Mandi",
+"line": "ANAND KHOYA 12OZ 6.49",
+"name": "khoa|khoya",
+"place": "Kitchen/Dairy",
+"keep": [
+2,
+10
+],
+"allergens": [
+"M"
+],
+"tags": [
+"dairy"
+],
+"clean": "Khoya"
+},
+{
+"store": "Subzi Mandi",
+"line": "MTR RAVA IDLI MIX 500G 3.99",
+"name": "idli|rava",
+"place": "Kitchen/Pantry",
+"keep": [
+90,
+365
+],
+"allergens": [
+"W"
+],
+"tags": [],
+"clean": "Rava Idli Mix"
+},
+{
+"store": "Subzi Mandi",
+"line": "LAUKI 1.8LB 2.69",
+"name": "lauki|bottle gourd",
+"place": "Kitchen/Produce",
+"keep": [
+4,
+10
+],
+"allergens": [],
+"tags": [],
+"clean": "Lauki"
+},
+{
+"store": "Subzi Mandi",
+"line": "AMUL CHEESE SLICES 200G 4.49",
+"name": "cheese",
+"place": "Kitchen/Dairy",
+"keep": [
+30,
+180
+],
+"allergens": [
+"M"
+],
+"tags": [
+"dairy"
+],
+"clean": "Amul Cheese Slices"
+},
+{
+"store": "JioMart",
+"line": "Fortune Besan 1 kg ₹ 112",
+"name": "besan",
+"place": "Kitchen/Pantry",
+"keep": [
+180,
+365
+],
+"allergens": [],
+"tags": [],
+"clean": "Besan"
+},
+{
+"store": "JioMart",
+"line": "Tata Tea Gold 500 g ₹ 285",
+"name": "tea",
+"place": "Kitchen/Drinks",
+"keep": [
+180,
+730
+],
+"allergens": [],
+"tags": [],
+"clean": "Tata Tea Gold"
+},
+{
+"store": "JioMart",
+"line": "Patanjali Cow Ghee 1 L ₹ 620",
+"name": "ghee",
+"place": "Kitchen/Pantry",
+"keep": [
+180,
+365
+],
+"allergens": [
+"M"
+],
+"tags": [
+"dairy"
+],
+"clean": "Cow Ghee"
+},
+{
+"store": "DMart",
+"line": "Sunfeast Dark Fantasy Choco Fills 300 g ₹ 160",
+"name": "biscuit|cookie|dark fantasy",
+"place": "Kitchen/Snacks",
+"keep": [
+90,
+365
+],
+"allergens": [
+"W",
+"M",
+"S"
+],
+"tags": [],
+"clean": "Dark Fantasy Choco Fills"
+},
+{
+"store": "DMart",
+"line": "Kissan Mixed Fruit Jam 500 g ₹ 145",
+"name": "jam",
+"place": "Kitchen/Pantry",
+"keep": [
+180,
+540
+],
+"allergens": [],
+"tags": [],
+"clean": "Mixed Fruit Jam"
+},
+{
+"store": "Mitra Q",
+"line": "CJ BIBIGO KIMCHI MANDU 1.5LB 8.99",
+"name": "dumpling|mandu",
+"place": "Kitchen/Frozen",
+"keep": [
+60,
+365
+],
+"allergens": [
+"W"
+],
+"tags": [
+"frozen"
+],
+"clean": "Kimchi Mandu"
+},
+{
+"store": "Mitra Q",
+"line": "OTTOGI MAYONNAISE 500G 4.99",
+"name": "mayo",
+"place": "Kitchen/Pantry",
+"keep": [
+90,
+365
+],
+"allergens": [
+"E"
+],
+"tags": [
+"egg"
+],
+"clean": "Ottogi Mayonnaise"
+},
+{
+"store": "Mitra Q",
+"line": "ENOKI MUSHROOM 200G 1.49",
+"name": "enoki|mushroom",
+"place": "Kitchen/Produce",
+"keep": [
+3,
+10
+],
+"allergens": [],
+"tags": [],
+"clean": "Enoki"
+},
+{
+"store": "Mitra Q",
+"line": "CJ HETBAHN COOKED RICE 12PK 13.99",
+"name": "rice",
+"place": "Kitchen/Pantry",
+"keep": [
+180,
+365
+],
+"allergens": [],
+"tags": [],
+"clean": "Hetbahn Cooked Rice"
+},
+{
+"store": "Mitra Q",
+"line": "SEMPIO SOY SAUCE 860ML 6.49",
+"name": "soy sauce",
+"place": "Kitchen/Pantry",
+"keep": [
+365,
+900
+],
+"allergens": [
+"S",
+"W"
+],
+"tags": [
+"liquid"
+],
+"clean": "Sempio Soy Sauce"
+},
+{
+"store": "Mitra Q",
+"line": "ODENG FISH CAKE 1LB 3.99",
+"name": "fish cake|odeng",
+"place": "Kitchen/Dairy",
+"keep": [
+5,
+21
+],
+"allergens": [
+"F",
+"W"
+],
+"tags": [
+"fish"
+],
+"clean": "Odeng Fish Cake"
+},
+{
+"store": "Great Wall",
+"line": "LEE KUM KEE CHILI GARLIC SAUCE 8OZ 2.99",
+"name": "chili|sauce",
+"place": "Kitchen/Pantry",
+"keep": [
+180,
+540
+],
+"allergens": [],
+"tags": [],
+"clean": "Chili Garlic Sauce"
+},
+{
+"store": "Great Wall",
+"line": "DRIED SHIITAKE MUSHROOM 5OZ 7.99",
+"name": "shiitake",
+"place": "Kitchen/Pantry",
+"keep": [
+180,
+730
+],
+"allergens": [],
+"tags": [],
+"clean": "Dried Shiitake"
+},
+{
+"store": "Great Wall",
+"line": "PEKING DUCK HALF 18.99",
+"name": "duck",
+"place": "Kitchen/Meat",
+"keep": [
+1,
+5
+],
+"allergens": [],
+"tags": [
+"meat"
+],
+"clean": "Peking Duck"
+},
+{
+"store": "Great Wall",
+"line": "WONTON WRAPPERS 1LB 2.49",
+"name": "wrapper",
+"place": "Kitchen/Dairy",
+"keep": [
+7,
+30
+],
+"allergens": [
+"W"
+],
+"tags": [],
+"clean": "Wonton Wrappers"
+},
+{
+"store": "Great Wall",
+"line": "A CHOY 1LB 1.99",
+"name": "choy",
+"place": "Kitchen/Produce",
+"keep": [
+3,
+7
+],
+"allergens": [],
+"tags": [],
+"clean": "A Choy"
+},
+{
+"store": "Tokyo Central",
+"line": "KIKKOMAN TSUYU 33.8OZ 7.99",
+"name": "tsuyu|sauce",
+"place": "Kitchen/Pantry",
+"keep": [
+180,
+540
+],
+"allergens": [
+"S",
+"W",
+"F"
+],
+"tags": [
+"fish",
+"liquid"
+],
+"clean": "Tsuyu"
+},
+{
+"store": "Tokyo Central",
+"line": "NISSIN DEMAE RAMEN SESAME 5PK 4.99",
+"name": "ramen",
+"place": "Kitchen/Pantry",
+"keep": [
+180,
+365
+],
+"allergens": [
+"W",
+"Z"
+],
+"tags": [],
+"clean": "Demae Ramen"
+},
+{
+"store": "Tokyo Central",
+"line": "MEIJI YAN YAN 2OZ 1.49",
+"name": "snack|yan yan",
+"place": "Kitchen/Snacks",
+"keep": [
+90,
+365
+],
+"allergens": [
+"W",
+"M",
+"S"
+],
+"tags": [],
+"clean": "Yan Yan"
+},
+{
+"store": "Tokyo Central",
+"line": "FROZEN EDAMAME 1LB 2.99",
+"name": "edamame",
+"place": "Kitchen/Frozen",
+"keep": [
+180,
+540
+],
+"allergens": [
+"S"
+],
+"tags": [
+"frozen"
+],
+"clean": "Edamame"
+},
+{
+"store": "Tokyo Central",
+"line": "TAMAGO EGG SUSHI 6PC 4.99",
+"name": "egg|tamago",
+"place": "Kitchen/Dairy",
+"keep": [
+1,
+3
+],
+"allergens": [
+"E"
+],
+"tags": [
+"egg"
+],
+"clean": "Tamago"
+},
+{
+"store": "Manila Oriental",
+"line": "MAMA SITAS ADOBO MIX 1.76OZ 1.29",
+"name": "adobo",
+"place": "Kitchen/Pantry",
+"keep": [
+180,
+730
+],
+"allergens": [
+"S",
+"W"
+],
+"tags": [],
+"clean": "Adobo Mix"
+},
+{
+"store": "Manila Oriental",
+"line": "UFC BANANA KETCHUP 320G 1.99",
+"name": "banana ketchup",
+"place": "Kitchen/Pantry",
+"keep": [
+180,
+540
+],
+"allergens": [],
+"tags": [],
+"clean": "Banana Ketchup"
+},
+{
+"store": "Manila Oriental",
+"line": "CDO PORK TOCINO 450G 5.49",
+"name": "tocino",
+"place": "Kitchen/Frozen",
+"keep": [
+30,
+180
+],
+"allergens": [],
+"tags": [
+"meat",
+"pork",
+"frozen"
+],
+"clean": "Pork Tocino"
+},
+{
+"store": "Manila Oriental",
+"line": "MAGNOLIA QUICKMELT CHEESE 440G 6.99",
+"name": "cheese",
+"place": "Kitchen/Dairy",
+"keep": [
+30,
+180
+],
+"allergens": [
+"M"
+],
+"tags": [
+"dairy"
+],
+"clean": "Quickmelt Cheese"
+},
+{
+"store": "Uwajimaya",
+"line": "THAI KITCHEN RED CURRY PASTE 4OZ 3.49",
+"name": "curry paste",
+"place": "Kitchen/Pantry",
+"keep": [
+180,
+540
+],
+"allergens": [],
+"tags": [],
+"clean": "Red Curry Paste"
+},
+{
+"store": "Uwajimaya",
+"line": "MAESRI PANANG CURRY PASTE 4OZ 1.49",
+"name": "curry paste",
+"place": "Kitchen/Pantry",
+"keep": [
+180,
+540
+],
+"allergens": [
+"C"
+],
+"tags": [
+"shellfish"
+],
+"clean": "Panang Curry Paste"
+},
+{
+"store": "Uwajimaya",
+"line": "VIET HUONG FISH SAUCE 24OZ 4.99",
+"name": "fish sauce",
+"place": "Kitchen/Pantry",
+"keep": [
+365,
+900
+],
+"allergens": [
+"F"
+],
+"tags": [
+"fish",
+"liquid"
+],
+"clean": "Viet Huong Fish Sauce"
+},
+{
+"store": "Uwajimaya",
+"line": "MAE PLOY SWEET CHILI SAUCE 25OZ 3.99",
+"name": "chili sauce",
+"place": "Kitchen/Pantry",
+"keep": [
+180,
+540
+],
+"allergens": [],
+"tags": [
+"liquid"
+],
+"clean": "Sweet Chili Sauce"
+},
+{
+"store": "El Super",
+"line": "CHOLULA HOT SAUCE 5OZ 2.99",
+"name": "hot sauce|salsa",
+"place": "Kitchen/Pantry",
+"keep": [
+180,
+730
+],
+"allergens": [],
+"tags": [
+"liquid"
+],
+"clean": "Cholula"
+},
+{
+"store": "El Super",
+"line": "LALA CREMA MEXICANA 15OZ 3.29",
+"name": "crema",
+"place": "Kitchen/Dairy",
+"keep": [
+7,
+21
+],
+"allergens": [
+"M"
+],
+"tags": [
+"dairy"
+],
+"clean": "Crema Mexicana"
+},
+{
+"store": "El Super",
+"line": "BOLILLOS 6CT 2.49",
+"name": "bolillo",
+"place": "Kitchen/Bakery",
+"keep": [
+2,
+5
+],
+"allergens": [
+"W"
+],
+"tags": [],
+"clean": "Bolillos"
+},
+{
+"store": "Cardenas",
+"line": "CARNITAS 1LB 7.99",
+"name": "carnitas|pork",
+"place": "Kitchen/Meat",
+"keep": [
+2,
+5
+],
+"allergens": [],
+"tags": [
+"meat",
+"pork"
+],
+"clean": "Carnitas"
+},
+{
+"store": "Cardenas",
+"line": "EL MEXICANO QUESO OAXACA 12OZ 4.99",
+"name": "queso|oaxaca",
+"place": "Kitchen/Dairy",
+"keep": [
+7,
+30
+],
+"allergens": [
+"M"
+],
+"tags": [
+"dairy"
+],
+"clean": "Queso Oaxaca"
+},
+{
+"store": "Cardenas",
+"line": "JARRITOS TAMARINDO 12.5OZ 1.29",
+"name": "jarritos|soda|drink",
+"place": "Kitchen/Drinks",
+"keep": [
+180,
+365
+],
+"allergens": [],
+"tags": [
+"liquid"
+],
+"clean": "Jarritos Tamarindo"
+},
+{
+"store": "Jerusalem Market",
+"line": "SABRA HUMMUS 10OZ 3.99",
+"name": "hummus",
+"place": "Kitchen/Dairy",
+"keep": [
+5,
+30
+],
+"allergens": [
+"Z"
+],
+"tags": [],
+"clean": "Sabra Hummus"
+},
+{
+"store": "Jerusalem Market",
+"line": "AKKAWI CHEESE 1LB 7.99",
+"name": "cheese|feta|akkawi",
+"place": "Kitchen/Dairy",
+"keep": [
+14,
+60
+],
+"allergens": [
+"M"
+],
+"tags": [
+"dairy"
+],
+"clean": "Akkawi Cheese"
+},
+{
+"store": "Jerusalem Market",
+"line": "MOGHRABIEH 2LB 4.99",
+"name": "couscous|moghrabieh",
+"place": "Kitchen/Pantry",
+"keep": [
+180,
+540
+],
+"allergens": [
+"W"
+],
+"tags": [],
+"clean": "Moghrabieh"
+},
+{
+"store": "Jerusalem Market",
+"line": "HALAL LAMB SHOULDER 2.4LB 21.58",
+"name": "lamb",
+"place": "Kitchen/Meat",
+"keep": [
+1,
+4
+],
+"allergens": [],
+"tags": [
+"meat"
+],
+"clean": "Lamb Shoulder"
+},
+{
+"store": "Ethiopian market",
+"line": "BERBERE SPICE 1LB 9.99",
+"name": "berbere",
+"place": "Kitchen/Pantry",
+"keep": [
+180,
+540
+],
+"allergens": [],
+"tags": [],
+"clean": "Berbere"
+},
+{
+"store": "Ethiopian market",
+"line": "TEFF FLOUR 2LB 8.99",
+"name": "teff",
+"place": "Kitchen/Pantry",
+"keep": [
+180,
+540
+],
+"allergens": [],
+"tags": [],
+"clean": "Teff Flour"
+},
+{
+"store": "Caribbean grocery",
+"line": "GRACE COCK FLAVOURED SOUP MIX 1.76OZ 1.29",
+"name": "soup",
+"place": "Kitchen/Pantry",
+"keep": [
+180,
+730
+],
+"allergens": [
+"W"
+],
+"tags": [],
+"clean": "Cock Soup Mix"
+},
+{
+"store": "Caribbean grocery",
+"line": "JAMAICAN BEEF PATTIES 4CT 6.99",
+"name": "patty|patties",
+"place": "Kitchen/Frozen",
+"keep": [
+60,
+365
+],
+"allergens": [
+"W"
+],
+"tags": [
+"meat",
+"beef",
+"frozen"
+],
+"clean": "Beef Patties"
+},
+{
+"store": "Gopuff",
+"line": "Nongshim Shin Ramyun Cup, 2.6 oz",
+"name": "ramen|ramyun",
+"place": "Kitchen/Pantry",
+"keep": [
+180,
+365
+],
+"allergens": [
+"W"
+],
+"tags": [],
+"clean": "Shin Ramyun Cup"
+},
+{
+"store": "DoorDash (H Mart)",
+"line": "Bibigo Gochujang Sauce, 11.5 oz",
+"name": "gochujang",
+"place": "Kitchen/Pantry",
+"keep": [
+180,
+730
+],
+"allergens": [
+"W",
+"S"
+],
+"tags": [],
+"clean": "Gochujang Sauce"
+},
+{
+"store": "Uber Eats (Patel Brothers)",
+"line": "Gits Rava Dosa Mix, 200 g",
+"name": "dosa|rava",
+"place": "Kitchen/Pantry",
+"keep": [
+90,
+365
+],
+"allergens": [
+"W"
+],
+"tags": [],
+"clean": "Rava Dosa Mix"
+},
+{
+"store": "FreshDirect",
+"line": "Kerrygold Pure Irish Butter, 8 oz",
+"name": "butter",
+"place": "Kitchen/Dairy",
+"keep": [
+30,
+120
+],
+"allergens": [
+"M"
+],
+"tags": [
+"dairy"
+],
+"clean": "Kerrygold Butter"
+},
+{
+"store": "Misfits Market",
+"line": "Organic Fresh Turmeric Root, 4 oz",
+"name": "turmeric|haldi",
+"place": "Kitchen/Produce",
+"keep": [
+14,
+30
+],
+"allergens": [],
+"tags": [],
+"clean": "Fresh Turmeric Root"
+},
+{
+"store": "Tesco",
+"line": "TRS CHAPATI FLOUR 10KG £12.00",
+"name": "atta|chapati flour",
+"place": "Kitchen/Pantry",
+"keep": [
+90,
+365
+],
+"allergens": [
+"W"
+],
+"tags": [],
+"clean": "Chapati Flour"
+},
+{
+"store": "Sainsbury's",
+"line": "Blue Dragon Fish Sauce 150ml £1.85",
+"name": "fish sauce",
+"place": "Kitchen/Pantry",
+"keep": [
+365,
+900
+],
+"allergens": [
+"F"
+],
+"tags": [
+"fish",
+"liquid"
+],
+"clean": "Fish Sauce"
+},
+{
+"store": "Sainsbury's",
+"line": "Patak's Lime Pickle 283g £1.75",
+"name": "pickle",
+"place": "Kitchen/Pantry",
+"keep": [
+180,
+730
+],
+"allergens": [
+"U"
+],
+"tags": [],
+"clean": "Lime Pickle"
+}
+]

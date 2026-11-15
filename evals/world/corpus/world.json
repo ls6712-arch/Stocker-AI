@@ -1,0 +1,380 @@
+[
+{
+"text": "atta khatam ho gaya, add to list",
+"persona": "Hinglish mom",
+"intent": "list_add",
+"items": [
+"atta"
+]
+},
+{
+"text": "bought 2 packets of paneer from patel",
+"persona": "Indian dad",
+"intent": "stated_update",
+"items": [
+"paneer"
+]
+},
+{
+"text": "used up the last of the toor dal for sambar",
+"persona": "South Indian cook",
+"intent": "stated_update",
+"items": [
+"toor dal"
+]
+},
+{
+"text": "kitna ghee bacha hai?",
+"persona": "Hindi speaker",
+"intent": "question",
+"items": []
+},
+{
+"text": "do we still have curry leaves or are they gone",
+"persona": "student",
+"intent": "question",
+"items": []
+},
+{
+"text": "made rajma chawal tonight",
+"persona": "North Indian family",
+"intent": "cooked",
+"items": []
+},
+{
+"text": "need jeera haldi and hing",
+"persona": "busy mom",
+"intent": "list_add",
+"items": [
+"jeera",
+"haldi",
+"hing"
+]
+},
+{
+"text": "the dahi went sour, threw it out",
+"persona": "grandmother",
+"intent": "stated_update",
+"items": [
+"dahi"
+]
+},
+{
+"text": "got 5kg sona masoori and 2 packs maggi on blinkit",
+"persona": "Bangalore professional",
+"intent": "stated_update",
+"items": [
+"sona masoori",
+"maggi"
+]
+},
+{
+"text": "is there any besan left for pakoras",
+"persona": "teen",
+"intent": "question",
+"items": []
+},
+{
+"text": "ran out of gochujang",
+"persona": "Korean-American student",
+"intent": "stated_update",
+"items": [
+"gochujang"
+]
+},
+{
+"text": "kimchi 다 먹었어, need more kimchi",
+"persona": "Korean mom",
+"intent": "list_add",
+"items": [
+"kimchi"
+]
+},
+{
+"text": "picked up napa cabbage and gochugaru at hmart",
+"persona": "home cook making kimchi",
+"intent": "stated_update",
+"items": [
+"napa cabbage",
+"gochugaru"
+]
+},
+{
+"text": "how much tofu do we have",
+"persona": "vegan",
+"intent": "question",
+"items": []
+},
+{
+"text": "made tteokbokki for the kids",
+"persona": "Korean dad",
+"intent": "cooked",
+"items": []
+},
+{
+"text": "finished the shin ramyun",
+"persona": "college student",
+"intent": "stated_update",
+"items": [
+"shin ramyun"
+]
+},
+{
+"text": "add oyster sauce and shaoxing wine",
+"persona": "Cantonese grandma via grandson",
+"intent": "list_add",
+"items": [
+"oyster sauce",
+"shaoxing wine"
+]
+},
+{
+"text": "we used all the bok choy in the stir fry",
+"persona": "couple",
+"intent": "stated_update",
+"items": [
+"bok choy"
+]
+},
+{
+"text": "any lap cheong left in the freezer?",
+"persona": "Chinese-American dad",
+"intent": "question",
+"items": []
+},
+{
+"text": "bought dumplings from 99 ranch, 2 bags",
+"persona": "roommates",
+"intent": "stated_update",
+"items": [
+"dumplings"
+]
+},
+{
+"text": "made fried rice with the leftover rice and lap cheong",
+"persona": "busy professional",
+"intent": "cooked",
+"items": []
+},
+{
+"text": "ubos na yung patis, pakibili",
+"persona": "Filipina mom (Taglish)",
+"intent": "list_add",
+"items": [
+"patis"
+]
+},
+{
+"text": "bumili ako ng longganisa at calamansi",
+"persona": "Filipino dad",
+"intent": "stated_update",
+"items": [
+"longganisa",
+"calamansi"
+]
+},
+{
+"text": "do we have bagoong for the kare kare",
+"persona": "Filipino family",
+"intent": "question",
+"items": []
+},
+{
+"text": "cooked sinigang tonight",
+"persona": "Filipino home",
+"intent": "cooked",
+"items": []
+},
+{
+"text": "out of fish sauce and lemongrass",
+"persona": "Thai cook",
+"intent": "stated_update",
+"items": [
+"fish sauce",
+"lemongrass"
+]
+},
+{
+"text": "add coconut milk x3 and red curry paste",
+"persona": "Thai-American",
+"intent": "list_add",
+"items": [
+"coconut milk",
+"red curry paste"
+]
+},
+{
+"text": "made pho, used the rice noodles",
+"persona": "Vietnamese mom",
+"intent": "cooked",
+"items": []
+},
+{
+"text": "se acabó el sazón, ponlo en la lista",
+"persona": "Puerto Rican mom",
+"intent": "list_add",
+"items": [
+"sazón"
+]
+},
+{
+"text": "compré tortillas y queso fresco",
+"persona": "Mexican dad",
+"intent": "stated_update",
+"items": [
+"tortillas",
+"queso fresco"
+]
+},
+{
+"text": "do we have masa for tamales this weekend",
+"persona": "Mexican family",
+"intent": "question",
+"items": []
+},
+{
+"text": "we finished the crema",
+"persona": "Salvadoran couple",
+"intent": "stated_update",
+"items": [
+"crema"
+]
+},
+{
+"text": "need plantains and sofrito",
+"persona": "Dominican student",
+"intent": "list_add",
+"items": [
+"plantains",
+"sofrito"
+]
+},
+{
+"text": "made arroz con pollo",
+"persona": "Cuban grandma",
+"intent": "cooked",
+"items": []
+},
+{
+"text": "bought 2 jars of tahini and some zaatar",
+"persona": "Lebanese couple",
+"intent": "stated_update",
+"items": [
+"tahini",
+"zaatar"
+]
+},
+{
+"text": "the labneh is gone",
+"persona": "Palestinian dad",
+"intent": "stated_update",
+"items": [
+"labneh"
+]
+},
+{
+"text": "how many pitas are left",
+"persona": "teen",
+"intent": "question",
+"items": []
+},
+{
+"text": "add halloumi and pomegranate molasses",
+"persona": "Persian-American host",
+"intent": "list_add",
+"items": [
+"halloumi",
+"pomegranate molasses"
+]
+},
+{
+"text": "made jollof for sunday lunch",
+"persona": "Nigerian mom",
+"intent": "cooked",
+"items": []
+},
+{
+"text": "garri don finish, add am to list",
+"persona": "Nigerian student (Pidgin)",
+"intent": "list_add",
+"items": [
+"garri"
+]
+},
+{
+"text": "bought palm oil and egusi",
+"persona": "Nigerian dad",
+"intent": "stated_update",
+"items": [
+"palm oil",
+"egusi"
+]
+},
+{
+"text": "do we have ackee and saltfish",
+"persona": "Jamaican grandmother",
+"intent": "question",
+"items": []
+},
+{
+"text": "used the last of the jerk seasoning",
+"persona": "Jamaican-American",
+"intent": "stated_update",
+"items": [
+"jerk seasoning"
+]
+},
+{
+"text": "need injera and berbere",
+"persona": "Ethiopian family",
+"intent": "list_add",
+"items": [
+"injera",
+"berbere"
+]
+},
+{
+"text": "finished the kefir",
+"persona": "Russian-speaking student",
+"intent": "stated_update",
+"items": [
+"kefir"
+]
+},
+{
+"text": "bought pierogi and kielbasa",
+"persona": "Polish-American dad",
+"intent": "stated_update",
+"items": [
+"pierogi",
+"kielbasa"
+]
+},
+{
+"text": "is there buckwheat left",
+"persona": "retired couple",
+"intent": "question",
+"items": []
+},
+{
+"text": "made borscht, used the beets and smetana",
+"persona": "Ukrainian grandmother",
+"intent": "cooked",
+"items": []
+},
+{
+"text": "used 2 cups of basmati and some ghee for biryani",
+"persona": "host who cooks",
+"intent": "stated_update",
+"items": [
+"basmati",
+"ghee"
+]
+},
+{
+"text": "did we buy miso last week?",
+"persona": "Japanese-American",
+"intent": "question",
+"items": []
+}
+]

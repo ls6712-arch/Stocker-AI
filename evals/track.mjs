@@ -38,6 +38,10 @@ try { const q = JSON.parse(sh(['evals/quickpath.mjs', '--json']).stdout); entry.
 const p = await paceRun(await loadPace(), 2, 1000);
 entry.suites.pace = { reminderOnTime: p.reminderOnTime, reminderLate: p.reminderLate, reminderEarly: p.reminderEarly, errorDays: p.errorDays, within2: p.within2, livingAlone: p.byHome['works alone'].onTime, student: p.byHome['student alone'].onTime };
 
+const { run: worldRun, loadAgent: worldAgent } = await import('./world.mjs');
+const W = await worldAgent();
+const w = await worldRun(W, 'heldout2');
+entry.suites.world = { overall: w.overall, knows: w.knows, allergy: w.allergy, falseAlarm: w.falseAlarm, diet: w.diet, units: w.units, lines: w.lines, stores: w.stores };
 console.log(JSON.stringify(entry, null, 1));
 if (!process.argv.includes('--dry')) {
   let hist = [];
