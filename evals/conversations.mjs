@@ -8,18 +8,11 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
+import { loadAgent } from './load.mjs';
 
 const ROOT = fileURLToPath(new URL('../', import.meta.url));
-const NAMES = ['unhail', 'route', 'questionPart', 'isQuestion', 'isCorrection', 'PROBE', 'scrub', 'guardReply', 'tooMuch', 'chatReply', 'sanitize', 'niceDate'];
+const NAMES = ['unhail', 'route', 'questionPart', 'PROBE', 'scrub', 'guardReply', 'tooMuch', 'chatReply', 'sanitize', 'niceDate'];
 
-// load the Worker with its internal helpers exported, from a temporary copy
-async function loadAgent() {
-  const src = fs.readFileSync(path.join(ROOT, 'src/index.js'), 'utf8');
-  const have = NAMES.filter((n) => new RegExp('^(const|function|async function) ' + n + '\\b', 'm').test(src));
-  const tmp = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'tote-')), 'agent.mjs');
-  fs.writeFileSync(tmp, src + '\nexport { ' + have.join(', ') + ' };\n');
-  return import(pathToFileURL(tmp).href);
-}
 
 // a seeded random generator, so every run sees the same 1,000 households
 let seed = 20261113;
@@ -91,7 +84,7 @@ const NOT_PRIVATE = ['2 x 500g pasta', '1.5kg chicken', 'a dozen eggs exp 12/29'
 const PRIVATE = [['card', 'my card is 4111 1111 1111 1111 exp 12/29'], ['card', 'card 5500-0000-0000-0004 pls'], ['email', 'send it to jamie.k@example.com'], ['phone', 'call me on 212-555-0199'], ['ssn', 'my ssn 123-45-6789']];
 
 async function main() {
-  const A = await loadAgent();
+  const A = await loadAgent(NAMES);
   const arg = process.argv.find((x) => x.startsWith('--corpus='));
   const dir = path.join(ROOT, arg ? arg.slice(9) : 'evals/corpus');
   const corpus = fs.readdirSync(dir).filter((f) => f.endsWith('.json')).flatMap((f) => JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8')).map((m) => ({ ...m, source: f.replace('.json', '') })));
@@ -116,9 +109,7 @@ async function main() {
       messages++;
       const t = m.said, ex = { household: user.who, intent: m.intent, said: t, original: m.text };
       // 1. the gate: questions must never reach the part that changes the home, and updates must not be lost
-      const corr = A.isCorrection ? A.isCorrection(t) : false;
-      const answer = A.isQuestion(t);
-      const way = A.route ? A.route(t) : (answer ? 'answer' : 'update');
+      const way = A.route(t);
       ex.route = way;
       if (m.ambiguous) { note('ambiguous on purpose (not scored): answered safely', way !== 'update' || true, ex); }
       else if (m.intent === 'correction') note('gate: corrections are caught', way === 'correct', ex);

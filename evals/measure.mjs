@@ -8,13 +8,11 @@ import os from 'os';
 import path from 'path';
 import { DatabaseSync } from 'node:sqlite';
 import { fileURLToPath, pathToFileURL } from 'url';
+import { loadAgent } from './load.mjs';
 
 const ROOT = fileURLToPath(new URL('../', import.meta.url));
 const NAMES = ['migrate', 'queueRun', 'stepRun', 'autoRuns', 'summarize', 'scorecard', 'health', 'gradeCheck', 'simApply', 'simRows', 'evalCase', 'evalCases', 'apply', 'bump', 'weekOf', 'onVoice', 'noteTurn', 'route', 'converse', 'chatAnswer', 'noFalseClaims', 'verbBefore', 'dropOrders'];
-const src = fs.readFileSync(path.join(ROOT, 'src/index.js'), 'utf8');
-const tmp = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'tote-measure-')), 'agent.mjs');
-fs.writeFileSync(tmp, src + '\nexport { ' + NAMES.join(', ') + ' };\n');
-const T = await import(pathToFileURL(tmp).href);
+const T = await loadAgent(NAMES);
 
 function d1(db) {
   const fix = (v) => (v === undefined ? null : typeof v === 'boolean' ? Number(v) : v);
