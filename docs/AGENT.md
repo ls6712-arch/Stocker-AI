@@ -30,7 +30,7 @@ The same voice is used in the chat prompt (`VOICE` and `LIMITS` in `src/index.js
 ## How a turn works
 
 1. **Read.** A message is cleaned of private details and any greeting or misheard name.
-2. **Decide.** A fixed gate sorts it: a question goes to the answering model and can change nothing; a statement goes to the structuring model.
+2. **Decide.** A fixed gate sorts it: a question goes to the answering model and can change nothing; a statement goes to the structuring model. Plans and maybes ("thinking of making pasta tomorrow") count as questions. Right after a change, a short follow-up ("and bread too", "make that two") or a correction with a number ("sorry, 2 not 3") goes to the structuring model with the last two exchanges as context, so it can tell what "it" or "that" means.
 3. **Propose.** The model returns proposed actions in a fixed shape: add, use, running low, or put on the shopping list (with an optional note).
 4. **Check.** Code validates every field, applies the guardrails, and separates what the person said outright from what the model inferred.
 5. **Act or ask.** Stated changes are applied and reported from the database result, each with Undo. Inferred changes (ingredients guessed from a dish) are shown as a question and applied only after a tap.
@@ -176,6 +176,13 @@ Five layers, all in this repository. The approach follows Anthropic's "Demystify
 | Reading failures | Every failed trial keeps what was said, what Tote did, its reply and which checks failed. Mark each as Tote's mistake or an unfair test; the share of unfair tests is on the scorecard | `/api/scorecard/verdict` |
 | Real use | Week by week from the app: misses, undo, corrections, said twice, not found, typical reply time, reminders sent and how many led to the list, and how many days off the learned pace was when the item was bought again. Kept as counters; nothing private | `health`, `bump` |
 | Offline history | `npm run track -- --note="what changed"` runs the offline suites and appends the scores to `public/evals/history.json`, shown on the scorecard | `evals/track.mjs` |
+
+### Training log
+
+| Date | Change | Measured |
+|---|---|---|
+| 14 Nov | Scorecard and capability tasks added | Live baseline (version 009431f7): regression 96.1%, capability 64.7% (partial 78.9%), on voice 100%, typical reply 4.0 s, slowest 5% 15.5 s |
+| 15 Nov | Round 1: follow-ups with the last two exchanges as context, plans and maybes change nothing, corrections like "2 not 3", learned pace in answers. From reading the baseline failures: answers may not claim a change they did not make; "bought" before an untracked thing is a purchase; an instruction line on a receipt is dropped, not the receipt. Two unfair tests fixed | Offline: all suites pass, router held-out 97.3%. Live: on the scorecard after the next run |
 
 ### The weekly loop
 
