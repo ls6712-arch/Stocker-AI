@@ -1,0 +1,350 @@
+# World grocery glossary for Tote. One item per line:
+#   aliases (comma separated, lowercase, as they appear on receipts, apps and in speech) ; display name ; Area/Category ; keeps (days from purchase, stored as usual) ; allergens ; tags
+# allergens: P peanuts, T tree nuts, M milk, E eggs, W wheat/gluten, S soy, F fish, C shellfish, Z sesame, U mustard
+# tags: meat, pork, beef, fish, shellfish, dairy, egg, honey, gelatin, alcohol, allium (onion/garlic), liquid, frozen
+# "Usually contains" is what most versions contain; Tote always says to check the label.
+#
+# ---- Indian and South Asian ----
+atta,chakki atta,whole wheat atta,gehun ka atta,chapati flour,chapatti flour,roti flour;Atta (whole wheat flour);Kitchen/Pantry;180;W;
+maida,all purpose flour maida;Maida (refined flour);Kitchen/Pantry;240;W;
+besan,gram flour,chickpea flour,chana besan;Besan (gram flour);Kitchen/Pantry;240;;
+sooji,suji,rava,semolina,bombay rava,semovita;Sooji (semolina);Kitchen/Pantry;240;W;
+ragi,ragi flour,nachni;Ragi flour;Kitchen/Pantry;150;;
+jowar,jowar flour;Jowar flour;Kitchen/Pantry;150;;
+bajra,bajra flour;Bajra flour;Kitchen/Pantry;90;;
+poha,flattened rice,aval,chivda rice;Poha;Kitchen/Pantry;240;;
+basmati,basmati rice;Basmati rice;Kitchen/Pantry;730;;
+sona masoori,sona masuri,ponni rice,idli rice,matta rice,kolam rice;Sona masoori rice;Kitchen/Pantry;540;;
+toor dal,tuvar dal,arhar dal,toovar dal,toor daal,pigeon peas split;Toor dal;Kitchen/Pantry;365;;
+moong dal,mung dal,yellow moong,moong daal,green moong,whole moong,mung beans;Moong dal;Kitchen/Pantry;365;;
+masoor dal,red lentils,masoor daal,malka masoor;Masoor dal (red lentils);Kitchen/Pantry;365;;
+urad dal,urad daal,black gram,urid dal,whole urad;Urad dal;Kitchen/Pantry;365;;
+chana dal,chana daal,bengal gram split;Chana dal;Kitchen/Pantry;365;;
+kabuli chana,chole,chickpeas,garbanzo,garbanzo beans,kala chana,black chickpeas;Chickpeas;Kitchen/Pantry;365;;
+rajma,kidney beans,red kidney beans;Rajma (kidney beans);Kitchen/Pantry;365;;
+ghee,desi ghee,cow ghee,clarified butter;Ghee;Kitchen/Pantry;270;M;dairy
+paneer,malai paneer,cottage cheese paneer;Paneer;Kitchen/Dairy;7;M;dairy
+dahi,curd,doi,mosaru,thayir;Dahi (yogurt);Kitchen/Dairy;7;M;dairy
+khoa,khoya,mawa;Khoa;Kitchen/Dairy;4;M;dairy
+malai,fresh cream malai;Malai (cream);Kitchen/Dairy;5;M;dairy
+lassi,mango lassi,chaas,buttermilk masala;Lassi;Kitchen/Drinks;7;M;dairy,liquid
+jeera,cumin,cumin seeds,jeerakam;Jeera (cumin);Kitchen/Pantry;540;;
+haldi,turmeric powder,haldi powder,manjal;Haldi (turmeric);Kitchen/Pantry;540;;
+dhania powder,coriander powder;Dhania powder (coriander);Kitchen/Pantry;365;;
+red chilli powder,lal mirch,kashmiri chilli,kashmiri mirch,chilli powder;Red chilli powder;Kitchen/Pantry;365;;
+garam masala;Garam masala;Kitchen/Pantry;365;;
+chaat masala;Chaat masala;Kitchen/Pantry;365;;
+kitchen king,sabzi masala,chole masala,chana masala,pav bhaji masala,biryani masala,sambar powder,rasam powder,meat masala,chicken masala;Spice mix;Kitchen/Pantry;365;;
+hing,asafoetida;Hing (asafoetida);Kitchen/Pantry;540;W;
+methi,kasuri methi,fenugreek,methi seeds,dried fenugreek;Methi (fenugreek);Kitchen/Pantry;365;;
+methi leaves,fresh methi;Methi leaves;Kitchen/Produce;4;;
+rai,mustard seeds,sarson seeds,kadugu;Mustard seeds;Kitchen/Pantry;540;U;
+sarson ka tel,mustard oil,kachi ghani;Mustard oil;Kitchen/Pantry;365;U;liquid
+ajwain,carom seeds,omam;Ajwain (carom seeds);Kitchen/Pantry;540;;
+elaichi,cardamom,green cardamom,elakkai;Elaichi (cardamom);Kitchen/Pantry;540;;
+saunf,fennel seeds;Saunf (fennel seeds);Kitchen/Pantry;540;;
+til,gingelly,sesame seeds,white sesame,black sesame;Sesame seeds;Kitchen/Pantry;365;Z;
+til oil,gingelly oil,nallennai,sesame oil,toasted sesame oil;Sesame oil;Kitchen/Pantry;365;Z;liquid
+curry leaves,kadi patta,karuveppilai,kariveppila;Curry leaves;Kitchen/Produce;7;;
+dhaniya,cilantro,coriander leaves,kothamalli,fresh coriander;Cilantro (dhaniya);Kitchen/Produce;5;;
+pudina,mint leaves,fresh mint;Mint (pudina);Kitchen/Produce;5;;
+green chillies,hari mirch,green chilli,thai chili,bird eye chili,serrano;Green chillies;Kitchen/Produce;10;;
+adrak,ginger,fresh ginger,ginger root;Ginger;Kitchen/Produce;21;;
+turmeric,fresh turmeric,turmeric root,kachi haldi;Fresh turmeric root;Kitchen/Produce;21;;
+lahsun,garlic,lehsun,poondu,garlic cloves,peeled garlic;Garlic;Kitchen/Produce;30;;allium
+pyaaz,onion,onions,red onion,kanda,vengayam;Onions;Kitchen/Produce;30;;allium
+aloo,potato,potatoes,batata;Potatoes;Kitchen/Produce;30;;
+bhindi,okra,lady finger,ladies finger,vendakkai;Okra (bhindi);Kitchen/Produce;4;;
+karela,bitter gourd,bitter melon,ampalaya;Bitter gourd (karela);Kitchen/Produce;5;;
+lauki,bottle gourd,dudhi,opo squash,calabash;Bottle gourd (lauki);Kitchen/Produce;7;;
+tindora,tendli,ivy gourd,kovakkai;Tindora;Kitchen/Produce;5;;
+drumstick,moringa,murungakkai,sajjan;Drumsticks (moringa);Kitchen/Produce;5;;
+baingan,brinjal,eggplant,aubergine,talong,nasu;Eggplant (baingan);Kitchen/Produce;6;;
+arbi,taro root,colocasia,gabi;Taro root;Kitchen/Produce;14;;
+jaggery,gur,bellam,vellam,panela,piloncillo;Jaggery (gur);Kitchen/Pantry;365;;
+imli,tamarind,tamarind paste,puli,sampalok;Tamarind;Kitchen/Pantry;365;;
+papad,papadum,appalam,pappadam;Papad;Kitchen/Pantry;180;;
+pickle achar,achaar,mango pickle,lime pickle,avakaya,gongura;Pickle (achar);Kitchen/Pantry;365;U;
+idli batter,dosa batter,idli dosa batter;Idli/dosa batter;Kitchen/Dairy;5;;
+roti,chapati,phulka,tortilla roti;Roti;Kitchen/Bakery;5;W;
+naan,garlic naan,butter naan;Naan;Kitchen/Bakery;5;W,M;dairy
+paratha,parotta,frozen paratha,malabar parotta,laccha paratha;Paratha;Kitchen/Frozen;180;W;frozen
+bhujia,aloo bhujia,namkeen,mixture,chivda,sev,khatta meetha;Namkeen (savoury snack mix);Kitchen/Snacks;120;;
+parle g,marie biscuit,glucose biscuit,good day,bourbon biscuit;Biscuits;Kitchen/Snacks;180;W,M;
+maggi,maggi noodles,top ramen masala,yippee noodles;Instant noodles (Maggi);Kitchen/Pantry;270;W;
+chai patti,tea leaves,assam tea,ctc tea,red label,taj mahal tea,wagh bakri;Tea leaves (chai);Kitchen/Drinks;540;;
+filter coffee,coffee powder chicory;Filter coffee powder;Kitchen/Drinks;180;;
+rooh afza,frooti,maaza,thums up;Indian soft drink;Kitchen/Drinks;270;;liquid
+kaju,cashew,cashews,cashew nuts;Cashews (kaju);Kitchen/Pantry;180;T;
+badam,almonds;Almonds (badam);Kitchen/Pantry;365;T;
+pista,pistachio,pistachios;Pistachios (pista);Kitchen/Pantry;270;T;
+akhrot,walnuts,walnut;Walnuts (akhrot);Kitchen/Pantry;180;T;
+moongphali,groundnut,groundnuts,peanuts,verkadalai,mani;Peanuts;Kitchen/Pantry;180;P;
+groundnut oil,peanut oil,kadalai ennai;Peanut oil;Kitchen/Pantry;365;P;liquid
+chikki,peanut chikki;Chikki;Kitchen/Snacks;90;P;
+mutton,goat meat,goat curry cut,bakra;Mutton (goat);Kitchen/Meat;2;;meat
+keema,minced mutton,chicken keema,qeema;Keema (minced meat);Kitchen/Meat;2;;meat
+rohu,katla,catla,pomfret,surmai,kingfish,hilsa,ilish,bangda,mackerel,sardine,sardines,tilapia,basa,pangasius;Fish;Kitchen/Meat;2;F;fish
+jhinga,prawns,prawn;Prawns;Kitchen/Meat;2;C;shellfish
+# ---- Chinese ----
+soy sauce,light soy,dark soy,shoyu,soya sauce,superior light soy,toyo;Soy sauce;Kitchen/Pantry;730;S,W;liquid
+tamari;Tamari;Kitchen/Pantry;730;S;liquid
+oyster sauce,oyster flavored sauce,oyster flavoured sauce;Oyster sauce;Kitchen/Pantry;540;C,W;shellfish,liquid
+hoisin,hoisin sauce;Hoisin sauce;Kitchen/Pantry;540;S,W,Z;liquid
+doubanjiang,toban djan,chili bean paste,broad bean paste,pixian;Doubanjiang (chili bean paste);Kitchen/Pantry;365;S,W;
+chili crisp,chili oil,lao gan ma,laoganma,chiu chow chili oil;Chili crisp;Kitchen/Pantry;365;S;liquid
+black vinegar,chinkiang vinegar,zhenjiang vinegar;Black vinegar;Kitchen/Pantry;730;W;liquid
+shaoxing,shaoxing wine,huadiao,cooking wine;Shaoxing wine;Kitchen/Pantry;730;W;alcohol,liquid
+xo sauce;XO sauce;Kitchen/Pantry;180;F,C;fish,shellfish
+fermented black beans,douchi;Fermented black beans;Kitchen/Pantry;365;S;
+five spice,five spice powder;Five-spice powder;Kitchen/Pantry;365;;
+sichuan peppercorn,szechuan peppercorn,hua jiao;Sichuan peppercorns;Kitchen/Pantry;365;;
+star anise;Star anise;Kitchen/Pantry;540;;
+bok choy,baby bok choy,shanghai bok choy,pak choi,pechay;Bok choy;Kitchen/Produce;5;;
+gai lan,chinese broccoli,kai lan;Gai lan;Kitchen/Produce;4;;
+choy sum,yu choy;Choy sum;Kitchen/Produce;4;;
+napa cabbage,napa,wombok,baechu,chinese cabbage;Napa cabbage;Kitchen/Produce;14;;
+bean sprouts,mung bean sprouts,togue;Bean sprouts;Kitchen/Produce;3;;
+lotus root;Lotus root;Kitchen/Produce;10;;
+winter melon,tong gwa;Winter melon;Kitchen/Produce;14;;
+shiitake,dried shiitake,shiitake mushrooms;Shiitake mushrooms;Kitchen/Produce;7;;
+wood ear,black fungus,cloud ear;Wood ear mushrooms;Kitchen/Pantry;365;;
+lap cheong,lap chong,chinese sausage,lup cheong;Chinese sausage (lap cheong);Kitchen/Meat;90;;meat,pork
+char siu,bbq pork;Char siu;Kitchen/Meat;4;S,W;meat,pork
+bean curd,tofu,firm tofu,silken tofu,soft tofu,extra firm tofu,dofu,dubu,tokwa;Tofu;Kitchen/Dairy;7;S;
+tofu skin,yuba,bean curd sheet;Tofu skin;Kitchen/Pantry;180;S;
+dumplings,potstickers,jiaozi,wontons,gyoza,mandu,xiao long bao,har gow,siu mai,shumai;Dumplings;Kitchen/Frozen;180;W;frozen
+dumpling wrappers,wonton wrappers,gyoza wrappers;Dumpling wrappers;Kitchen/Dairy;14;W;
+spring roll wrappers,lumpia wrappers;Spring roll wrappers;Kitchen/Frozen;180;W;frozen
+rice noodles,rice vermicelli,rice sticks,ho fun,bihon,pho noodles,banh pho,pad thai noodles,sen lek;Rice noodles;Kitchen/Pantry;540;;
+glass noodles,cellophane noodles,mung bean noodles,vermicelli bean thread,sotanghon,dangmyeon;Glass noodles;Kitchen/Pantry;540;;
+egg noodles,lo mein,chow mein noodles,wonton noodles,pancit canton,mami noodles;Egg noodles;Kitchen/Pantry;180;W,E;egg
+jasmine rice,thai hom mali,hom mali;Jasmine rice;Kitchen/Pantry;730;;
+glutinous rice,sticky rice,sweet rice,malagkit,mochigome;Glutinous rice;Kitchen/Pantry;730;;
+congee,jook;Congee;Kitchen/Pantry;3;;
+mooncake;Mooncakes;Kitchen/Snacks;30;W,E;egg
+# ---- Japanese ----
+miso,white miso,red miso,shiro miso,awase miso;Miso;Kitchen/Dairy;365;S;
+dashi,hondashi,dashi powder,dashi granules,katsuobushi,bonito flakes,bonito;Dashi;Kitchen/Pantry;365;F;fish
+mirin,aji mirin;Mirin;Kitchen/Pantry;730;;liquid
+sake,cooking sake,ryorishu;Sake;Kitchen/Drinks;365;;alcohol,liquid
+rice vinegar,sushi vinegar,seasoned rice vinegar;Rice vinegar;Kitchen/Pantry;730;;liquid
+ponzu;Ponzu;Kitchen/Pantry;180;S,W,F;fish,liquid
+kewpie,japanese mayonnaise,japanese mayo;Kewpie mayonnaise;Kitchen/Pantry;180;E;egg
+tonkatsu sauce,bulldog sauce,okonomi sauce,okonomiyaki sauce;Tonkatsu sauce;Kitchen/Pantry;365;W,S;liquid
+furikake;Furikake;Kitchen/Pantry;365;Z,F;fish
+nori,sushi nori,gim,kim,roasted seaweed,seaweed snack,laver;Nori (seaweed);Kitchen/Pantry;365;;
+wakame,kombu,kelp,dashima,hijiki;Seaweed (wakame/kombu);Kitchen/Pantry;365;;
+panko,panko bread crumbs,japanese breadcrumbs;Panko;Kitchen/Pantry;365;W;
+tempura flour,tempura batter mix;Tempura flour;Kitchen/Pantry;365;W;
+udon,udon noodles,sanuki udon;Udon;Kitchen/Pantry;14;W;
+soba,soba noodles,buckwheat noodles;Soba;Kitchen/Pantry;365;W;
+ramen,ramen noodles,shin ramyun,ramyun,ramyeon,buldak,samyang,nissin,cup noodles,indomie,mama noodles,mi goreng,instant noodles;Instant ramen;Kitchen/Pantry;270;W;
+sushi rice,calrose,koshihikari,nishiki,japonica rice;Sushi rice;Kitchen/Pantry;730;;
+natto;Natto;Kitchen/Dairy;10;S;
+edamame;Edamame;Kitchen/Frozen;270;S;frozen
+daikon,mooli,mu,korean radish,white radish,labanos;Daikon radish;Kitchen/Produce;14;;
+shiso,perilla,kkaennip,perilla leaves;Shiso/perilla leaves;Kitchen/Produce;4;;
+yuzu;Yuzu;Kitchen/Produce;14;;
+umeboshi;Umeboshi;Kitchen/Pantry;365;;
+matcha,matcha powder;Matcha;Kitchen/Drinks;180;;
+mochi,daifuku;Mochi;Kitchen/Snacks;5;;
+kamaboko,narutomaki,fish cake,fish cakes,eomuk,odeng,surimi,imitation crab,crab stick,kani;Fish cake (surimi);Kitchen/Dairy;10;F,W,E;fish
+unagi,eel;Unagi (eel);Kitchen/Frozen;180;F,S,W;fish,frozen
+# ---- Korean ----
+gochujang,red pepper paste,hot pepper paste;Gochujang;Kitchen/Pantry;540;W,S;
+gochugaru,korean chili flakes,red pepper flakes korean,red pepper powder korean;Gochugaru;Kitchen/Pantry;365;;
+doenjang,soybean paste,korean soybean paste;Doenjang;Kitchen/Pantry;540;S,W;
+ssamjang;Ssamjang;Kitchen/Pantry;365;S,W,Z;
+kimchi,cabbage kimchi,mak kimchi,kkakdugi,radish kimchi,baechu kimchi,vegan kimchi;Kimchi;Kitchen/Dairy;60;F,C;fish,shellfish
+tteok,tteokbokki,rice cake,rice cakes,garaetteok,dduk,topokki;Tteok (rice cakes);Kitchen/Dairy;14;;
+dangmyeon,sweet potato noodles;Sweet potato noodles;Kitchen/Pantry;540;;
+anchovy broth,myeolchi,dried anchovies,ikan bilis,dilis;Dried anchovies;Kitchen/Pantry;180;F;fish
+bulgogi,galbi,kalbi,short ribs,beef bulgogi;Bulgogi/galbi beef;Kitchen/Meat;2;S,W,Z;meat,beef
+pork belly,samgyeopsal,liempo,sam gyup sal;Pork belly;Kitchen/Meat;2;;meat,pork
+spam,luncheon meat,ma ling;Spam (luncheon meat);Kitchen/Pantry;730;;meat,pork
+yakult;Yakult;Kitchen/Dairy;21;M;dairy,liquid
+banana milk,binggrae;Banana milk;Kitchen/Drinks;30;M;dairy,liquid
+soju;Soju;Kitchen/Drinks;730;;alcohol,liquid
+# ---- Southeast Asian ----
+fish sauce,nam pla,nuoc mam,patis,nuoc cham,three crabs,red boat,squid brand;Fish sauce;Kitchen/Pantry;730;F;fish,liquid
+shrimp paste,belacan,kapi,terasi,bagoong,bagoong alamang,mam tom;Shrimp paste;Kitchen/Pantry;365;C;shellfish
+dried shrimp,hae bee,tom kho;Dried shrimp;Kitchen/Pantry;180;C;shellfish
+coconut milk,coconut cream,santan,gata,chaokoh coconut;Coconut milk;Kitchen/Pantry;730;;liquid
+lemongrass,tanglad,serai,takrai,sereh;Lemongrass;Kitchen/Produce;14;;
+galangal,kha,lengkuas,blue ginger;Galangal;Kitchen/Produce;14;;
+kaffir lime leaves,makrut lime leaves,lime leaves,bai makrut,daun jeruk;Makrut lime leaves;Kitchen/Produce;10;;
+thai basil,holy basil,bai horapa,tulsi,rau que;Thai basil;Kitchen/Produce;5;;
+pandan,pandan leaves,screwpine;Pandan;Kitchen/Produce;7;;
+curry paste,red curry paste,green curry paste,massaman,panang,yellow curry paste;Thai curry paste;Kitchen/Pantry;365;C;shellfish
+sambal,sambal oelek,sriracha,huy fong,gochu sauce;Chili sauce (sambal/sriracha);Kitchen/Pantry;365;;
+kecap manis,sweet soy sauce,abc kecap;Kecap manis;Kitchen/Pantry;730;S,W;liquid
+peanut sauce,satay sauce,satay;Peanut (satay) sauce;Kitchen/Pantry;365;P,S;
+rice paper,banh trang,spring roll rice paper;Rice paper;Kitchen/Pantry;730;;
+calamansi,kalamansi,calamondin;Calamansi;Kitchen/Produce;14;;
+cane vinegar,datu puti vinegar,sukang iloco,coconut vinegar,palm vinegar,spiced vinegar;Cane/coconut vinegar;Kitchen/Pantry;730;;liquid
+longganisa,longaniza,chorizo de bilbao;Longganisa;Kitchen/Meat;30;;meat,pork
+tocino,pork tocino,chicken tocino;Tocino;Kitchen/Frozen;90;;meat,pork,frozen
+ube,ube halaya,purple yam;Ube;Kitchen/Pantry;30;M;dairy
+pancit,bihon pancit,palabok;Pancit noodles;Kitchen/Pantry;365;;
+banana ketchup,jufran,ufc banana ketchup;Banana ketchup;Kitchen/Pantry;365;;liquid
+lechon sauce,mang tomas,all around sarsa;Lechon sauce;Kitchen/Pantry;365;;liquid
+chicharon,chicharron,chicharrones,pork rinds;Pork rinds (chicharron);Kitchen/Snacks;90;;meat,pork
+jackfruit,langka,nangka;Jackfruit;Kitchen/Produce;5;;
+durian;Durian;Kitchen/Produce;4;;
+rambutan,lychee,longan,mangosteen,dragon fruit,pitaya;Tropical fruit;Kitchen/Produce;5;;
+enoki,enoki mushroom,king oyster mushroom,eryngii,shimeji,beech mushroom,oyster mushroom,oyster mushrooms;Asian mushrooms (enoki, king oyster);Kitchen/Produce;7;;
+# ---- Mexican and Latin American ----
+masa harina,maseca,masa,masa preparada,harina pan,arepa flour;Masa harina;Kitchen/Pantry;365;;
+tortillas,corn tortillas,tortillas de maiz,guerrero,mission tortillas;Corn tortillas;Kitchen/Bakery;14;;
+flour tortillas,tortillas de harina,burrito tortillas,wraps;Flour tortillas;Kitchen/Bakery;14;W;
+queso fresco,queso blanco,queso duro,queso de freir,panela cheese,queso panela,cotija,queso oaxaca,oaxaca cheese,queso chihuahua,queso para freir,quesillo;Queso fresco;Kitchen/Dairy;14;M;dairy
+crema,crema mexicana,crema agria,crema salvadorena,mexican sour cream;Crema;Kitchen/Dairy;14;M;dairy
+dulce de leche,cajeta;Dulce de leche;Kitchen/Pantry;365;M;dairy
+tomatillo,tomatillos,tomate verde;Tomatillos;Kitchen/Produce;14;;
+jalapeno,jalapenos,jalapeño,chile jalapeno,poblano,chile poblano,habanero,scotch bonnet,aji amarillo,anaheim;Fresh chiles;Kitchen/Produce;10;;
+chipotle in adobo,chipotles,chiles chipotles,la costena chipotle,embasa chipotle;Chipotles in adobo;Kitchen/Pantry;730;;
+dried chiles,guajillo,ancho,pasilla,chile de arbol,chile ancho,chile guajillo,mulato;Dried chiles;Kitchen/Pantry;365;;
+nopales,nopalitos,cactus paddles;Nopales;Kitchen/Produce;7;;
+chayote,sayote,christophene,choko;Chayote;Kitchen/Produce;21;;
+plantain,plantains,platano,platanos,platano maduro,platano verde,green plantains;Plantains;Kitchen/Produce;7;;
+yuca,cassava,manioc,kamoteng kahoy;Yuca (cassava);Kitchen/Produce;7;;
+malanga,yautia,eddo,dasheen;Malanga;Kitchen/Produce;14;;
+black beans,frijoles negros,habichuelas negras;Black beans;Kitchen/Pantry;730;;
+pinto beans,frijoles pintos,refried beans,frijoles refritos;Pinto beans;Kitchen/Pantry;730;;
+sazon,sazon goya,sazón,sazon completa,sason;Sazon/adobo seasoning;Kitchen/Pantry;730;;
+sofrito,recaito,recao;Sofrito;Kitchen/Dairy;30;;allium
+mexican chorizo,chorizo,chorizo de puerco,soyrizo;Chorizo;Kitchen/Meat;14;;meat,pork
+carne asada,arrachera,flap meat,diezmillo,bistec;Carne asada (beef);Kitchen/Meat;2;;meat,beef
+salsa verde,salsa roja,salsa valentina,valentina,cholula,tapatio,el yucateco;Hot sauce / salsa;Kitchen/Pantry;365;;liquid
+mole,mole poblano,dona maria mole;Mole paste;Kitchen/Pantry;365;P,T,Z,W;
+horchata,jamaica,agua de jamaica,hibiscus flowers,flor de jamaica;Horchata/jamaica;Kitchen/Drinks;365;;
+tamarindo,jarritos,sidral,mexican coke,coca cola mexicana,inca kola,guarana,materva,kola champagne;Latin soft drink;Kitchen/Drinks;270;;liquid
+yerba mate,mate,cruz de malta,taragui;Yerba mate;Kitchen/Drinks;540;;
+pan dulce,conchas,bolillos,bolillo,telera;Pan dulce / bolillos;Kitchen/Bakery;4;W,E,M;
+tamales;Tamales;Kitchen/Frozen;180;;frozen
+empanadas,empanada discs,tapas para empanadas,discos;Empanadas;Kitchen/Frozen;180;W;frozen
+guava paste,pasta de guayaba,goiabada;Guava paste;Kitchen/Pantry;365;;
+# ---- Middle Eastern and North African ----
+tahini,tahina,sesame paste,ziyad tahini,al wadi tahini;Tahini;Kitchen/Pantry;365;Z;
+hummus,houmous,hommus;Hummus;Kitchen/Dairy;7;Z;
+labneh,labne,lebneh,strained yogurt;Labneh;Kitchen/Dairy;14;M;dairy
+halloumi,hellim;Halloumi;Kitchen/Dairy;30;M;dairy
+feta,feta cheese,bulgarian feta,akkawi,nabulsi;Feta;Kitchen/Dairy;30;M;dairy
+zaatar,za'atar,zatar,za atar;Za'atar;Kitchen/Pantry;365;Z;
+sumac;Sumac;Kitchen/Pantry;365;;
+baharat,ras el hanout,seven spice,7 spice,shawarma spice,dukkah;Middle Eastern spice mix;Kitchen/Pantry;365;;
+harissa;Harissa;Kitchen/Pantry;365;;
+pomegranate molasses,dibs rumman;Pomegranate molasses;Kitchen/Pantry;730;;liquid
+rose water,orange blossom water;Rose water;Kitchen/Pantry;730;;liquid
+pita,pita bread,khubz,lavash,lavosh,markook,saj bread;Pita / flatbread;Kitchen/Bakery;5;W;
+bulgur,burghul,bulghur,cracked wheat;Bulgur;Kitchen/Pantry;365;W;
+freekeh,frikeh;Freekeh;Kitchen/Pantry;365;W;
+couscous,cous cous,pearl couscous,israeli couscous,maftoul;Couscous;Kitchen/Pantry;365;W;
+fava beans,ful medames,foul medammes,broad beans,ful;Fava beans;Kitchen/Pantry;730;;
+dates,medjool,deglet noor,khajur,khajoor,ajwa dates;Dates;Kitchen/Pantry;180;;
+halva,halawa,tahini halva;Halva;Kitchen/Snacks;180;Z,T;
+baklava;Baklava;Kitchen/Snacks;14;W,T,M;
+phyllo,filo,fillo,kataifi,yufka;Phyllo dough;Kitchen/Frozen;270;W;frozen
+preserved lemons;Preserved lemons;Kitchen/Pantry;365;;
+lamb,lamb shoulder,lamb chops,leg of lamb,ground lamb;Lamb;Kitchen/Meat;2;;meat
+halal chicken,zabiha chicken;Halal chicken;Kitchen/Meat;2;;meat
+sujuk,sucuk,basturma,pastirma;Sujuk/basturma;Kitchen/Meat;30;;meat,beef
+# ---- African and Caribbean ----
+gari,garri,eba;Gari;Kitchen/Pantry;365;;
+fufu,fufu flour,pounded yam,poundo,iyan;Fufu flour;Kitchen/Pantry;365;;
+egusi,egusi seeds,melon seeds;Egusi;Kitchen/Pantry;180;;
+ogbono,ogbolo,bush mango seeds;Ogbono;Kitchen/Pantry;180;;
+palm oil,red palm oil,zomi,dende;Palm oil;Kitchen/Pantry;540;;liquid
+stockfish,okporoko,dried fish,smoked fish;Stockfish / dried fish;Kitchen/Pantry;180;F;fish
+crayfish ground,ground crayfish,dried crayfish;Ground crayfish;Kitchen/Pantry;180;C;shellfish
+maggi cubes,maggi seasoning,knorr cubes,bouillon cubes,stock cubes,royco,onga;Stock cubes;Kitchen/Pantry;540;W,S,M;
+suya spice,yaji,suya;Suya spice;Kitchen/Pantry;365;P;
+berbere;Berbere;Kitchen/Pantry;365;;
+mitmita;Mitmita;Kitchen/Pantry;365;;
+niter kibbeh,niter kebbeh;Niter kibbeh (spiced butter);Kitchen/Dairy;60;M;dairy
+injera;Injera;Kitchen/Bakery;5;;
+teff,teff flour;Teff flour;Kitchen/Pantry;365;;
+shito,shito sauce;Shito;Kitchen/Pantry;180;F,C;fish,shellfish
+jollof seasoning,jollof spice;Jollof seasoning;Kitchen/Pantry;365;;
+ackee,ackees;Ackee;Kitchen/Pantry;730;;
+saltfish,salt fish,bacalao,bacalhau,salted cod,baccala;Saltfish (salted cod);Kitchen/Pantry;365;F;fish
+callaloo,amaranth greens,chauli,thotakura,kulitis;Callaloo;Kitchen/Produce;4;;
+jerk seasoning,jerk marinade,walkerswood,grace jerk;Jerk seasoning;Kitchen/Pantry;365;;
+sorrel drink,sorrel;Sorrel;Kitchen/Drinks;365;;
+breadfruit,ulu;Breadfruit;Kitchen/Produce;4;;
+yam,white yam,puna yam,ube yam;Yam;Kitchen/Produce;30;;
+goat,goat meat,cabrito,chivo;Goat meat;Kitchen/Meat;2;;meat
+oxtail;Oxtail;Kitchen/Meat;2;;meat,beef
+# ---- Eastern European and Jewish ----
+kielbasa,kielbasy,polish sausage,krakowska,kabanos;Kielbasa;Kitchen/Meat;14;;meat,pork
+pierogi,pierogies,varenyky,pelmeni,vareniki;Pierogi;Kitchen/Frozen;180;W,E,M;frozen
+kefir;Kefir;Kitchen/Dairy;14;M;dairy,liquid
+tvorog,farmer cheese,farmers cheese,twarog,quark;Farmer cheese (tvorog);Kitchen/Dairy;10;M;dairy
+smetana,sour cream smetana;Smetana;Kitchen/Dairy;14;M;dairy
+buckwheat,kasha,grechka,buckwheat groats;Buckwheat (kasha);Kitchen/Pantry;365;;
+sauerkraut,kiszona kapusta,kvashenaya kapusta;Sauerkraut;Kitchen/Dairy;60;;
+pickled herring,herring,shuba,schmaltz herring;Herring;Kitchen/Dairy;30;F;fish
+rye bread,borodinsky,pumpernickel;Rye bread;Kitchen/Bakery;7;W;
+challah;Challah;Kitchen/Bakery;4;W,E;egg
+matzo,matzah,matza;Matzo;Kitchen/Pantry;365;W;
+gefilte fish;Gefilte fish;Kitchen/Pantry;365;F,E;fish
+lox,smoked salmon,nova;Lox (smoked salmon);Kitchen/Dairy;10;F;fish
+bagels,bagel;Bagels;Kitchen/Bakery;4;W;
+# ---- Italian and Mediterranean staples people abbreviate ----
+pesto,basil pesto,pesto genovese;Pesto;Kitchen/Dairy;14;T,M;dairy
+parmigiano,parmesan,parmigiano reggiano,grana padano,pecorino;Parmesan;Kitchen/Dairy;60;M;dairy
+prosciutto,pancetta,guanciale,salami,soppressata,mortadella,pepperoni;Cured meat (prosciutto/salami);Kitchen/Meat;21;;meat,pork
+anchovies,anchovy,anchovy fillets,colatura;Anchovies;Kitchen/Pantry;365;F;fish
+worcestershire,worcestershire sauce,lea perrins;Worcestershire sauce;Kitchen/Pantry;730;F;fish,liquid
+gelatin,gelatine,jello,jell-o,gummy bears,marshmallows;Gelatin (and sweets made with it);Kitchen/Pantry;365;;gelatin
+honey,raw honey,manuka;Honey;Kitchen/Pantry;730;;honey
+caesar dressing;Caesar dressing;Kitchen/Dairy;60;F,E,M;fish,egg,dairy,liquid
+lard,manteca,manteca de cerdo;Lard (manteca);Kitchen/Pantry;180;;meat,pork
+# ---- added 15 Nov from the first held-out set (that set is now tuning; a fresh one scores this) ----
+gulab jamun mix,gulab jamun;Gulab jamun mix;Kitchen/Pantry;270;M,W;dairy
+soan papdi,son papdi;Soan papdi;Kitchen/Snacks;120;W,M,T;dairy
+oats,rolled oats,masala oats,quick oats,steel cut oats;Oats;Kitchen/Pantry;365;;
+choco pie,chocopie;Choco Pie;Kitchen/Snacks;180;W,E,M,S;egg,dairy
+pocky,pepero;Pocky;Kitchen/Snacks;270;W,M,S;dairy
+tuna,canned tuna,tuna in oil,tuna chunks;Canned tuna;Kitchen/Pantry;1095;F;fish
+bibim myun,bibimmyun,naengmyeon,jjajangmyeon,chapagetti,neoguri;Korean instant noodles;Kitchen/Pantry;270;W;
+sha cha,sha cha sauce,shacha;Sha cha sauce;Kitchen/Pantry;365;F,C,S;fish,shellfish
+century eggs,preserved duck eggs,pidan,salted duck eggs,salted eggs,itlog na maalat;Preserved duck eggs;Kitchen/Pantry;60;E;egg
+garlic chives,chinese chives,gau choy,nira,buchu;Garlic chives;Kitchen/Produce;5;;allium
+fermented bean curd,fermented tofu,furu,doufu ru,red bean curd,stinky tofu;Fermented bean curd;Kitchen/Pantry;365;S;
+bamboo shoots,bamboo shoot,labong;Bamboo shoots;Kitchen/Pantry;730;;
+dried scallop,dried scallops,conpoy;Dried scallops;Kitchen/Pantry;365;C;shellfish
+golden curry,vermont curry,java curry,japanese curry,curry roux,kokumaro;Japanese curry roux;Kitchen/Pantry;365;W,S,M;
+sesame dressing,roasted sesame dressing,goma dressing,deep roasted sesame dressing;Sesame dressing;Kitchen/Pantry;180;Z,E,S,W;egg,liquid
+shirataki,konjac noodles,konnyaku,shirataki noodles;Shirataki noodles;Kitchen/Dairy;90;;
+inari,inari age,aburaage,abura age,fried tofu pouches;Inari age;Kitchen/Dairy;90;S,W;
+kare kare mix,kare-kare mix;Kare-kare mix;Kitchen/Pantry;540;P;
+sinigang mix,sinigang sa sampalok;Sinigang mix;Kitchen/Pantry;540;;
+hotdog,hotdogs,hot dogs,hot dog,tender juicy,franks,frankfurters,wieners;Hot dogs;Kitchen/Meat;14;;meat,pork
+pine nuts,pine nut,pignoli,chilgoza;Pine nuts;Kitchen/Pantry;120;T;
+everything bagel seasoning,everything but the bagel,everything but the bagel sesame seasoning;Everything bagel seasoning;Kitchen/Pantry;365;Z;
+zhoug,zhug,schug;Zhoug;Kitchen/Dairy;30;;
+goya adobo,adobo all purpose,adobo seasoning,adobo con pimienta,adobo goya,adobo badia;Adobo seasoning;Kitchen/Pantry;730;;
+malta,malta goya,malta india,vitamalt;Malta (malt drink);Kitchen/Drinks;270;W;liquid
+mojo criollo,mojo marinade,mojo;Mojo criollo;Kitchen/Pantry;365;;allium,liquid
+habichuelas,habichuelas rosadas,pink beans,red beans,frijoles rojos;Pink/red beans;Kitchen/Pantry;730;;
+aleppo pepper,urfa biber,pul biber,maras pepper;Aleppo pepper;Kitchen/Pantry;365;;
+dried limes,loomi,limoo amani,black lime;Dried limes;Kitchen/Pantry;365;;
+kashk,kishk;Kashk;Kitchen/Dairy;60;M;dairy
+milk powder,powdered milk,nido,peak milk powder;Milk powder;Kitchen/Pantry;365;M;dairy
+water crackers,excelsior crackers,crix;Crackers;Kitchen/Snacks;180;W;
+hard dough bread,hardo bread,coco bread,bulla,bulla cake;Hard dough bread;Kitchen/Bakery;5;W;
+ryazhenka,varenets,prostokvasha;Ryazhenka;Kitchen/Dairy;10;M;dairy,liquid
+sprats,sprats in oil,riga gold;Sprats;Kitchen/Pantry;730;F;fish
+syrniki,blintzes,blini,nalesniki;Syrniki / blintzes;Kitchen/Frozen;180;M,E,W;dairy,egg,frozen
+callaloo canned,canned callaloo,grace callaloo;Callaloo (canned);Kitchen/Pantry;730;;
+tsuyu,mentsuyu,soba sauce,noodle soup base;Tsuyu (noodle soup base);Kitchen/Pantry;365;S,W,F;fish,liquid
+samosa,samosas,kachori,patties,patty,beef patties,jamaican patties;Samosas / patties;Kitchen/Frozen;180;W;frozen
+moghrabieh,mograbieh,pearl couscous moghrabieh;Moghrabieh;Kitchen/Pantry;365;W;
+rava idli mix,rava dosa mix,idli mix,dosa mix,upma mix,dhokla mix;Idli/dosa mix;Kitchen/Pantry;270;W;
+carnitas,al pastor,barbacoa,birria,lengua,tripas;Carnitas / Mexican braised meat;Kitchen/Meat;3;;meat,pork
+chili garlic sauce,chilli garlic sauce,tuong ot toi;Chili garlic sauce;Kitchen/Pantry;365;;allium,liquid
+sweet chili sauce,sweet chilli sauce,thai sweet chili;Sweet chili sauce;Kitchen/Pantry;365;;liquid
+peking duck,roast duck,siu ngaap;Roast duck;Kitchen/Meat;3;;meat
+dried shiitake,dried mushrooms,dried shiitake mushroom;Dried shiitake;Kitchen/Pantry;365;;

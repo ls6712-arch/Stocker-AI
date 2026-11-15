@@ -221,6 +221,15 @@ async function finish(e, cap = 50) { let r; for (let i = 0; i < cap; i++) { r = 
   ok('receipts: ordinary lines survive', T.dropOrders('ORGANIC EGGS 12CT 4.99\nPAPER TOWELS 2PK 6.49') === 'ORGANIC EGGS 12CT 4.99\nPAPER TOWELS 2PK 6.49');
 }
 
+// ---- the glossary inside the Worker is the one in src/grocery-data.txt ----
+{
+  const txt = fs.readFileSync(path.join(ROOT, 'src/grocery-data.txt'), 'utf8');
+  const src = fs.readFileSync(path.join(ROOT, 'src/index.js'), 'utf8');
+  ok('glossary: src/index.js carries the current src/grocery-data.txt (run npm run glossary)', src.includes('const GROCERY_TXT = `' + txt + '`;'));
+  const bad = txt.split('\n').filter((l) => l.trim() && !l.startsWith('#') && l.split(';').length !== 6);
+  ok('glossary: every line has six fields', bad.length === 0, bad.slice(0, 3));
+}
+
 // ---- the real cases file is well formed ----
 {
   const data = JSON.parse(fs.readFileSync(path.join(ROOT, 'public/evals/cases.json'), 'utf8'));

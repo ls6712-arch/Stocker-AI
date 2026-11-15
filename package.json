@@ -8,10 +8,12 @@
     "deploy": "wrangler deploy",
     "db:init": "wrangler d1 execute pantry-keeper --remote --file=schema.sql",
     "golive": "wrangler deploy && wrangler secret put APP_PIN",
-    "test": "node evals/households.mjs && node evals/conversations.mjs && node --no-warnings evals/learning.mjs && node --no-warnings evals/measure.mjs",
+    "test": "node evals/households.mjs && node evals/conversations.mjs && node --no-warnings evals/learning.mjs && node --no-warnings evals/measure.mjs && node --no-warnings evals/world.mjs --check",
     "test:heldout": "node evals/conversations.mjs --corpus=evals/heldout",
     "track": "node --no-warnings evals/track.mjs",
-    "test:pace": "node evals/pace.mjs"
+    "test:pace": "node evals/pace.mjs",
+    "glossary": "node scripts/glossary.mjs",
+    "test:world": "node --no-warnings evals/world.mjs --set=heldout2"
   },
   "devDependencies": {
     "wrangler": "^4.162.0"

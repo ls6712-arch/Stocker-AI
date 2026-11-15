@@ -177,12 +177,28 @@ Five layers, all in this repository. The approach follows Anthropic's "Demystify
 | Real use | Week by week from the app: misses, undo, corrections, said twice, not found, typical reply time, reminders sent and how many led to the list, and how many days off the learned pace was when the item was bought again. Kept as counters; nothing private | `health`, `bump` |
 | Offline history | `npm run track -- --note="what changed"` runs the offline suites and appends the scores to `public/evals/history.json`, shown on the scorecard | `evals/track.mjs` |
 
+### World groceries
+
+Tote knows about 330 things from Indian, Chinese, Japanese, Korean, Southeast Asian, Latin, Middle Eastern, African, Caribbean and Eastern European kitchens, as they appear on receipts (Patel Brothers, H Mart, 99 Ranch, Seafood City, Northgate), delivery apps (Weee!, Instacart, Blinkit, BigBasket, Zepto) and in speech ("atta", "patis", "gochugaru").
+
+| Piece | How it works | Where |
+|---|---|---|
+| The glossary | One line per item: the names people use, the display name, where it goes, how long it keeps, allergens it usually contains, diet tags. Edit `src/grocery-data.txt`, then `npm run glossary` copies it into the Worker | `src/grocery-data.txt`, `scripts/glossary.mjs` |
+| Matching | Receipt shorthand is expanded (FLV, SCE, WHL, OJ). When several names appear, the prepared product beats the raw ingredient ("kimchi MANDU", "PIEROGI potato cheese"); a name inside a longer one loses to it ("methi" in "methi leaves") | `itemMatch` |
+| Weak matches | A product word that does not fit ("chili garlic SAUCE" is not produce, "bagel SEASONING" is not bakery) makes the match weak: its allergy and diet warnings still apply, but the model decides where it goes and how long it keeps | `FORMS` |
+| Context | Only the entries a receipt or message needs go to the model, at most 25 | `glossaryFor` |
+| After the model | Where it goes and how long it keeps come from the glossary when it knows the item; "frozen" on the pack wins; a gallon is never a gram; allergy and diet warnings are set by rule, from the item name and the receipt line it came from, and always say "check the label" | `enrich` |
+| Safety net | Plain everyday words for every allergen and diet (flour, bread, noodles, scallops, sprats, carnitas…) catch items the glossary does not know | `WORDS`, `FOOD` |
+
+Scores (`npm run test:world`, `evals/world.mjs`): the tuning set (108 lines, 13 stores) and the first held-out set (98 lines, 17 stores) have both been used to fix things. The fresh held-out set (57 lines, 20 stores and apps) scored **71.2% at first sight** (old code 35.2%), and 86.2% after general fixes made from its failures, so it is no longer clean either. The next clean measure is real receipts. Known trade-offs: most Thai curry pastes contain shrimp, so a vegan one is still flagged "usually contains shellfish, check the label"; brand snacks with no telling word (Yan Yan, Dark Fantasy) are left to the model.
+
 ### Training log
 
 | Date | Change | Measured |
 |---|---|---|
 | 14 Nov | Scorecard and capability tasks added | Live baseline (version 009431f7): regression 96.1%, capability 64.7% (partial 78.9%), on voice 100%, typical reply 4.0 s, slowest 5% 15.5 s |
 | 15 Nov | Round 1: follow-ups with the last two exchanges as context, plans and maybes change nothing, corrections like "2 not 3", learned pace in answers. From reading the baseline failures: answers may not claim a change they did not make; "bought" before an untracked thing is a purchase; an instruction line on a receipt is dropped, not the receipt. Two unfair tests fixed | Offline: all suites pass, router held-out 97.3%. Live: on the scorecard after the next run |
+| 15 Nov | World groceries: a 330-item glossary across ten cuisines, receipt shorthand, prepared-over-ingredient matching, weak matches, frozen and gallon fixes, allergy and diet warnings by rule | Offline, fresh held-out (20 stores): 35.2% before, 71.2% at first sight, 86.2% after; allergies caught 21.7% → 82.6%; diets 55.9% → 100%; gallons 0% → 100%. Live: eight world tasks, baseline first, then this change |
 
 ### The weekly loop
 

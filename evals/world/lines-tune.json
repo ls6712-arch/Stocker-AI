@@ -1,0 +1,1632 @@
+[
+{
+"store": "Patel Brothers",
+"line": "DEEP TOOR DAL OILY 4LB 7.99",
+"name": "toor",
+"place": "Kitchen/Pantry",
+"keep": [
+180,
+730
+],
+"allergens": [],
+"tags": [],
+"clean": "Toor Dal"
+},
+{
+"store": "Patel Brothers",
+"line": "LAXMI SONA MASOORI RICE 20LB 21.99",
+"name": "sona|rice",
+"place": "Kitchen/Pantry",
+"keep": [
+365,
+900
+],
+"allergens": [],
+"tags": [],
+"clean": "Sona Masoori Rice"
+},
+{
+"store": "Patel Brothers",
+"line": "SWAD CHAKKI ATTA 20LB 16.99",
+"name": "atta",
+"place": "Kitchen/Pantry",
+"keep": [
+90,
+365
+],
+"allergens": [
+"W"
+],
+"tags": [],
+"clean": "Chakki Atta"
+},
+{
+"store": "Patel Brothers",
+"line": "AMUL GHEE 32OZ 19.99",
+"name": "ghee",
+"place": "Kitchen/Pantry",
+"keep": [
+180,
+365
+],
+"allergens": [
+"M"
+],
+"tags": [
+"dairy"
+],
+"clean": "Amul Ghee"
+},
+{
+"store": "Patel Brothers",
+"line": "NANAK PANEER 14OZ 5.49",
+"name": "paneer",
+"place": "Kitchen/Dairy",
+"keep": [
+3,
+14
+],
+"allergens": [
+"M"
+],
+"tags": [
+"dairy"
+],
+"clean": "Paneer"
+},
+{
+"store": "Patel Brothers",
+"line": "MDH KITCHEN KING 100G 3.29",
+"name": "spice",
+"place": "Kitchen/Pantry",
+"keep": [
+180,
+730
+],
+"allergens": [],
+"tags": [],
+"clean": "MDH Kitchen King Masala"
+},
+{
+"store": "Patel Brothers",
+"line": "CURRY LEAVES 0.99",
+"name": "curry leaves",
+"place": "Kitchen/Produce",
+"keep": [
+3,
+14
+],
+"allergens": [],
+"tags": [],
+"clean": "Curry Leaves"
+},
+{
+"store": "Patel Brothers",
+"line": "HALDIRAM ALOO BHUJIA 400G 4.99",
+"name": "namkeen|bhujia",
+"place": "Kitchen/Snacks",
+"keep": [
+60,
+180
+],
+"allergens": [],
+"tags": [],
+"clean": "Aloo Bhujia"
+},
+{
+"store": "Patel Brothers",
+"line": "VADILAL HING 100G 2.99",
+"name": "hing",
+"place": "Kitchen/Pantry",
+"keep": [
+180,
+730
+],
+"allergens": [
+"W"
+],
+"tags": [],
+"clean": "Hing"
+},
+{
+"store": "Patel Brothers",
+"line": "PRIYA AVAKAYA MANGO PICKLE 300G 3.49",
+"name": "pickle",
+"place": "Kitchen/Pantry",
+"keep": [
+180,
+730
+],
+"allergens": [
+"U"
+],
+"tags": [],
+"clean": "Avakaya Mango Pickle"
+},
+{
+"store": "Patel Brothers",
+"line": "BHINDI 2.1LB 5.25",
+"name": "okra",
+"place": "Kitchen/Produce",
+"keep": [
+2,
+7
+],
+"allergens": [],
+"tags": [],
+"clean": "Bhindi"
+},
+{
+"store": "Patel Brothers",
+"line": "IDLI DOSA BATTER 32OZ 5.99",
+"name": "batter",
+"place": "Kitchen/Dairy",
+"keep": [
+2,
+7
+],
+"allergens": [],
+"tags": [],
+"clean": "Idli Dosa Batter"
+},
+{
+"store": "Patel Brothers",
+"line": "PARLE G BISCUIT 10PK 3.99",
+"name": "biscuit",
+"place": "Kitchen/Snacks",
+"keep": [
+90,
+365
+],
+"allergens": [
+"W"
+],
+"tags": [],
+"clean": "Parle-G Biscuits"
+},
+{
+"store": "Patel Brothers",
+"line": "KAJU W320 1LB 9.99",
+"name": "cashew",
+"place": "Kitchen/Pantry",
+"keep": [
+90,
+365
+],
+"allergens": [
+"T"
+],
+"tags": [],
+"clean": "Cashews"
+},
+{
+"store": "Patel Brothers",
+"line": "DEEP FROZEN MALABAR PAROTTA 5PC 3.49",
+"name": "paratha",
+"place": "Kitchen/Frozen",
+"keep": [
+60,
+365
+],
+"allergens": [
+"W"
+],
+"tags": [],
+"clean": "Malabar Parotta"
+},
+{
+"store": "BigBasket",
+"line": "Tata Sampann Unpolished Moong Dal, 1 kg ₹ 178",
+"name": "moong",
+"place": "Kitchen/Pantry",
+"keep": [
+180,
+730
+],
+"allergens": [],
+"tags": [],
+"clean": "Moong Dal"
+},
+{
+"store": "BigBasket",
+"line": "Aashirvaad Shudh Chakki Atta 5 kg ₹ 285",
+"name": "atta",
+"place": "Kitchen/Pantry",
+"keep": [
+90,
+365
+],
+"allergens": [
+"W"
+],
+"tags": [],
+"clean": "Aashirvaad Atta"
+},
+{
+"store": "BigBasket",
+"line": "Fresho Coriander Leaves 100 g ₹ 18",
+"name": "cilantro|coriander",
+"place": "Kitchen/Produce",
+"keep": [
+2,
+7
+],
+"allergens": [],
+"tags": [],
+"clean": "Coriander Leaves"
+},
+{
+"store": "BigBasket",
+"line": "Fortune Kachi Ghani Mustard Oil 1 L ₹ 165",
+"name": "mustard oil",
+"place": "Kitchen/Pantry",
+"keep": [
+180,
+540
+],
+"allergens": [
+"U"
+],
+"tags": [
+"liquid"
+],
+"clean": "Mustard Oil"
+},
+{
+"store": "BigBasket",
+"line": "Nandini Curd 500 g ₹ 30",
+"name": "dahi|yogurt",
+"place": "Kitchen/Dairy",
+"keep": [
+3,
+10
+],
+"allergens": [
+"M"
+],
+"tags": [
+"dairy"
+],
+"clean": "Curd"
+},
+{
+"store": "BigBasket",
+"line": "Catch Hing Powder 50 g ₹ 72",
+"name": "hing",
+"place": "Kitchen/Pantry",
+"keep": [
+180,
+730
+],
+"allergens": [
+"W"
+],
+"tags": [],
+"clean": "Hing Powder"
+},
+{
+"store": "BigBasket",
+"line": "Fresho Drumstick 250 g ₹ 35",
+"name": "drumstick",
+"place": "Kitchen/Produce",
+"keep": [
+3,
+7
+],
+"allergens": [],
+"tags": [],
+"clean": "Drumstick"
+},
+{
+"store": "Blinkit",
+"line": "Amul Pure Ghee (1 L) x1 ₹ 650",
+"name": "ghee",
+"place": "Kitchen/Pantry",
+"keep": [
+180,
+365
+],
+"allergens": [
+"M"
+],
+"tags": [
+"dairy"
+],
+"clean": "Amul Ghee"
+},
+{
+"store": "Blinkit",
+"line": "Mother Dairy Malai Paneer 200 g x2 ₹ 180",
+"name": "paneer",
+"place": "Kitchen/Dairy",
+"keep": [
+3,
+14
+],
+"allergens": [
+"M"
+],
+"tags": [
+"dairy"
+],
+"clean": "Malai Paneer"
+},
+{
+"store": "Blinkit",
+"line": "Maggi 2-Minute Masala Noodles 70 g x 12 ₹ 168",
+"name": "maggi|noodle",
+"place": "Kitchen/Pantry",
+"keep": [
+180,
+365
+],
+"allergens": [
+"W"
+],
+"tags": [],
+"clean": "Maggi Noodles"
+},
+{
+"store": "Blinkit",
+"line": "Haldiram's Navratan Mixture 200 g ₹ 55",
+"name": "namkeen|mixture",
+"place": "Kitchen/Snacks",
+"keep": [
+60,
+180
+],
+"allergens": [],
+"tags": [],
+"clean": "Navratan Mixture"
+},
+{
+"store": "Blinkit",
+"line": "Red Label Tea 500 g ₹ 290",
+"name": "tea",
+"place": "Kitchen/Drinks",
+"keep": [
+180,
+730
+],
+"allergens": [],
+"tags": [],
+"clean": "Red Label Tea"
+},
+{
+"store": "Blinkit",
+"line": "Organic Tattva Jaggery Powder 500 g ₹ 110",
+"name": "jaggery",
+"place": "Kitchen/Pantry",
+"keep": [
+180,
+730
+],
+"allergens": [],
+"tags": [],
+"clean": "Jaggery Powder"
+},
+{
+"store": "H Mart",
+"line": "CJ GOCHUJANG HOT PEPPER PASTE 1KG 8.99",
+"name": "gochujang",
+"place": "Kitchen/Pantry",
+"keep": [
+180,
+730
+],
+"allergens": [
+"W",
+"S"
+],
+"tags": [],
+"clean": "Gochujang"
+},
+{
+"store": "H Mart",
+"line": "NONGSHIM SHIN RAMYUN 4PK 5.49",
+"name": "ramen|ramyun",
+"place": "Kitchen/Pantry",
+"keep": [
+180,
+365
+],
+"allergens": [
+"W"
+],
+"tags": [],
+"clean": "Shin Ramyun"
+},
+{
+"store": "H Mart",
+"line": "JONGGA MAT KIMCHI 1.65LB 8.99",
+"name": "kimchi",
+"place": "Kitchen/Dairy",
+"keep": [
+21,
+120
+],
+"allergens": [
+"F",
+"C"
+],
+"tags": [
+"fish"
+],
+"clean": "Jongga Kimchi"
+},
+{
+"store": "H Mart",
+"line": "PULMUONE TOFU FIRM 14OZ 2.29",
+"name": "tofu",
+"place": "Kitchen/Dairy",
+"keep": [
+3,
+14
+],
+"allergens": [
+"S"
+],
+"tags": [],
+"clean": "Firm Tofu"
+},
+{
+"store": "H Mart",
+"line": "NAPA CABBAGE 3.2LB 3.17",
+"name": "napa",
+"place": "Kitchen/Produce",
+"keep": [
+7,
+21
+],
+"allergens": [],
+"tags": [],
+"clean": "Napa Cabbage"
+},
+{
+"store": "H Mart",
+"line": "KOREAN RADISH MU 1.8LB 1.78",
+"name": "daikon|radish",
+"place": "Kitchen/Produce",
+"keep": [
+7,
+21
+],
+"allergens": [],
+"tags": [],
+"clean": "Korean Radish"
+},
+{
+"store": "H Mart",
+"line": "HAITAI GOCHUGARU 1LB 9.99",
+"name": "gochugaru",
+"place": "Kitchen/Pantry",
+"keep": [
+180,
+540
+],
+"allergens": [],
+"tags": [],
+"clean": "Gochugaru"
+},
+{
+"store": "H Mart",
+"line": "SURASANG TTEOKBOKKI RICE CAKE 1.3LB 4.49",
+"name": "tteok|rice cake",
+"place": "Kitchen/Dairy",
+"keep": [
+5,
+30
+],
+"allergens": [],
+"tags": [],
+"clean": "Tteokbokki Rice Cakes"
+},
+{
+"store": "H Mart",
+"line": "SEMPIO DOENJANG 1KG 7.99",
+"name": "doenjang",
+"place": "Kitchen/Pantry",
+"keep": [
+180,
+730
+],
+"allergens": [
+"S",
+"W"
+],
+"tags": [],
+"clean": "Doenjang"
+},
+{
+"store": "H Mart",
+"line": "SAMGYEOPSAL PORK BELLY 1.5LB 9.73",
+"name": "pork belly",
+"place": "Kitchen/Meat",
+"keep": [
+1,
+4
+],
+"allergens": [],
+"tags": [
+"meat",
+"pork"
+],
+"clean": "Pork Belly"
+},
+{
+"store": "H Mart",
+"line": "CJ BIBIGO MANDU PORK 1.5LB 8.99",
+"name": "dumpling",
+"place": "Kitchen/Frozen",
+"keep": [
+60,
+365
+],
+"allergens": [
+"W"
+],
+"tags": [
+"frozen",
+"meat",
+"pork"
+],
+"clean": "Bibigo Mandu"
+},
+{
+"store": "99 Ranch",
+"line": "LKK OYSTER FLV SAUCE 18OZ 3.49",
+"name": "oyster sauce",
+"place": "Kitchen/Pantry",
+"keep": [
+180,
+730
+],
+"allergens": [
+"C"
+],
+"tags": [
+"shellfish"
+],
+"clean": "Oyster Sauce"
+},
+{
+"store": "99 Ranch",
+"line": "PEARL RIVER BRIDGE LIGHT SOY 500ML 2.99",
+"name": "soy sauce",
+"place": "Kitchen/Pantry",
+"keep": [
+365,
+900
+],
+"allergens": [
+"S",
+"W"
+],
+"tags": [
+"liquid"
+],
+"clean": "Light Soy Sauce"
+},
+{
+"store": "99 Ranch",
+"line": "LKK HOISIN SAUCE 20OZ 3.99",
+"name": "hoisin",
+"place": "Kitchen/Pantry",
+"keep": [
+180,
+730
+],
+"allergens": [
+"S",
+"W",
+"Z"
+],
+"tags": [],
+"clean": "Hoisin Sauce"
+},
+{
+"store": "99 Ranch",
+"line": "SHANGHAI BOK CHOY 1.4LB 2.79",
+"name": "bok choy",
+"place": "Kitchen/Produce",
+"keep": [
+3,
+7
+],
+"allergens": [],
+"tags": [],
+"clean": "Shanghai Bok Choy"
+},
+{
+"store": "99 Ranch",
+"line": "GAI LAN 1.1LB 2.19",
+"name": "gai lan",
+"place": "Kitchen/Produce",
+"keep": [
+3,
+7
+],
+"allergens": [],
+"tags": [],
+"clean": "Gai Lan"
+},
+{
+"store": "99 Ranch",
+"line": "KAM YEN JAN LAP CHEONG 12OZ 6.99",
+"name": "sausage|lap",
+"place": "Kitchen/Meat",
+"keep": [
+30,
+180
+],
+"allergens": [],
+"tags": [
+"meat",
+"pork"
+],
+"clean": "Lap Cheong"
+},
+{
+"store": "99 Ranch",
+"line": "PIXIAN DOUBANJIANG 500G 3.99",
+"name": "doubanjiang",
+"place": "Kitchen/Pantry",
+"keep": [
+180,
+540
+],
+"allergens": [
+"S",
+"W"
+],
+"tags": [],
+"clean": "Doubanjiang"
+},
+{
+"store": "99 Ranch",
+"line": "GOLD PLUM CHINKIANG VINEGAR 550ML 2.49",
+"name": "black vinegar",
+"place": "Kitchen/Pantry",
+"keep": [
+365,
+900
+],
+"allergens": [
+"W"
+],
+"tags": [
+"liquid"
+],
+"clean": "Chinkiang Vinegar"
+},
+{
+"store": "99 Ranch",
+"line": "WEI-CHUAN PORK CABBAGE DUMPLINGS 24OZ 6.99",
+"name": "dumpling",
+"place": "Kitchen/Frozen",
+"keep": [
+60,
+365
+],
+"allergens": [
+"W"
+],
+"tags": [
+"frozen",
+"meat",
+"pork"
+],
+"clean": "Pork Cabbage Dumplings"
+},
+{
+"store": "Mitsuwa",
+"line": "KIKKOMAN AJI-MIRIN 10OZ 4.29",
+"name": "mirin",
+"place": "Kitchen/Pantry",
+"keep": [
+365,
+900
+],
+"allergens": [],
+"tags": [
+"liquid"
+],
+"clean": "Aji-Mirin"
+},
+{
+"store": "Mitsuwa",
+"line": "HIKARI ORGANIC WHITE MISO 17.6OZ 6.99",
+"name": "miso",
+"place": "Kitchen/Dairy",
+"keep": [
+180,
+540
+],
+"allergens": [
+"S"
+],
+"tags": [],
+"clean": "White Miso"
+},
+{
+"store": "Mitsuwa",
+"line": "AJINOMOTO HONDASHI 1.05OZ 3.49",
+"name": "dashi",
+"place": "Kitchen/Pantry",
+"keep": [
+180,
+730
+],
+"allergens": [
+"F"
+],
+"tags": [
+"fish"
+],
+"clean": "Hondashi"
+},
+{
+"store": "Mitsuwa",
+"line": "KEWPIE MAYONNAISE 17OZ 5.99",
+"name": "kewpie|mayo",
+"place": "Kitchen/Pantry",
+"keep": [
+90,
+365
+],
+"allergens": [
+"E"
+],
+"tags": [
+"egg"
+],
+"clean": "Kewpie Mayonnaise"
+},
+{
+"store": "Mitsuwa",
+"line": "NISHIKI MEDIUM GRAIN RICE 15LB 22.99",
+"name": "sushi rice|rice",
+"place": "Kitchen/Pantry",
+"keep": [
+365,
+900
+],
+"allergens": [],
+"tags": [],
+"clean": "Nishiki Rice"
+},
+{
+"store": "Mitsuwa",
+"line": "SANUKI UDON 3P 3.99",
+"name": "udon",
+"place": "Kitchen/Pantry",
+"keep": [
+5,
+30
+],
+"allergens": [
+"W"
+],
+"tags": [],
+"clean": "Udon"
+},
+{
+"store": "Mitsuwa",
+"line": "FURIKAKE NORITAMA 1.8OZ 3.29",
+"name": "furikake",
+"place": "Kitchen/Pantry",
+"keep": [
+180,
+540
+],
+"allergens": [
+"Z",
+"F"
+],
+"tags": [
+"fish"
+],
+"clean": "Furikake"
+},
+{
+"store": "Mitsuwa",
+"line": "KAMABOKO PINK 5.6OZ 3.99",
+"name": "fish cake|kamaboko",
+"place": "Kitchen/Dairy",
+"keep": [
+5,
+21
+],
+"allergens": [
+"F"
+],
+"tags": [
+"fish"
+],
+"clean": "Kamaboko"
+},
+{
+"store": "Seafood City",
+"line": "DATU PUTI SPICED VINEGAR 1L 2.49",
+"name": "vinegar",
+"place": "Kitchen/Pantry",
+"keep": [
+365,
+900
+],
+"allergens": [],
+"tags": [
+"liquid"
+],
+"clean": "Datu Puti Vinegar"
+},
+{
+"store": "Seafood City",
+"line": "ROJONS BAGOONG ALAMANG 8OZ 3.99",
+"name": "shrimp paste",
+"place": "Kitchen/Pantry",
+"keep": [
+180,
+540
+],
+"allergens": [
+"C"
+],
+"tags": [
+"shellfish"
+],
+"clean": "Bagoong Alamang"
+},
+{
+"store": "Seafood City",
+"line": "RUFINA PATIS 25OZ 3.29",
+"name": "fish sauce",
+"place": "Kitchen/Pantry",
+"keep": [
+365,
+900
+],
+"allergens": [
+"F"
+],
+"tags": [
+"fish",
+"liquid"
+],
+"clean": "Patis"
+},
+{
+"store": "Seafood City",
+"line": "PAMPANGA LONGGANISA 12OZ 5.99",
+"name": "longganisa",
+"place": "Kitchen/Meat",
+"keep": [
+7,
+60
+],
+"allergens": [],
+"tags": [
+"meat",
+"pork"
+],
+"clean": "Longganisa"
+},
+{
+"store": "Seafood City",
+"line": "GOOD SHEPHERD UBE HALAYA 12OZ 6.99",
+"name": "ube",
+"place": "Kitchen/Pantry",
+"keep": [
+14,
+90
+],
+"allergens": [
+"M"
+],
+"tags": [
+"dairy"
+],
+"clean": "Ube Halaya"
+},
+{
+"store": "Seafood City",
+"line": "CALAMANSI 1LB 3.99",
+"name": "calamansi",
+"place": "Kitchen/Produce",
+"keep": [
+7,
+21
+],
+"allergens": [],
+"tags": [],
+"clean": "Calamansi"
+},
+{
+"store": "Seafood City",
+"line": "JUFRAN BANANA KETCHUP 12OZ 2.29",
+"name": "banana ketchup",
+"place": "Kitchen/Pantry",
+"keep": [
+180,
+540
+],
+"allergens": [],
+"tags": [],
+"clean": "Banana Ketchup"
+},
+{
+"store": "Seafood City",
+"line": "SOTANGHON VERMICELLI 8OZ 1.99",
+"name": "glass noodle",
+"place": "Kitchen/Pantry",
+"keep": [
+365,
+900
+],
+"allergens": [],
+"tags": [],
+"clean": "Sotanghon"
+},
+{
+"store": "Weee!",
+"line": "Lao Gan Ma Spicy Chili Crisp 7.41 oz × 2 $7.98",
+"name": "chili crisp",
+"place": "Kitchen/Pantry",
+"keep": [
+180,
+540
+],
+"allergens": [
+"S"
+],
+"tags": [],
+"clean": "Lao Gan Ma Chili Crisp"
+},
+{
+"store": "Weee!",
+"line": "Mae Ploy Red Curry Paste 14 oz $3.99",
+"name": "curry paste",
+"place": "Kitchen/Pantry",
+"keep": [
+180,
+540
+],
+"allergens": [
+"C"
+],
+"tags": [
+"shellfish"
+],
+"clean": "Red Curry Paste"
+},
+{
+"store": "Weee!",
+"line": "Chaokoh Coconut Milk 13.5 fl oz × 4 $7.96",
+"name": "coconut milk",
+"place": "Kitchen/Pantry",
+"keep": [
+365,
+900
+],
+"allergens": [],
+"tags": [
+"liquid"
+],
+"clean": "Coconut Milk"
+},
+{
+"store": "Weee!",
+"line": "Three Crabs Fish Sauce 24 fl oz $5.49",
+"name": "fish sauce",
+"place": "Kitchen/Pantry",
+"keep": [
+365,
+900
+],
+"allergens": [
+"F"
+],
+"tags": [
+"fish",
+"liquid"
+],
+"clean": "Three Crabs Fish Sauce"
+},
+{
+"store": "Weee!",
+"line": "Fresh Lemongrass 3 stalks $1.99",
+"name": "lemongrass",
+"place": "Kitchen/Produce",
+"keep": [
+7,
+21
+],
+"allergens": [],
+"tags": [],
+"clean": "Lemongrass"
+},
+{
+"store": "Weee!",
+"line": "Banh Trang Rice Paper 12 oz $2.49",
+"name": "rice paper",
+"place": "Kitchen/Pantry",
+"keep": [
+365,
+900
+],
+"allergens": [],
+"tags": [],
+"clean": "Rice Paper"
+},
+{
+"store": "Weee!",
+"line": "Enoki Mushroom 7 oz $1.29",
+"name": "enoki|mushroom",
+"place": "Kitchen/Produce",
+"keep": [
+3,
+10
+],
+"allergens": [],
+"tags": [],
+"clean": "Enoki Mushroom"
+},
+{
+"store": "Instacart",
+"line": "Goya Sazón Culantro y Achiote, 1.41 oz",
+"name": "sazon",
+"place": "Kitchen/Pantry",
+"keep": [
+365,
+900
+],
+"allergens": [],
+"tags": [],
+"clean": "Goya Sazon"
+},
+{
+"store": "Instacart",
+"line": "Cacique Queso Fresco, 10 oz",
+"name": "queso",
+"place": "Kitchen/Dairy",
+"keep": [
+7,
+21
+],
+"allergens": [
+"M"
+],
+"tags": [
+"dairy"
+],
+"clean": "Queso Fresco"
+},
+{
+"store": "Instacart",
+"line": "Mission Corn Tortillas, 30 ct",
+"name": "tortilla",
+"place": "Kitchen/Bakery",
+"keep": [
+7,
+30
+],
+"allergens": [],
+"tags": [],
+"clean": "Corn Tortillas"
+},
+{
+"store": "Instacart",
+"line": "Ziyad Tahini, 16 oz",
+"name": "tahini",
+"place": "Kitchen/Pantry",
+"keep": [
+180,
+540
+],
+"allergens": [
+"Z"
+],
+"tags": [],
+"clean": "Tahini"
+},
+{
+"store": "Instacart",
+"line": "Lea & Perrins Worcestershire Sauce, 10 fl oz",
+"name": "worcestershire",
+"place": "Kitchen/Pantry",
+"keep": [
+365,
+900
+],
+"allergens": [
+"F"
+],
+"tags": [
+"fish",
+"liquid"
+],
+"clean": "Worcestershire Sauce"
+},
+{
+"store": "Instacart",
+"line": "Huy Fong Sriracha Hot Chili Sauce, 17 oz",
+"name": "sriracha|chili sauce",
+"place": "Kitchen/Pantry",
+"keep": [
+180,
+540
+],
+"allergens": [],
+"tags": [],
+"clean": "Sriracha"
+},
+{
+"store": "Instacart",
+"line": "Organic Whole Milk, 1 gal",
+"name": "",
+"place": "Kitchen/Dairy",
+"keep": [
+5,
+14
+],
+"allergens": [
+"M"
+],
+"tags": [
+"dairy"
+],
+"clean": "Whole Milk"
+},
+{
+"store": "Northgate",
+"line": "CACIQUE COTIJA 10OZ 4.99",
+"name": "cotija|queso",
+"place": "Kitchen/Dairy",
+"keep": [
+7,
+60
+],
+"allergens": [
+"M"
+],
+"tags": [
+"dairy"
+],
+"clean": "Cotija"
+},
+{
+"store": "Northgate",
+"line": "LA COSTENA CHIPOTLE PEPPERS 7OZ 1.79",
+"name": "chipotle",
+"place": "Kitchen/Pantry",
+"keep": [
+365,
+900
+],
+"allergens": [],
+"tags": [],
+"clean": "Chipotle Peppers"
+},
+{
+"store": "Northgate",
+"line": "TOMATILLO 1.6LB 2.38",
+"name": "tomatillo",
+"place": "Kitchen/Produce",
+"keep": [
+7,
+21
+],
+"allergens": [],
+"tags": [],
+"clean": "Tomatillos"
+},
+{
+"store": "Northgate",
+"line": "MASECA MASA HARINA 4.4LB 3.99",
+"name": "masa",
+"place": "Kitchen/Pantry",
+"keep": [
+180,
+540
+],
+"allergens": [],
+"tags": [],
+"clean": "Maseca"
+},
+{
+"store": "Northgate",
+"line": "CHORIZO DE PUERCO 12OZ 2.99",
+"name": "chorizo",
+"place": "Kitchen/Meat",
+"keep": [
+5,
+30
+],
+"allergens": [],
+"tags": [
+"meat",
+"pork"
+],
+"clean": "Pork Chorizo"
+},
+{
+"store": "Northgate",
+"line": "PLATANO MADURO 2LB 1.58",
+"name": "plantain",
+"place": "Kitchen/Produce",
+"keep": [
+3,
+10
+],
+"allergens": [],
+"tags": [],
+"clean": "Plantains"
+},
+{
+"store": "Northgate",
+"line": "CREMA MEXICANA 15OZ 3.49",
+"name": "crema",
+"place": "Kitchen/Dairy",
+"keep": [
+7,
+21
+],
+"allergens": [
+"M"
+],
+"tags": [
+"dairy"
+],
+"clean": "Crema Mexicana"
+},
+{
+"store": "Northgate",
+"line": "DONA MARIA MOLE 8.25OZ 2.99",
+"name": "mole",
+"place": "Kitchen/Pantry",
+"keep": [
+180,
+540
+],
+"allergens": [
+"P",
+"Z",
+"W"
+],
+"tags": [],
+"clean": "Mole"
+},
+{
+"store": "Northgate",
+"line": "CHILE GUAJILLO 3OZ 1.99",
+"name": "dried chile|chile",
+"place": "Kitchen/Pantry",
+"keep": [
+180,
+540
+],
+"allergens": [],
+"tags": [],
+"clean": "Guajillo Chiles"
+},
+{
+"store": "Sahadi's",
+"line": "ZIYAD ZAATAR 8OZ 4.99",
+"name": "za'atar|zaatar",
+"place": "Kitchen/Pantry",
+"keep": [
+180,
+540
+],
+"allergens": [
+"Z"
+],
+"tags": [],
+"clean": "Za'atar"
+},
+{
+"store": "Sahadi's",
+"line": "KAROUN LABNEH 16OZ 5.99",
+"name": "labneh",
+"place": "Kitchen/Dairy",
+"keep": [
+7,
+21
+],
+"allergens": [
+"M"
+],
+"tags": [
+"dairy"
+],
+"clean": "Labneh"
+},
+{
+"store": "Sahadi's",
+"line": "HALLOUMI CHEESE 8OZ 5.49",
+"name": "halloumi",
+"place": "Kitchen/Dairy",
+"keep": [
+14,
+60
+],
+"allergens": [
+"M"
+],
+"tags": [
+"dairy"
+],
+"clean": "Halloumi"
+},
+{
+"store": "Sahadi's",
+"line": "BULGUR #2 2LB 3.99",
+"name": "bulgur",
+"place": "Kitchen/Pantry",
+"keep": [
+180,
+540
+],
+"allergens": [
+"W"
+],
+"tags": [],
+"clean": "Bulgur"
+},
+{
+"store": "Sahadi's",
+"line": "CORTAS POMEGRANATE MOLASSES 10OZ 4.49",
+"name": "pomegranate molasses",
+"place": "Kitchen/Pantry",
+"keep": [
+365,
+900
+],
+"allergens": [],
+"tags": [
+"liquid"
+],
+"clean": "Pomegranate Molasses"
+},
+{
+"store": "Sahadi's",
+"line": "MEDJOOL DATES 2LB 11.99",
+"name": "dates",
+"place": "Kitchen/Pantry",
+"keep": [
+90,
+365
+],
+"allergens": [],
+"tags": [],
+"clean": "Medjool Dates"
+},
+{
+"store": "Sahadi's",
+"line": "PITA BREAD 6CT 2.49",
+"name": "pita",
+"place": "Kitchen/Bakery",
+"keep": [
+3,
+7
+],
+"allergens": [
+"W"
+],
+"tags": [],
+"clean": "Pita Bread"
+},
+{
+"store": "African market",
+"line": "IJEBU GARRI 4LB 7.99",
+"name": "gari",
+"place": "Kitchen/Pantry",
+"keep": [
+180,
+540
+],
+"allergens": [],
+"tags": [],
+"clean": "Ijebu Garri"
+},
+{
+"store": "African market",
+"line": "GROUND EGUSI 1LB 9.99",
+"name": "egusi",
+"place": "Kitchen/Pantry",
+"keep": [
+90,
+365
+],
+"allergens": [],
+"tags": [],
+"clean": "Egusi"
+},
+{
+"store": "African market",
+"line": "RED PALM OIL 1L 6.99",
+"name": "palm oil",
+"place": "Kitchen/Pantry",
+"keep": [
+365,
+730
+],
+"allergens": [],
+"tags": [
+"liquid"
+],
+"clean": "Red Palm Oil"
+},
+{
+"store": "African market",
+"line": "STOCKFISH CUT 8OZ 14.99",
+"name": "stockfish|dried fish",
+"place": "Kitchen/Pantry",
+"keep": [
+90,
+365
+],
+"allergens": [
+"F"
+],
+"tags": [
+"fish"
+],
+"clean": "Stockfish"
+},
+{
+"store": "African market",
+"line": "MAGGI CUBES 100CT 4.99",
+"name": "stock cube",
+"place": "Kitchen/Pantry",
+"keep": [
+365,
+900
+],
+"allergens": [
+"W"
+],
+"tags": [],
+"clean": "Maggi Cubes"
+},
+{
+"store": "African market",
+"line": "GRACE ACKEE 19OZ 9.99",
+"name": "ackee",
+"place": "Kitchen/Pantry",
+"keep": [
+365,
+900
+],
+"allergens": [],
+"tags": [],
+"clean": "Ackee"
+},
+{
+"store": "African market",
+"line": "SALTFISH BONELESS 1LB 8.99",
+"name": "saltfish",
+"place": "Kitchen/Pantry",
+"keep": [
+180,
+540
+],
+"allergens": [
+"F"
+],
+"tags": [
+"fish"
+],
+"clean": "Saltfish"
+},
+{
+"store": "African market",
+"line": "WALKERSWOOD JERK SEASONING 10OZ 6.49",
+"name": "jerk",
+"place": "Kitchen/Pantry",
+"keep": [
+180,
+540
+],
+"allergens": [],
+"tags": [],
+"clean": "Jerk Seasoning"
+},
+{
+"store": "NetCost",
+"line": "LIFEWAY KEFIR PLAIN 32OZ 4.49",
+"name": "kefir",
+"place": "Kitchen/Dairy",
+"keep": [
+7,
+21
+],
+"allergens": [
+"M"
+],
+"tags": [
+"dairy",
+"liquid"
+],
+"clean": "Kefir"
+},
+{
+"store": "NetCost",
+"line": "KIELBASA KRAKOWSKA 1.2LB 7.18",
+"name": "kielbasa",
+"place": "Kitchen/Meat",
+"keep": [
+7,
+30
+],
+"allergens": [],
+"tags": [
+"meat",
+"pork"
+],
+"clean": "Kielbasa"
+},
+{
+"store": "NetCost",
+"line": "PIEROGI POTATO CHEESE 16OZ 3.99",
+"name": "pierogi",
+"place": "Kitchen/Frozen",
+"keep": [
+60,
+365
+],
+"allergens": [
+"W",
+"M"
+],
+"tags": [
+"frozen"
+],
+"clean": "Pierogi"
+},
+{
+"store": "NetCost",
+"line": "BUCKWHEAT GROATS 2LB 3.49",
+"name": "buckwheat",
+"place": "Kitchen/Pantry",
+"keep": [
+180,
+540
+],
+"allergens": [],
+"tags": [],
+"clean": "Buckwheat"
+},
+{
+"store": "NetCost",
+"line": "FARMER CHEESE 16OZ 4.99",
+"name": "farmer cheese|tvorog",
+"place": "Kitchen/Dairy",
+"keep": [
+5,
+14
+],
+"allergens": [
+"M"
+],
+"tags": [
+"dairy"
+],
+"clean": "Farmer Cheese"
+},
+{
+"store": "NetCost",
+"line": "BORODINSKY RYE BREAD 3.49",
+"name": "rye",
+"place": "Kitchen/Bakery",
+"keep": [
+4,
+10
+],
+"allergens": [
+"W"
+],
+"tags": [],
+"clean": "Borodinsky Rye Bread"
+}
+]

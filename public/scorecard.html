@@ -43,7 +43,7 @@ svg text{fill:var(--muted);font-size:11px}.legend{display:flex;gap:14px;flex-wra
 <div class="card wrap" id="health"></div>
 
 <h2>Offline scores</h2>
-<p>Recorded with <code>npm run track</code> before each change is pushed: the router on phrasings it was never taught, and how well the learned pace times reminders across 1,000 simulated households.</p>
+<p>Recorded with <code>npm run track</code> before each change is pushed: the router on phrasings it was never taught; world groceries (receipt lines from 20 stores and delivery apps Tote was not tuned on: knowing the item, where it goes, how long it keeps, allergy and diet warnings, units); and how well the learned pace times reminders across 1,000 simulated households.</p>
 <div class="card wrap" id="offline"></div>
 
 <h2>The weekly loop</h2>
@@ -102,8 +102,8 @@ svg text{fill:var(--muted);font-size:11px}.legend{display:flex;gap:14px;flex-wra
         b.onclick=function(){send('POST','/api/scorecard/verdict',{run:d.run,case:t.case_id,trial:t.trial,verdict:v[0]}).then(function(){t.verdict=v[0]||null;draw(data)})};bar.append(b)});c.append(bar);TR.append(c)});
     table($('health'),['Week of','Turns','Missed','Undone','Corrected','Said twice','Not found','Typical time','Reminders','Useful','Too early','Pace error'],(d.health||[]).map(function(w){return [w.week,w.turns,pc(w.missRate),pc(w.undoRate),pc(w.correctedRate),pc(w.repeatRate),pc(w.notFoundRate),w.p50ms?Math.round(w.p50ms/100)/10+'s':'–',w.remindersSent,pc(w.remindUseful),pc(w.remindEarly),w.paceErrorDays==null?'–':w.paceErrorDays+' days ('+w.pacePurchases+')']}))}
   function offline(){fetch('/evals/history.json',{cache:'no-store'}).then(function(r){return r.json()}).then(function(h){
-    table($('offline'),['When','Change','Router, held-out','Reminders on time','Too late','Pace off by','Living alone','Learning','Measuring'],h.slice().reverse().map(function(e){var s=e.suites||{},p=s.pace||{},rh=s.routerHeldOut||{};
-      return [String(e.at).slice(0,10)+(e.commit?' '+e.commit:''),e.note||'',rh.meanGate!=null?rh.meanGate+'% (worst '+rh.minGate+'%)':'–',pc(p.reminderOnTime),pc(p.reminderLate),p.errorDays!=null?p.errorDays+' days':'–',pc(p.livingAlone),s.learning?s.learning.pass+'/'+s.learning.total:'–',s.measuring?s.measuring.pass+'/'+s.measuring.total:'–']}))},function(){$('offline').textContent='No offline scores recorded yet.'})}
+    table($('offline'),['When','Change','Router, held-out','World groceries','Allergies caught','Reminders on time','Too late','Pace off by','Living alone','Learning','Measuring'],h.slice().reverse().map(function(e){var s=e.suites||{},p=s.pace||{},rh=s.routerHeldOut||{},w=s.world||{};
+      return [String(e.at).slice(0,10)+(e.commit?' '+e.commit:''),e.note||'',rh.meanGate!=null?rh.meanGate+'% (worst '+rh.minGate+'%)':'–',pc(w.overall),pc(w.allergy),pc(p.reminderOnTime),pc(p.reminderLate),p.errorDays!=null?p.errorDays+' days':'–',pc(p.livingAlone),s.learning?s.learning.pass+'/'+s.learning.total:'–',s.measuring?s.measuring.pass+'/'+s.measuring.total:'–']}))},function(){$('offline').textContent='No offline scores recorded yet.'})}
   function load(run){return send('GET','/api/scorecard'+(run?'?run='+run:'')).then(draw,function(e){$('state').textContent=e===401?'Sign in to Stocker in this browser first.':'Could not load the scorecard.'})}
   // while this page is open, an open run moves faster than the background pace of a few trials a minute
   function step(){if(stepping)return;stepping=true;send('POST','/api/scorecard/step').then(function(r){stepping=false;load($('pick').value);if(r&&r.status==='running')setTimeout(step,1500)},function(){stepping=false})}
