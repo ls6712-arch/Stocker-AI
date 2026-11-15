@@ -39,7 +39,7 @@ const d=n=>{const x=new Date();x.setDate(x.getDate()+n);return x.getFullYear()+'
  const last=await p.evaluate(()=>{const m=document.querySelector('main'),nav=document.querySelector('#tabbar').getBoundingClientRect();window.scrollTo(0,document.body.scrollHeight);const els=[...m.querySelectorAll('button')].filter(e=>e.offsetParent);const r=els[els.length-1].getBoundingClientRect();return {bottom:Math.round(r.bottom),nav:Math.round(nav.top)}});
  check('The last button on a long page is not hidden behind the tab bar',last.bottom<=last.nav+2,JSON.stringify(last));
  // --- nudges and badges
- const badge=await p.textContent('#listBadge').catch(()=>''),listN=await p.evaluate(()=>fetch('/api/items',{credentials:'same-origin'}).then(r=>r.json()).then(d=>d.extras.length+d.items.filter(i=>i.qty<=0||i.low).length));
+ const badge=await p.textContent('#listBadge').catch(()=>''),listN=await p.evaluate(()=>document.querySelectorAll('#app button.check').length);
  check('List badge matches what is on the list',String(badge).trim()===String(listN),'badge "'+badge+'" vs '+listN);
  check('There is one place that gathers everything needing attention',await p.locator('#bell, [aria-label*="otification"], [aria-label*="eeds you"]').count()>0,'no bell or inbox found');
  check('The app icon can show a count (app badge)',await p.evaluate(()=>/setAppBadge/.test(document.documentElement.innerHTML)),'');

@@ -147,7 +147,7 @@ async function main() {
 
   // milk was last bought on the 7th at a 3-day pace, so it is due from the 9th
   const preview = (await call('GET', '/api/remind', null, day(9))).data.preview;
-  note('reminder: milk is raised on day 2 of a 3-day pace, with the reason', !!preview && /Milk is probably running low/.test(preview.title) && /about every 3 days/.test(preview.body) && preview.actions.length === 2, preview);
+  note('reminder: milk is raised on day 2 of a 3-day pace, saying when', !!preview && /Milk is running low/.test(preview.title) && /My guess: out by tomorrow/.test(preview.body) && preview.actions.length === 2, preview);
   note('reminder: nothing is raised the day after buying', (await call('GET', '/api/remind', null, day(8))).data.preview === null);
   const pushes = () => sentPushes.length;
   let n0 = pushes();
@@ -197,6 +197,69 @@ async function main() {
   pushStatus = 201;
   const ny = A.localNow('America/New_York', new Date('2026-03-10T21:30:00Z'));
   note('timing: the hour is the phone\'s own local hour', ny.day === '2026-03-10' && ny.hour === 17, ny);
+
+  // ---- 3b. clean notifications, in a fresh home ----
+  {
+    const db2 = new DatabaseSync(':memory:');
+    db2.exec(fs.readFileSync(path.join(ROOT, 'schema.sql'), 'utf8'));
+    const env2 = { ...env, DB: d1(db2) };
+    let jar = '';
+    const call2 = async (method, p, body, today) => {
+      const res = await A.default.fetch(new Request('https://stocker.test' + p, { method, headers: { cookie: jar, 'content-type': 'application/json', origin: 'https://stocker.test', 'x-today': today || day(1) }, body: body ? JSON.stringify(body) : undefined }), env2);
+      return { status: res.status, data: await res.json().catch(() => ({})), res };
+    };
+    jar = (await call2('POST', '/api/login', { pin: 'test1234', name: 'Sam' })).res.headers.getSetCookie().map((c) => c.split(';')[0]).join('; ');
+    const say2 = (text, n) => call2('POST', '/api/chat', { text }, day(n));
+    const words = (t) => String(t || '').split(/\s+/).filter(Boolean).length;
+    const sentStat = (name) => db2.prepare("SELECT COALESCE(SUM(CAST(v AS REAL)), 0) AS n FROM settings WHERE k LIKE ?").get('stat:' + name + ':%').n;
+    await say2('bought milk', 1); await say2('bought milk', 4);
+
+    const one = (await call2('GET', '/api/remind', null, day(6))).data.preview || {};
+    note('notification: leads with the item and says when, as my guess', /^Milk is running low$/.test(one.title || '') && /my guess/i.test(one.body || '') && /tomorrow/.test(one.body || ''), one);
+    note('notification: title and body each under 12 words', !!one.title && words(one.title) < 12 && words(one.body) < 12, one);
+    await say2('bought bread', 1); await say2('bought bread', 4);
+    const two = (await call2('GET', '/api/remind', null, day(6))).data.preview || {};
+    note('notification: two items stay short too', /Milk and Bread are running low/.test(two.title || '') && words(two.title) < 12 && words(two.body) < 12, two);
+
+    pushStatus = 201; let n1 = sentPushes.length;
+    await call2('POST', '/api/push', sub('https://fcm.googleapis.com/fcm/send/home2-a'));
+    const hi = open(sentPushes[sentPushes.length - 1]);
+    note('notification: the hello is short', sentPushes.length === n1 + 1 && words(hi.body) < 12, hi);
+
+    pushStatus = 503; n1 = sentPushes.length;
+    await A.tick(env2, at(6, 17));
+    pushStatus = 201;
+    await A.tick(env2, at(6, 18));
+    await A.tick(env2, at(6, 19));
+    const got = sentPushes.length > n1 ? open(sentPushes[sentPushes.length - 1]) : {};
+    note('phone: a push service hiccup is tried again later that day, then stops', sentPushes.length === n1 + 2 && /Milk/.test(got.title || ''), [sentPushes.length - n1, got]);
+
+    await call2('POST', '/api/push', { ...sub('https://fcm.googleapis.com/fcm/send/home2-b'), quiet: true });
+    n1 = sentPushes.length;
+    await A.tick(env2, at(8, 17));
+    note('phone: each phone hears once that day', sentPushes.length === n1 + 2, sentPushes.length - n1);
+
+    db2.prepare("UPDATE push_subs SET fails = 8 WHERE endpoint LIKE '%home2-a'").run();
+    await A.tick(env2, at(10, 17));
+    const kept = db2.prepare("SELECT fails FROM push_subs WHERE endpoint LIKE '%home2-a'").get();
+    note('phone: a phone that works again is kept, not dropped for old failures', !!kept && kept.fails === 0, kept);
+
+    const milk2 = (await call2('GET', '/api/items', null, day(10))).data.items.find((i) => i.name === 'Milk');
+    const added = (await call2('POST', '/api/remind', { ids: [milk2.id], answer: 'add', hour: 17 }, day(10))).data;
+    note('answer: a tap on the notification says what it did', /Milk is on your list/.test((added.say || {}).title || '') && Array.isArray(added.before) && added.before.length === 1, added);
+    await call2('POST', '/api/remind', { answer: 'undo', of: 'add', before: added.before }, day(10));
+    const back = (await call2('GET', '/api/items', null, day(10))).data.items.find((i) => i.name === 'Milk');
+    note('answer: Undo from the notification puts it back', back.low === 0 && back.finish_days === milk2.finish_days, back);
+    note('counting: an undone "add" is not counted as useful', sentStat('remind_add') === 0, sentStat('remind_add'));
+    const still = (await call2('POST', '/api/remind', { ids: [milk2.id], answer: 'still', hour: 17 }, day(10))).data;
+    await call2('POST', '/api/remind', { answer: 'undo', of: 'still', before: still.before }, day(10));
+    const back2 = (await call2('GET', '/api/items', null, day(10))).data.items.find((i) => i.name === 'Milk');
+    note('answer: Undo also takes back "still have it"', back2.finish_days === milk2.finish_days && /later/.test((still.say || {}).title || ''), [back2.finish_days, milk2.finish_days, still.say]);
+    db2.prepare("DELETE FROM settings WHERE k LIKE 'stat:remind_sent:%'").run();
+    n1 = sentPushes.length;
+    await A.tick(env2, at(12, 17));
+    note('counting: a reminder on two phones counts each item once', sentPushes.length === n1 + 2 && sentStat('remind_sent') === 1, [sentPushes.length - n1, sentStat('remind_sent')]);
+  }
 
   // ---- 4. learning from conversations ----
   db.exec('DELETE FROM turns');

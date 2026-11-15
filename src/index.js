@@ -1109,6 +1109,7 @@ async function digest(env, today, commit) {
   const items = (await env.DB.prepare('SELECT * FROM items').all()).results, p = await getProfile(env);
   const rem = new Map((await env.DB.prepare('SELECT * FROM reminders').all()).results.map((r) => [r.name_key, r]));
   const low = [];
+  let raised = 0;
   for (const it of items.filter((i) => (i.learned || i.essential) && dueSoon(i, p, today)).sort((a, b) => (runOutDay(a, p) < runOutDay(b, p) ? -1 : 1))) {
     const r = rem.get(it.name_key);
     if (r && r.muted) continue;
@@ -1118,33 +1119,36 @@ async function digest(env, today, commit) {
     if (commit) {
       await env.DB.prepare('INSERT INTO reminders (name_key, sent, streak, muted, answered, last_day) VALUES (?, 1, 0, 0, 0, ?) ON CONFLICT(name_key) DO UPDATE SET sent = sent + ?, streak = ?, muted = ?, answered = 0, last_day = ?')
         .bind(it.name_key, today, streak >= 3 ? 0 : 1, streak, streak >= 3 ? 1 : 0, streak >= 3 ? r.last_day : today).run();
+      if (streak < 3) raised++;
     }
     if (streak < 3) low.push(it);
   }
+  // counted once per item per day, however many phones hear about it, so "led to the list" is a fair share
+  if (raised) await bump(env, 'remind_sent', raised);
   const use = items.filter((i) => i.qty > 0 && !i.frozen && i.expiry === today);
-  return { low: low.slice(0, 6), use: use.slice(0, 6) };
+  return { low: low.slice(0, 6).map((it) => ({ ...it, left: dayGap(today, runOutDay(it, p)) })), use: use.slice(0, 6) };
 }
+// Fixed sentences only. Item first, then when, said as my guess; each line under 12 words (Tote's voice rules).
+const whenOut = (left) => (left <= 0 ? 'out about now' : left === 1 ? 'out by tomorrow' : 'out in ' + left + ' days');
 function remindText(d, today) {
   if (!d.low.length && !d.use.length) return null;
-  const lc = (t) => t.toLowerCase();
+  const many = (list) => listOf(list.slice(0, 2).map((i) => i.name).concat(list.length > 2 ? [list.length - 2 + ' more'] : []));
   let title = '', body = '';
-  if (d.low.length === 1) {
-    const it = d.low[0], since = dayGap(it.bought || it.added, today);
-    title = it.name + ' is probably running low';
-    body = (it.learned ? 'You usually buy it about every ' + everyDays(it.finish_days) + ', and it has been ' + since + (since === 1 ? ' day' : ' days') + '.' : 'It has been ' + since + ' days since you bought it.') + ' Shall I put it on your list?';
-  } else if (d.low.length > 1) {
-    title = listOf(d.low.slice(0, 2).map((i) => i.name).concat(d.low.length > 2 ? [d.low.length - 2 + ' more'] : [])) + ' are probably running low';
-    body = 'Going by your usual pace. I can put them on your list, or tell me you still have them.';
-  }
-  if (d.use.length) {
-    const u = 'he ' + lc(d.use[0].name) + (d.use.length > 1 ? ' and ' + (d.use.length - 1) + ' more want' : ' wants') + ' using today';
-    if (!title) { title = 'T' + u; body = 'Or it can go in the freezer.'; } else body += ' Also, t' + u + '.';
+  if (d.low.length) {
+    const left = Math.max(...d.low.map((i) => (Number.isFinite(i.left) ? i.left : 1)));
+    title = d.low.length === 1 ? d.low[0].name + ' is running low' : many(d.low) + ' are running low';
+    body = 'My guess: ' + (d.low.length === 1 ? whenOut(left) : left <= 1 ? whenOut(left) : 'out within ' + left + ' days') + '.';
+    body += d.use.length ? ' ' + many(d.use) + (d.use.length === 1 ? ' is' : ' are') + ' best by today.' : d.low.length === 1 ? ' Add it to your list?' : ' Add them to your list?';
+  } else {
+    title = many(d.use) + (d.use.length === 1 ? ' is' : ' are') + ' best by today';
+    body = d.use.length === 1 ? 'Use it today, or freeze it.' : 'Use them today, or freeze them.';
   }
   return {
     title, body, url: '/?n=1', ids: d.low.map((i) => i.id),
     actions: d.low.length === 1 ? [{ action: 'add', title: 'Add to list' }, { action: 'still', title: 'Still have it' }] : d.low.length ? [{ action: 'add', title: 'Add all to list' }, { action: 'open', title: 'Show me' }] : [],
   };
 }
+const PUSH_GIVE_UP = 24; // failed tries in a row (an hour apart, within reminder hours) before a phone is forgotten
 // Runs every hour. Each phone hears from me at most once a day, at its own local time, and only when there is something to say.
 async function tick(env, now) {
   await migrate(env);
@@ -1157,11 +1161,11 @@ async function tick(env, now) {
     const t = localNow(sub.tz, now);
     if (sub.last_day === t.day || t.hour < at.hour || t.hour > 21) continue;
     const msg = remindText(byDay[t.day] || (byDay[t.day] = await digest(env, t.day, true)), t.day);
-    await env.DB.prepare('UPDATE push_subs SET last_day = ? WHERE endpoint = ?').bind(t.day, sub.endpoint).run();
-    if (!msg) continue;
+    if (!msg) { await env.DB.prepare('UPDATE push_subs SET last_day = ? WHERE endpoint = ?').bind(t.day, sub.endpoint).run(); continue; }
     const status = await pushSend(env, sub, msg, origin).catch(() => 0);
-    if (status === 404 || status === 410 || sub.fails >= 8) await env.DB.prepare('DELETE FROM push_subs WHERE endpoint = ?').bind(sub.endpoint).run();
-    else if (status >= 200 && status < 300) { sent++; await bump(env, 'remind_sent', (msg.ids || []).length || 1); if (sub.fails) await env.DB.prepare('UPDATE push_subs SET fails = 0 WHERE endpoint = ?').bind(sub.endpoint).run(); }
+    // gone for good: forget the phone. Delivered: done for today. A hiccup: try again next hour, and give up on a phone only after days of failures.
+    if (status === 404 || status === 410 || (!(status >= 200 && status < 300) && sub.fails + 1 >= PUSH_GIVE_UP)) await env.DB.prepare('DELETE FROM push_subs WHERE endpoint = ?').bind(sub.endpoint).run();
+    else if (status >= 200 && status < 300) { sent++; await env.DB.prepare('UPDATE push_subs SET last_day = ?, fails = 0 WHERE endpoint = ?').bind(t.day, sub.endpoint).run(); }
     else await env.DB.prepare('UPDATE push_subs SET fails = fails + 1 WHERE endpoint = ?').bind(sub.endpoint).run();
   }
   return { sent };
@@ -1597,7 +1601,7 @@ async function api(request, env, url) {
     await env.DB.prepare('INSERT INTO push_subs (endpoint, p256dh, auth, who, tz, added) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(endpoint) DO UPDATE SET p256dh = excluded.p256dh, auth = excluded.auth, who = excluded.who, tz = excluded.tz, fails = 0')
       .bind(sub.endpoint, sub.p256dh, sub.auth, me || null, okZone(body.tz), new Date().toISOString()).run();
     await env.DB.prepare("INSERT INTO settings (k, v) VALUES ('origin', ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v").bind(url.origin).run();
-    const hello = body.quiet ? 0 : await pushSend(env, sub, { title: 'Reminders are on', body: 'I will let you know when something is running out. Once a day at most.', url: '/', ids: [], actions: [] }, url.origin).catch(() => 0);
+    const hello = body.quiet ? 0 : await pushSend(env, sub, { title: 'Reminders are on', body: 'Once a day at most, when something runs low.', url: '/', ids: [], actions: [] }, url.origin).catch(() => 0);
     return json({ ok: true, hello: hello >= 200 && hello < 300 });
   }
   if (path === '/api/push' && method === 'DELETE') {
@@ -1612,13 +1616,30 @@ async function api(request, env, url) {
   // an answer to a reminder, from the notification itself or from inside the app
   if (path === '/api/remind' && method === 'POST') {
     const body = (await request.json().catch(() => null)) || {};
-    const ids = (Array.isArray(body.ids) ? body.ids : []).filter((id) => /^[0-9a-f-]{36}$/.test(String(id))).slice(0, 12);
+    const isId = (id) => /^[0-9a-f-]{36}$/.test(String(id));
+    // Undo from the notification: put back exactly what the answer changed
+    if (body.answer === 'undo') {
+      const of = ['add', 'still'].includes(body.of) ? body.of : '';
+      const before = (Array.isArray(body.before) ? body.before : []).filter((b) => b && isId(b.id)).slice(0, 12);
+      if (!of || !before.length) return json({ error: 'empty' }, 400);
+      let n = 0;
+      for (const b of before) {
+        const r = of === 'add'
+          ? await env.DB.prepare('UPDATE items SET low = ? WHERE id = ?').bind(b.low ? 1 : 0, b.id).run()
+          : await env.DB.prepare('UPDATE items SET finish_days = ? WHERE id = ?').bind(clamp(Math.round(num(b.finish_days, 14)), 1, 365), b.id).run();
+        n += (r && r.meta && r.meta.changes) || 1;
+      }
+      await bump(env, 'remind_' + of, -before.length);
+      return json({ ok: true, undone: n });
+    }
+    const ids = (Array.isArray(body.ids) ? body.ids : []).filter(isId).slice(0, 12);
     const ans = ['add', 'still', 'stop', 'start'].includes(body.answer) ? body.answer : '';
     if (!ans || !ids.length) return json({ error: 'empty' }, 400);
-    const done = [];
+    const done = [], before = [];
     for (const id of ids) {
       const it = await env.DB.prepare('SELECT * FROM items WHERE id = ?').bind(id).first();
       if (!it) continue;
+      before.push({ id: it.id, low: it.low ? 1 : 0, finish_days: it.finish_days });
       if (ans === 'add') await env.DB.prepare('UPDATE items SET low = 1 WHERE id = ?').bind(id).run();
       // "still have it" means my estimate was short: give it half as long again before I ask
       if (ans === 'still') await env.DB.prepare('UPDATE items SET finish_days = ? WHERE id = ?').bind(clamp(dayGap(it.bought || it.added, today) + Math.max(3, Math.ceil(it.finish_days * 0.5)), 1, 365), id).run();
@@ -1635,7 +1656,10 @@ async function api(request, env, url) {
       h[hour]++;
       await env.DB.prepare("INSERT INTO settings (k, v) VALUES ('remind:hours', ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v").bind(JSON.stringify(h)).run();
     }
-    return json({ ok: true, done });
+    // what the notification shows once it is tapped, from what really changed
+    const names = listOf(done.slice(0, 2).concat(done.length > 2 ? [done.length - 2 + ' more'] : []));
+    const say = !done.length ? null : ans === 'add' ? { title: names + (done.length === 1 ? ' is' : ' are') + ' on your list' } : ans === 'still' ? { title: 'Got it. I will ask about ' + names + ' later' } : null;
+    return json({ ok: true, done, say, before: ans === 'add' || ans === 'still' ? before : [] });
   }
 
   // ---- the weekly look at where I went wrong ----

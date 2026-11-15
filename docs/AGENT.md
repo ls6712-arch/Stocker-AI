@@ -138,14 +138,17 @@ Off until someone taps Turn on (under For you, or in the bell). On an iPhone, St
 |---|---|
 | What is worth a reminder | Something whose pace is the household's own, or an essential, that is about to run out; and anything that wants using today. The same rules as the app's "Might be running low", so the phone and the screen agree |
 | How often | One notification per phone per day at most, and only when there is something to say. An item is raised every other day at most |
+| What it says | Fixed sentences, item first, then when, said as a guess: "Milk is running low" / "My guess: out by tomorrow. Add it to your list?". Two items: "Milk and Bread are running low". Best by today: "Spinach is best by today" / "Use it today, or freeze it." Each line stays under 12 words (`remindText`) |
+| When a send fails | 404 or 410: the phone unsubscribed, so it is forgotten. Any other failure: tried again the next hour, the same day, and the phone is dropped only after 24 failed tries in a row. A success resets the count |
 | When | Five in the afternoon, local time, until the household's own hour is learned |
-| Answering | On Android and desktop the notification has "Add to list" and "Still have it". On iPhone, tapping it opens the list of things that need you, with the same answers |
+| Answering | On Android and desktop the notification has "Add to list" and "Still have it". The tap is applied, then the notification is replaced by a quiet one saying what changed ("Milk is on your list") with Undo; `/api/remind` returns that sentence and the values it changed, and `answer: "undo"` puts them back. On iPhone (no notification buttons), tapping it opens the list of things that need you, with the same answers |
+| Counting | `remind_sent` counts each item once on the day it is raised, however many phones hear about it, so "reminders that led to the list" is a fair share. An undone answer is taken back off its counter |
 | What decides | Code. An hourly Worker cron (`tick`) checks whether any phone is due. No model is called |
 | The key | The signing key is made on first use and kept in `settings`. It is never sent to the browser and can do nothing except send to phones that subscribed |
 
 ## App audit
 
-`evals/app-audit.js` walks the app with automated taps (Playwright, against a local `wrangler dev`): back button, reload, scroll memory, page titles, tap-target sizes, the list badge, the bell, offline behaviour and an expired sign-in. 24 checks.
+`evals/app-audit.cjs` (and `evals/app-monkey.cjs <seed>`, random taps that report script errors, server errors, stuck screens and taps that leave the app) walks the app with automated taps (Playwright, against a local `wrangler dev`): back button, reload, scroll memory, page titles, tap-target sizes, the list badge, the bell, offline behaviour and an expired sign-in. 24 checks.
 
 ## Evals
 
@@ -155,7 +158,7 @@ Five layers, all in this repository. The approach follows Anthropic's "Demystify
 |---|---|---|---|
 | Household simulation | `npm test` | No | 1,000 generated households, including hostile input, against the profile, starter-list, allergen and label rules |
 | Router | `npm test`, `npm run test:heldout` | No | 1,000 simulated households and about 5,500 messages through routing, privacy and guardrail code |
-| Learning | `npm test` | No | 46 checks on pace, reminders, the push message and the review loop, with the real SQL in memory |
+| Learning | `npm test` | No | 58 checks on pace, reminders (wording, retries, counting, Undo from the notification), the push message and the review loop, with the real SQL in memory |
 | Measuring | `npm test` | No | 43 checks that the scorecard's own numbers are right: the grader, pass@k and pass^k worked out by hand, isolation, the allowance, the health counters |
 | Pace | `npm run test:pace` | No | Months of shopping for 1,000 households (bulk buys, holidays, shopping early or late); scores how often a reminder lands the day or two before they run out |
 | Live agent | runs itself, see below | Yes | 68 tasks against the real models, graded on the outcome |

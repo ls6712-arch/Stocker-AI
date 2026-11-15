@@ -785,7 +785,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     var hide=false;try{hide=localStorage.getItem('stocker.starterHide')==='1'}catch(e){}
     if(profile&&!hide){var have=items.map(function(i){return i.name.toLowerCase()}).concat(extras.map(function(x){return x.text.toLowerCase()}));
       var picks=starterList().filter(function(n){var l=n.toLowerCase();return fits(n)&&!have.some(function(h){return h.indexOf(l)>-1||l.indexOf(h)>-1})}).slice(0,10);
-      if(picks.length){var sc=el('div','card'),sh=el('div','sechead'),hb=el('button','link','Hide');hb.type='button';hb.style.padding='0';
+      if(picks.length){var sc=el('div','card'),sh=el('div','sechead'),hb=el('button','link','Hide');hb.type='button';hb.style.padding='0';hb.style.minWidth='44px';hb.style.minHeight='40px';
         hb.onclick=function(){try{localStorage.setItem('stocker.starterHide','1')}catch(e){}render()};
         sh.append(el('h3','',pers().length===1?PERSONA[pers()[0]][0]+' staples':'Staples for your home'),hb);sc.append(sh,el('p','sub','A starter list picked for your kind of home. Tap what you want on your shopping list.'));
         var wc=el('div','wrapchips');picks.forEach(function(n){var b=el('button','mini','+ '+n);b.type='button';

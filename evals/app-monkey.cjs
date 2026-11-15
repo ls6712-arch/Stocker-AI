@@ -19,6 +19,7 @@ let seed=Number(process.argv[2]||7);const rnd=()=>(seed=(seed*1664525+1013904223
  await p.reload();await p.waitForTimeout(1000);
  const N=Number(process.argv[3]||320);let done=0;
  for(let i=0;i<N;i++){
+   if(!(await p.evaluate(()=>!!document.querySelector('#gate')))){const u=p.url();if(!(await p.evaluate(()=>!!document.querySelector('a[href="/"]'))))bug('a tap left the app with no way back: '+u.replace('http://127.0.0.1:8799',''),last);await p.goBack().catch(()=>{});await p.waitForTimeout(800);if(!(await p.evaluate(()=>!!document.querySelector('#gate')))){await p.goto('http://127.0.0.1:8799/');await p.waitForTimeout(900)}continue}
    const st=await p.evaluate(()=>({gate:!document.querySelector('#gate').hidden,busy:!document.querySelector('#busy').hidden,dlgs:[...document.querySelectorAll('dialog[open]')].map(d=>d.id),sw:document.documentElement.scrollWidth,cw:document.documentElement.clientWidth}));
    if(st.gate){bug('fell back to the sign-in screen',last);break}
    if(st.sw>st.cw+1)bug('page scrolls sideways ('+st.sw+' > '+st.cw+')',last);
