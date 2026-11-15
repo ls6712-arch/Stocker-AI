@@ -10,16 +10,14 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
+import { loadAgent } from './load.mjs';
 
 const ROOT = fileURLToPath(new URL('../', import.meta.url));
 const arg = (k, d) => { const a = process.argv.find((x) => x.startsWith('--' + k + '=')); return a ? a.split('=')[1] : d; };
 const SEED = Number(arg('seed', 2)), HOUSEHOLDS = Number(arg('households', 1000)), DAYS = 180;
 
 export async function loadPace() {
-  const src = fs.readFileSync(path.join(ROOT, 'src/index.js'), 'utf8');
-  const tmp = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'tote-pace-')), 'agent.mjs');
-  fs.writeFileSync(tmp, src + '\nexport { paceFrom };\n');
-  return (await import(pathToFileURL(tmp).href)).paceFrom;
+  return (await loadAgent(['paceFrom'])).paceFrom;
 }
 
 function rng(seed) { let s = seed >>> 0 || 1; return () => { s ^= s << 13; s ^= s >>> 17; s ^= s << 5; return ((s >>> 0) % 1e9) / 1e9; }; }

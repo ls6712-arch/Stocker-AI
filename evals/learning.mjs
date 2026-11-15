@@ -9,16 +9,11 @@ import path from 'path';
 import crypto from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
 import { fileURLToPath, pathToFileURL } from 'url';
+import { loadAgent } from './load.mjs';
 
 const ROOT = fileURLToPath(new URL('../', import.meta.url));
 const NAMES = ['paceFrom', 'remindText', 'digest', 'tick', 'localNow', 'dueSoon', 'review', 'migrate'];
 
-async function loadAgent() {
-  const src = fs.readFileSync(path.join(ROOT, 'src/index.js'), 'utf8');
-  const tmp = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'tote-learn-')), 'agent.mjs');
-  fs.writeFileSync(tmp, src + '\nexport { ' + NAMES.join(', ') + ' };\n');
-  return import(pathToFileURL(tmp).href);
-}
 
 // a stand-in for the Cloudflare database that runs the same SQL
 function d1(db) {
@@ -59,7 +54,7 @@ const day = (n) => new Date(Date.UTC(2026, 2, n)).toISOString().slice(0, 10); //
 const at = (n, hour) => new Date(Date.UTC(2026, 2, n, hour));
 
 async function main() {
-  const A = await loadAgent();
+  const A = await loadAgent(NAMES);
 
   // ---- 1. the pace estimate on its own ----
   const buys = (...days) => days.map((d) => ({ bought: day(d), qty: 1, unit: 'L', ran_out: null }));

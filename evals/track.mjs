@@ -21,7 +21,7 @@ try { entry.commit = execSync('git rev-parse --short HEAD', { cwd: ROOT }).toStr
 
 const h = sh(['evals/households.mjs']);
 entry.suites.households = { ok: h.status === 0 };
-const c = sh(['evals/conversations.mjs']);
+const c = sh(['evals/conversations.mjs', '--json']);
 try {
   const rep = JSON.parse(fs.readFileSync(path.join(ROOT, 'evals/report.json'), 'utf8'));
   const pass = rep.checks.reduce((s, x) => s + x.pass, 0), total = rep.checks.reduce((s, x) => s + x.total, 0);

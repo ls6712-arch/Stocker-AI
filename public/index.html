@@ -605,7 +605,6 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
   }
   var ALIAS={dadbusy:'mom',momsolo:'dad'};
   function pers(){return profile?(profile.personas||[profile.persona]):[]}
-  function persLabel(){var p=pers();return p.length===1?PERSONA[p[0]][0]:'your home'}
   function starterList(){var lists=pers().map(function(k){return STARTER[ALIAS[k]||k]}),out=[],extra=[];
     (profile.pets||[]).forEach(function(p){if(p==='Dog')extra.push('Dog food','Poop bags');else if(p==='Cat')extra.push('Cat food','Cat litter');else extra.push(p+' food')});
     if((profile.members||[]).some(function(m){return m.kind==='baby'}))extra.push('Diapers','Baby wipes');
@@ -1332,7 +1331,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
       act('No, none of those',pending.no);return}
     var lc=function(x){return x.toLowerCase()},by=function(a,b){return a.p-b.p},pool=[],key=function(t){return t.toLowerCase().replace(/\b(now|the|a|an|please)\b|[^a-z ]/g,'').replace(/\s+/g,' ').trim()},add=function(t,p){if(t&&!pool.some(function(x){return key(x.t)===key(t)}))pool.push({t:t,p:p+(tipSeen[t]||0)*5+Math.random()})};
     var have=items.filter(function(i){return i.qty>0}),kit=have.filter(function(i){return areaOf(i)==='Kitchen'&&!i.frozen}),other=have.filter(function(i){return areaOf(i)!=='Kitchen'});
-    var soon=items.filter(needsUse).sort(function(a,b){return expiry(a).d-expiry(b).d}),low=items.filter(maybeLow),unk=items.filter(function(i){return i.unsure&&i.qty>0});
+    var soon=items.filter(needsUse).sort(function(a,b){return expiry(a).d-expiry(b).d}),low=items.filter(maybeLow);
     var listN=items.filter(needsBuy).length+extras.length,h=today().getHours(),quick=profile&&profile.cook==='quick',ps=pers().map(function(k){return ALIAS[k]||k});
     var pick=function(a){return a[Math.floor(Math.random()*a.length)]};
     // 1. follow-ups to what was just said

@@ -654,8 +654,6 @@ function route(raw, name) {
   if ((ASK_INSIDE.test(t) || TAG.test(t) || (/\?\s*$/.test(t) && /^[\x00-\x7f]*$/.test(t) && !/,/.test(t))) && !asks && !did) return 'answer';
   return 'update';
 }
-const isQuestion = (raw, name) => route(raw, name) !== 'update';
-const isCorrection = (raw, name) => route(raw, name) === 'correct';
 // in "bought bananas, how much pasta is left?" the question part still deserves an answer
 function questionPart(raw) {
   const t = fixTypos(String(raw));
@@ -1304,7 +1302,7 @@ async function evalCase(env, c, day) {
     did: (r.blocked ? 'BLOCKED; ' : '') + (r.actions || []).map((a) => a.action + ' ' + a.quantity + ' ' + a.unit + ' ' + a.name + (a.note ? ' {' + a.note + '}' : '') + (a.warn ? ' [' + a.warn + ']' : '')).concat((r.proposed || []).map((a) => 'asks: use ' + a.quantity + ' ' + a.unit + ' ' + a.name)).join('; '),
   };
 }
-// Fixed checks, the same ones /evals.html uses, plus checks on how the home ends up after every turn.
+// Fixed checks, plus checks on how the home ends up after every turn.
 function gradeCheck(c, r, rows, list) {
   const rx = (p) => new RegExp(p, 'iu'), nm = (a, p) => rx(p).test(a.name || '');
   const P = r.proposed || [], A = (r.actions || []).concat(P), reply = r.reply || '', k = Object.keys(c)[0], v = c[k];
