@@ -1004,7 +1004,7 @@ async function mcp(request, env) {
 
 // ---------- storage that newer versions need ----------
 // Run once per start-up: adds what is missing and never touches what is there.
-const SCHEMA = 4;
+const SCHEMA = 5;
 let ready = null;
 function migrate(env) {
   if (!ready) ready = (async () => {
@@ -1020,6 +1020,7 @@ function migrate(env) {
       'CREATE TABLE IF NOT EXISTS eval_trials (run INTEGER NOT NULL, case_id TEXT NOT NULL, trial INTEGER NOT NULL, suite TEXT NOT NULL, grp TEXT, pass INTEGER NOT NULL, score REAL NOT NULL, voice INTEGER NOT NULL DEFAULT 1, failed TEXT, said TEXT, did TEXT, reply TEXT, ms INTEGER, calls INTEGER, verdict TEXT, PRIMARY KEY (run, case_id, trial))',
     ]) await env.DB.prepare(sql).run();
     await env.DB.prepare('ALTER TABLE turns ADD COLUMN ms INTEGER').run().catch(() => {});
+    await env.DB.prepare('ALTER TABLE eval_trials ADD COLUMN tokens INTEGER').run().catch(() => {});
     await env.DB.prepare("INSERT INTO settings (k, v) VALUES ('schema', ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v").bind(String(SCHEMA)).run();
   })().catch((e) => { ready = null; console.error('migrate failed', String((e && e.message) || e)); });
   return ready;
@@ -1268,39 +1269,64 @@ function simApply(rows, list, actions) {
 }
 
 // One trial of one task, through the same converse() people use. Nothing real is read or written: the database is withheld.
+// How many tokens a model call cost. Workers AI reports usage for text models; when it does not, a rough count (4 characters a token).
+function tokensOf(input, res) {
+  const u = res && res.usage;
+  if (u && (u.total_tokens || u.prompt_tokens)) return Number(u.total_tokens || (u.prompt_tokens || 0) + (u.completion_tokens || 0)) || 0;
+  const said = JSON.stringify((input && (input.messages || input.prompt)) || '').length, back = JSON.stringify((res && res.response) || '').length;
+  return Math.round((said + back) / 4);
+}
+// A phrase this home has said before, written the same way however it was typed: "Tote, we're OUT of milk!!" = "we're out of milk"
+const memoKey = (t) => unhail(String(t || '').toLowerCase().normalize('NFKC'), '').replace(/[^\p{L}\p{N}%' ]+/gu, ' ').replace(/\s+/g, ' ').trim().slice(0, 200);
+// A task marked "offline" runs as if the day's AI allowance were used up: any model call fails, as it would for a household.
+const NO_CREDITS = 'simulated: no AI credits';
 async function evalCase(env, c, day) {
-  let calls = 0;
+  let calls = 0, tokens = 0;
   const ai = env.AI;
-  const e = { ...env, DB: null, AI: { run: (...a) => { calls++; return ai.run(...a); } } };
+  const e = { ...env, DB: null, MEMO: new Map(), AI: { run: async (...a) => {
+    calls++;
+    if (c.offline) throw new Error(NO_CREDITS);
+    const res = await ai.run(...a);
+    tokens += tokensOf(a[1], res);
+    return res;
+  } } };
+  // what this home taught Tote before the task starts (phrases it already understood), so recall can be tested
+  for (const m of Array.isArray(c.remembered) ? c.remembered.slice(0, 20) : []) if (m && m.said) e.MEMO.set(memoKey(String(m.said)), JSON.stringify(sanitize({ actions: m.actions }, 'voice').actions));
   const profile = c.profile ? cleanProfile(c.profile) : null;
   const rows = simRows(c.inventory), list = (c.list || []).map(String);
   const t0 = Date.now();
   let r = { actions: [], proposed: [], reply: '', blocked: false };
   const said = [], history = [];
   if (c.kind === 'receipt' || c.kind === 'shelf') {
-    const out = sanitize(await structure(e, c.kind === 'shelf' ? 'shelf' : 'bill', String(c.text).slice(0, 2000), day, rows.map((x) => x.name + ' (' + x.qty + ' ' + x.unit + ')'), profile), c.kind === 'shelf' ? 'shelf' : 'bill');
+    const out = c.offline ? { actions: [] } : sanitize(await structure(e, c.kind === 'shelf' ? 'shelf' : 'bill', String(c.text).slice(0, 2000), day, rows.map((x) => x.name + ' (' + x.qty + ' ' + x.unit + ')'), profile), c.kind === 'shelf' ? 'shelf' : 'bill');
     if (!restricted(profile)) out.actions.forEach((a) => { a.warn = ''; });
     r = { actions: out.actions, proposed: [], reply: '', blocked: false };
     said.push(String(c.text).slice(0, 300));
   } else {
     for (const text of (c.turns || [c.text]).map((t) => String(t).slice(0, 600))) {
       said.push(text);
-      const turn = await converse(e, text, history, rows, profile, day);
-      let reply = turn.reply;
-      if (!reply) {
-        const res = turn.out.actions.length ? simApply(rows, list, turn.out.actions) : { changes: [], missed: [] };
-        const ask = turn.proposal.length ? proposeText(turn.proposal) : '';
-        reply = res.changes.length ? chatReply(res) + (ask ? ' ' + ask : '') : ask || await chatAnswer(e, text, history, rows, day, profile, res.missed);
+      try {
+        const turn = await converse(e, text, history, rows, profile, day);
+        let reply = turn.reply;
+        if (!reply) {
+          const res = turn.out.actions.length ? simApply(rows, list, turn.out.actions) : { changes: [], missed: [] };
+          const ask = turn.proposal.length ? proposeText(turn.proposal) : '';
+          reply = res.changes.length ? chatReply(res) + (ask ? ' ' + ask : '') : ask || await chatAnswer(e, text, history, rows, day, profile, res.missed);
+        }
+        r = { actions: turn.out.actions, proposed: turn.proposal, reply, blocked: turn.blocked, route: turn.route };
+      } catch (err) {
+        if (String((err && err.message) || err) !== NO_CREDITS) throw err;
+        r = { actions: [], proposed: [], reply: '', blocked: false, route: 'stuck' }; // the household would have seen "used up today's allowance"
       }
-      r = { actions: turn.out.actions, proposed: turn.proposal, reply, blocked: turn.blocked, route: turn.route };
-      history.push({ role: 'user', content: text }, { role: 'assistant', content: reply });
+      history.push({ role: 'user', content: text }, { role: 'assistant', content: r.reply });
     }
   }
+  r.calls = calls;
   const graded = (c.checks || []).map((k) => gradeCheck(k, r, rows, list));
   const passed = graded.filter((g) => g[0]).length;
   return {
     pass: graded.length > 0 && passed === graded.length, score: graded.length ? passed / graded.length : 0, voice: onVoice(r.reply),
-    failed: graded.filter((g) => !g[0]).map((g) => g[1]), said: said.join(' → '), reply: r.reply || '', ms: Date.now() - t0, calls,
+    failed: graded.filter((g) => !g[0]).map((g) => g[1]), said: said.join(' → '), reply: r.reply || '', ms: Date.now() - t0, calls, tokens,
     did: (r.blocked ? 'BLOCKED; ' : '') + (r.actions || []).map((a) => a.action + ' ' + a.quantity + ' ' + a.unit + ' ' + a.name + (a.note ? ' {' + a.note + '}' : '') + (a.warn ? ' [' + a.warn + ']' : '')).concat((r.proposed || []).map((a) => 'asks: use ' + a.quantity + ' ' + a.unit + ' ' + a.name)).join('; '),
   };
 }
@@ -1328,6 +1354,7 @@ function gradeCheck(c, r, rows, list) {
     case 'replyHas': return [rx(v).test(reply), 'reply mentions /' + v + '/'];
     case 'replyNot': return [!rx(v).test(reply), 'reply avoids /' + v + '/'];
     case 'replyMax': return [reply.length <= v, 'reply at most ' + v + ' characters (got ' + reply.length + ')'];
+    case 'maxCalls': return [(r.calls || 0) <= v, 'at most ' + v + ' model call' + (v === 1 ? '' : 's') + ' (got ' + (r.calls || 0) + ')'];
     case 'stateQty': { const x = row(v[0]); return [!!x && x.qty >= v[1] && x.qty <= v[2], 'ends with ' + v[1] + '-' + v[2] + ' of ' + v[0] + ' (got ' + (x ? x.qty : 'none') + ')']; }
     case 'onList': return [onList(v), v + ' ends up on the list'];
     case 'notOnList': return [!onList(v), v + ' is not on the list'];
@@ -1359,6 +1386,9 @@ function summarize(trials) {
     k, trials: trials.length, all: rate(cases), suites, groups,
     voice: pct(trials.filter((t) => t.voice).length, trials.length),
     p50ms: q(0.5), p95ms: q(0.95), callsPerTrial: trials.length ? Math.round((trials.reduce((s, t) => s + (t.calls || 0), 0) / trials.length) * 100) / 100 : null,
+    // tokens per task, and the share of tasks done without any model call (what still works when the allowance runs out)
+    tokensPerTrial: trials.some((t) => t.tokens) ? Math.round(trials.reduce((s, t) => s + (t.tokens || 0), 0) / trials.length) : null,
+    noModel: pct(trials.filter((t) => !t.calls).length, trials.length),
     graderWrong: trials.filter((t) => t.verdict === 'grader').length, reviewed: trials.filter((t) => t.verdict).length,
     cases: cases.map((c) => ({ id: c.id, suite: c.suite, grp: c.grp, n: c.n, p: c.p })),
   };
@@ -1404,24 +1434,24 @@ async function stepRun(env, max = EVAL_STEP, budgetMs = 40000) {
     try {
       const t = await evalCase(env, c, day);
       calls += t.calls;
-      rows.push([run.id, c.id, trial, c.suite, c.group, t.pass ? 1 : 0, t.score, t.voice ? 1 : 0, JSON.stringify(t.failed).slice(0, 1500), t.said.slice(0, 900), t.did.slice(0, 900), t.reply.slice(0, 900), t.ms, t.calls]);
+      rows.push([run.id, c.id, trial, c.suite, c.group, t.pass ? 1 : 0, t.score, t.voice ? 1 : 0, JSON.stringify(t.failed).slice(0, 1500), t.said.slice(0, 900), t.did.slice(0, 900), t.reply.slice(0, 900), t.ms, t.calls, t.tokens || 0]);
       i++;
     } catch (e) {
       const msg = String((e && e.message) || e);
       if (/4006|daily free allocation|neurons/i.test(msg)) { await aiFail(env, e, 'eval run'); status = 'paused'; err = 'AI allowance used up for today'; wait = addDays(utcDay(), 1); break; }
       calls++;
-      rows.push([run.id, c.id, trial, c.suite, c.group, 0, 0, 1, JSON.stringify(['error: ' + msg.slice(0, 200)]), String(c.text || (c.turns || []).join(' → ')).slice(0, 900), '', '', Date.now() - t0, 1]);
+      rows.push([run.id, c.id, trial, c.suite, c.group, 0, 0, 1, JSON.stringify(['error: ' + msg.slice(0, 200)]), String(c.text || (c.turns || []).join(' → ')).slice(0, 900), '', '', Date.now() - t0, 1, 0]);
       i++;
     }
   }
-  const ins = 'INSERT OR REPLACE INTO eval_trials (run, case_id, trial, suite, grp, pass, score, voice, failed, said, did, reply, ms, calls) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
+  const ins = 'INSERT OR REPLACE INTO eval_trials (run, case_id, trial, suite, grp, pass, score, voice, failed, said, did, reply, ms, calls, tokens) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
   const stmts = rows.map((r) => env.DB.prepare(ins).bind(...r));
   stmts.push(env.DB.prepare("INSERT INTO settings (k, v) VALUES (?, ?) ON CONFLICT(k) DO UPDATE SET v = CAST(CAST(v AS INTEGER) + ? AS TEXT)").bind('evalcalls:' + utcDay(), String(calls), calls));
   await env.DB.batch(stmts);
   let summary = null;
   if (i >= total) {
     status = 'done';
-    summary = summarize((await env.DB.prepare('SELECT case_id, suite, grp, pass, score, voice, ms, calls, verdict FROM eval_trials WHERE run = ?').bind(run.id).all()).results);
+    summary = summarize((await env.DB.prepare('SELECT case_id, suite, grp, pass, score, voice, ms, calls, tokens, verdict FROM eval_trials WHERE run = ?').bind(run.id).all()).results);
   }
   await env.DB.prepare('UPDATE eval_runs SET status = ?, next = ?, calls = calls + ?, err = ?, wait = ?, done = ?, summary = COALESCE(?, summary) WHERE id = ?')
     .bind(status, i, calls, err || null, wait, status === 'done' ? new Date().toISOString() : null, summary ? JSON.stringify(summary) : null, run.id).run();
@@ -1463,7 +1493,7 @@ async function scorecard(env, today, runId) {
   for (const r of runs.filter((x) => x.status === 'done' && x.version)) (versions[r.version] = versions[r.version] || []).push(r.id);
   const byVersion = [];
   for (const [v, ids] of Object.entries(versions).slice(0, 6)) {
-    const t = (await env.DB.prepare('SELECT case_id, suite, grp, pass, score, voice, ms, calls, verdict FROM eval_trials WHERE run IN (' + ids.map(() => '?').join(',') + ')').bind(...ids).all()).results;
+    const t = (await env.DB.prepare('SELECT case_id, suite, grp, pass, score, voice, ms, calls, tokens, verdict FROM eval_trials WHERE run IN (' + ids.map(() => '?').join(',') + ')').bind(...ids).all()).results;
     const s = summarize(t);
     byVersion.push({ version: v, runs: ids.length, first: runs.find((r) => r.id === Math.min(...ids)).at, ...s, cases: s.cases });
   }

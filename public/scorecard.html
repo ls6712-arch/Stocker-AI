@@ -85,7 +85,7 @@ svg text{fill:var(--muted);font-size:11px}.legend{display:flex;gap:14px;flex-wra
       tile(T,pc(reg.pass1),'Regression, pass@1',reg.tasks+' tasks');tile(T,pc(reg.passAllK),'Regression, pass^'+v.k,'passed every trial');
       tile(T,pc(cap.pass1),'Capability, pass@1',cap.tasks+' tasks');tile(T,pc(cap.partial),'Capability, partial','share of checks met');
       tile(T,pc(v.voice),'On voice','no emoji, calm, short');tile(T,num(v.p50ms&&Math.round(v.p50ms/100)/10,'s'),'Typical time','95%: '+num(v.p95ms&&Math.round(v.p95ms/100)/10,'s'));
-      tile(T,num(v.callsPerTrial),'Model calls per task','cost');tile(T,v.reviewed?pc(v.graderWrong/v.reviewed*100):'–','Tests found unfair',v.reviewed+' failures read')}
+      tile(T,num(v.callsPerTrial),'Model calls per task','cost');tile(T,num(v.tokensPerTrial),'Tokens per task','what a task costs');tile(T,pc(v.noModel),'Done without AI','still works when credits run out');tile(T,v.reviewed?pc(v.graderWrong/v.reviewed*100):'–','Tests found unfair',v.reviewed+' failures read')}
     else T.append(el('p','','Nothing measured yet for this version.'));
     chart(d.runs||[],[]);
     var C=$('changes');C.textContent='';

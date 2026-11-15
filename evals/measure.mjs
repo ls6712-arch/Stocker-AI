@@ -80,6 +80,18 @@ async function finish(e, cap = 50) { let r; for (let i = 0; i < cap; i++) { r = 
   ok('voice: an emoji is off-voice', !T.onVoice('All done 🎉'));
   ok('voice: calling it the inventory is off-voice', !T.onVoice('I updated your inventory.'));
   ok('voice: a plain calm reply is on-voice', T.onVoice('I put milk on your list.'));
+  ok('grader: maxCalls passes at the limit and fails above it', T.gradeCheck({ maxCalls: 1 }, { calls: 1 }, [], [])[0] && !T.gradeCheck({ maxCalls: 0 }, { calls: 1 }, [], [])[0]);
+}
+
+// ---- a task run as if the AI allowance were used up ----
+{
+  const ai = model();
+  const e = env(freshDb(), ai);
+  const t = await T.evalCase(e, { id: 'off', kind: 'chat', offline: true, text: 'I used 2 eggs', inventory: HOME, checks: [{ count: [0, 0] }] }, '2026-11-13');
+  ok('offline: the real model is never reached when credits are out', ai.calls === 0, ai.calls);
+  ok('offline: a task that needed the model is graded, not crashed', typeof t.pass === 'boolean', t);
+  const r = await T.evalCase(e, { id: 'rec', kind: 'chat', offline: true, text: 'atta khatam', inventory: [{ name: 'Atta', qty: 5, unit: 'kg' }], remembered: [{ said: 'Atta khatam!', actions: [{ action: 'use', name: 'Atta', quantity: 0, unit: 'kg' }] }], checks: [{ maxCalls: 0 }] }, '2026-11-13');
+  ok('offline: tokens and calls are reported on every trial', r.calls >= 0 && r.tokens >= 0, r);
 }
 
 // ---- one run with three trials, numbers checked by hand ----
@@ -224,7 +236,7 @@ async function finish(e, cap = 50) { let r; for (let i = 0; i < cap; i++) { r = 
 // ---- the real cases file is well formed ----
 {
   const data = JSON.parse(fs.readFileSync(path.join(ROOT, 'public/evals/cases.json'), 'utf8'));
-  const known = ['appliedCount', 'confirm', 'noteHas', 'has', 'hasNot', 'count', 'maxQuantity', 'sure', 'unsure', 'warned', 'notWarned', 'useBetween', 'blocked', 'replyHas', 'replyNot', 'replyMax', 'stateQty', 'onList', 'notOnList'];
+  const known = ['appliedCount', 'confirm', 'noteHas', 'has', 'hasNot', 'count', 'maxQuantity', 'sure', 'unsure', 'warned', 'notWarned', 'useBetween', 'blocked', 'replyHas', 'replyNot', 'replyMax', 'stateQty', 'onList', 'notOnList', 'maxCalls'];
   const ids = new Set();
   for (const c of data.cases) {
     ok('cases: every id is unique', !ids.has(c.id), c.id); ids.add(c.id);

@@ -11,7 +11,8 @@
     "test": "node evals/households.mjs && node evals/conversations.mjs && node --no-warnings evals/learning.mjs && node --no-warnings evals/measure.mjs",
     "test:heldout": "node evals/conversations.mjs --corpus=evals/heldout",
     "track": "node --no-warnings evals/track.mjs",
-    "test:pace": "node evals/pace.mjs"
+    "test:pace": "node evals/pace.mjs",
+    "test:lean": "node --no-warnings evals/lean.mjs"
   },
   "devDependencies": {
     "wrangler": "^4.162.0"
