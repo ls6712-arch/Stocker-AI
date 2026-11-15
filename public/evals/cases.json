@@ -458,9 +458,10 @@
      "replyNot": "^yes"
     },
     {
-     "replyHas": "not tracked|no butter|don't have|do not have|not at home|isn't|is not"
+     "replyHas": "not tracked|no butter|don't have|do not have|not at home|isn't|is not|(do not|don't|can't|cannot) see any|no sign of"
     }
-   ]
+   ],
+   "fixed": "2026-11-15: the reply \"I do not see any butter tracked\" was right; the check missed the wording"
   },
   {
    "id": "question-use-up",
@@ -1914,10 +1915,11 @@
     }
    ],
    "turns": [
-    "I bought milk",
-    "actually make that two"
+    "I bought a carton of milk",
+    "actually I bought two"
    ],
-   "text": "I bought milk / actually make that two"
+   "text": "I bought a carton of milk / actually I bought two",
+   "fixed": "2026-11-15: \"make that two\" could mean two bought or two at home; reworded so only one reading fits"
   },
   {
    "id": "cap-followup-and-too",
