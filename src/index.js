@@ -1304,7 +1304,7 @@ async function evalCase(env, c, day) {
 function gradeCheck(c, r, rows, list) {
   const rx = (p) => new RegExp(p, 'iu'), nm = (a, p) => rx(p).test(a.name || '');
   const P = r.proposed || [], A = (r.actions || []).concat(P), reply = r.reply || '', k = Object.keys(c)[0], v = c[k];
-  const match = (a, w) => (!w.action || rx('^(' + w.action + ')$').test(a.action)) && (!w.name || nm(a, w.name)) && (!w.area || a.area === w.area) && (!w.category || a.category === w.category);
+  const match = (a, w) => (!w.action || rx('^(' + w.action + ')$').test(a.action)) && (!w.name || nm(a, w.name)) && (!w.area || a.area === w.area) && (!w.category || a.category === w.category) && (!w.unit || a.unit === w.unit);
   const row = (p) => rows.find((x) => rx(p).test(x.name));
   const onList = (p) => list.some((x) => rx(p).test(x)) || rows.some((x) => rx(p).test(x.name) && (x.qty <= 0 || x.low));
   switch (k) {

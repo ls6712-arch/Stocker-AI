@@ -3190,6 +3190,341 @@
     }
    ],
    "text": "picked up 2 dozen eggs"
+  },
+  {
+   "id": "world-patel-receipt",
+   "group": "World groceries",
+   "suite": "capability",
+   "kind": "receipt",
+   "text": "PATEL BROTHERS #112\nDEEP TOOR DAL OILY 4LB 7.99\nSWAD CHAKKI ATTA 20LB 16.99\nAMUL GHEE 32OZ 19.99\nCURRY LEAVES 0.99\nNANAK PANEER 14OZ 5.49\nORG WHL MILK 1GAL 5.99\nSUBTOTAL 57.44\nTAX 0.00",
+   "checks": [
+    {
+     "has": {
+      "action": "add",
+      "name": "toor|dal"
+     }
+    },
+    {
+     "has": {
+      "action": "add",
+      "name": "atta",
+      "category": "Pantry"
+     }
+    },
+    {
+     "has": {
+      "action": "add",
+      "name": "ghee",
+      "category": "Pantry"
+     }
+    },
+    {
+     "has": {
+      "action": "add",
+      "name": "curry leaves",
+      "category": "Produce"
+     }
+    },
+    {
+     "has": {
+      "action": "add",
+      "name": "paneer",
+      "category": "Dairy"
+     }
+    },
+    {
+     "has": {
+      "action": "add",
+      "name": "milk",
+      "unit": "L"
+     }
+    },
+    {
+     "hasNot": {
+      "name": "subtotal|tax"
+     }
+    },
+    {
+     "count": [
+      6,
+      6
+     ]
+    }
+   ]
+  },
+  {
+   "id": "world-hmart-fish-allergy",
+   "group": "World groceries",
+   "suite": "capability",
+   "kind": "receipt",
+   "profile": {
+    "personas": [
+     "family4"
+    ],
+    "allergies": [
+     "Fish"
+    ]
+   },
+   "text": "H MART\nCJ GOCHUJANG 1KG 8.99\nJONGGA MAT KIMCHI 1.65LB 8.99\nODENG FISH CAKE 1LB 3.99\nPULMUONE TOFU FIRM 14OZ 2.29\nNAPA CABBAGE 3.2LB 3.17",
+   "checks": [
+    {
+     "warned": "kimchi"
+    },
+    {
+     "warned": "fish cake|odeng"
+    },
+    {
+     "notWarned": "tofu"
+    },
+    {
+     "notWarned": "napa|cabbage"
+    },
+    {
+     "count": [
+      5,
+      5
+     ]
+    }
+   ]
+  },
+  {
+   "id": "world-weee-vegetarian",
+   "group": "World groceries",
+   "suite": "capability",
+   "kind": "receipt",
+   "profile": {
+    "personas": [
+     "couple"
+    ],
+    "diet": [
+     "Vegetarian"
+    ]
+   },
+   "text": "Weee! order #W88231\nThree Crabs Fish Sauce 24 fl oz $5.49\nChaokoh Coconut Milk 13.5 fl oz x 4 $7.96\nAjinomoto Hondashi 1.05 oz $3.49\nFresh Lemongrass 3 stalks $1.99\nRice Paper 12 oz $2.49",
+   "checks": [
+    {
+     "warned": "fish sauce"
+    },
+    {
+     "warned": "dashi|hondashi"
+    },
+    {
+     "notWarned": "coconut"
+    },
+    {
+     "notWarned": "lemongrass"
+    },
+    {
+     "notWarned": "rice paper"
+    },
+    {
+     "count": [
+      5,
+      5
+     ]
+    }
+   ]
+  },
+  {
+   "id": "world-bigbasket-inr",
+   "group": "World groceries",
+   "suite": "capability",
+   "kind": "receipt",
+   "text": "bigbasket order summary\nTata Sampann Unpolished Moong Dal, 1 kg ₹ 178\nAashirvaad Shudh Chakki Atta 5 kg ₹ 285\nFresho Coriander Leaves 100 g ₹ 18\nNandini Curd 500 g ₹ 30\nDelivery charge ₹ 30\nTotal ₹ 541",
+   "checks": [
+    {
+     "has": {
+      "action": "add",
+      "name": "moong"
+     }
+    },
+    {
+     "has": {
+      "action": "add",
+      "name": "atta"
+     }
+    },
+    {
+     "has": {
+      "action": "add",
+      "name": "coriander|cilantro|dhaniya",
+      "category": "Produce"
+     }
+    },
+    {
+     "has": {
+      "action": "add",
+      "name": "curd|dahi|yogurt",
+      "category": "Dairy"
+     }
+    },
+    {
+     "hasNot": {
+      "name": "delivery|total"
+     }
+    },
+    {
+     "count": [
+      4,
+      4
+     ]
+    }
+   ]
+  },
+  {
+   "id": "world-northgate-receipt",
+   "group": "World groceries",
+   "suite": "capability",
+   "kind": "receipt",
+   "text": "NORTHGATE GONZALEZ MARKET\nCACIQUE QUESO FRESCO 10OZ 4.99\nTOMATILLO 1.6LB 2.38\nMASECA MASA HARINA 4.4LB 3.99\nCHORIZO DE PUERCO 12OZ 2.99\nCHILE GUAJILLO 3OZ 1.99",
+   "checks": [
+    {
+     "has": {
+      "action": "add",
+      "name": "queso",
+      "category": "Dairy"
+     }
+    },
+    {
+     "has": {
+      "action": "add",
+      "name": "tomatillo",
+      "category": "Produce"
+     }
+    },
+    {
+     "has": {
+      "action": "add",
+      "name": "masa|maseca",
+      "category": "Pantry"
+     }
+    },
+    {
+     "has": {
+      "action": "add",
+      "name": "chorizo",
+      "category": "Meat"
+     }
+    },
+    {
+     "has": {
+      "action": "add",
+      "name": "guajillo|chile",
+      "category": "Pantry"
+     }
+    },
+    {
+     "count": [
+      5,
+      5
+     ]
+    }
+   ]
+  },
+  {
+   "id": "world-hinglish-voice",
+   "group": "World groceries",
+   "suite": "capability",
+   "kind": "chat",
+   "inventory": [
+    {
+     "name": "Atta",
+     "qty": 5,
+     "unit": "kg",
+     "category": "Pantry",
+     "area": "Kitchen"
+    },
+    {
+     "name": "Paneer",
+     "qty": 1,
+     "unit": "pack",
+     "category": "Dairy",
+     "area": "Kitchen"
+    }
+   ],
+   "text": "atta khatam ho gaya aur do packet paneer le aaya",
+   "checks": [
+    {
+     "stateQty": [
+      "atta",
+      0,
+      0
+     ]
+    },
+    {
+     "stateQty": [
+      "paneer",
+      3,
+      3
+     ]
+    }
+   ]
+  },
+  {
+   "id": "world-taglish-voice",
+   "group": "World groceries",
+   "suite": "capability",
+   "kind": "chat",
+   "inventory": [
+    {
+     "name": "Patis (fish sauce)",
+     "qty": 1,
+     "unit": "pcs",
+     "category": "Pantry",
+     "area": "Kitchen"
+    },
+    {
+     "name": "Calamansi",
+     "qty": 10,
+     "unit": "pcs",
+     "category": "Produce",
+     "area": "Kitchen"
+    }
+   ],
+   "text": "ubos na yung patis, pakibili",
+   "checks": [
+    {
+     "onList": "patis"
+    },
+    {
+     "stateQty": [
+      "calamansi",
+      10,
+      10
+     ]
+    }
+   ]
+  },
+  {
+   "id": "world-spanish-voice",
+   "group": "World groceries",
+   "suite": "capability",
+   "kind": "chat",
+   "inventory": [
+    {
+     "name": "Corn Tortillas",
+     "qty": 0,
+     "unit": "pack",
+     "category": "Bakery",
+     "area": "Kitchen"
+    }
+   ],
+   "text": "compré tortillas y queso fresco",
+   "checks": [
+    {
+     "stateQty": [
+      "tortilla",
+      1,
+      99
+     ]
+    },
+    {
+     "has": {
+      "action": "add",
+      "name": "queso"
+     }
+    }
+   ]
   }
  ]
 }
