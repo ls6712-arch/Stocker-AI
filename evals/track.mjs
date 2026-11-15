@@ -32,6 +32,9 @@ const held = (hc.stdout.match(/(\d+(?:\.\d+)?)%\s+\d+\/\d+\s+gate/g) || []).map(
 if (held.length) entry.suites.routerHeldOut = { minGate: Math.min(...held), meanGate: Math.round((held.reduce((a, b) => a + b, 0) / held.length) * 10) / 10 };
 entry.suites.learning = count(sh(['evals/learning.mjs']).stdout, /Learning: (\d+) \/ (\d+) checks passed/);
 entry.suites.measuring = count(sh(['evals/measure.mjs']).stdout, /(\d+) of (\d+) measuring checks pass/);
+// without a model: does Stocker still work with the AI allowance used up, and how many live tasks cost no model call at all
+try { entry.suites.lean = JSON.parse(sh(['evals/lean.mjs', '--json']).stdout); } catch (e) {}
+try { const q = JSON.parse(sh(['evals/quickpath.mjs', '--json']).stdout); entry.suites.quick = { ...q.held, both: q.both }; } catch (e) {}
 const p = await paceRun(await loadPace(), 2, 1000);
 entry.suites.pace = { reminderOnTime: p.reminderOnTime, reminderLate: p.reminderLate, reminderEarly: p.reminderEarly, errorDays: p.errorDays, within2: p.within2, livingAlone: p.byHome['works alone'].onTime, student: p.byHome['student alone'].onTime };
 

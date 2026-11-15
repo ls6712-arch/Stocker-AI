@@ -145,3 +145,26 @@ CREATE TABLE IF NOT EXISTS eval_trials (
   verdict TEXT,
   PRIMARY KEY (run, case_id, trial)
 );
+
+-- What the model worked out about products this home bought, so code can file them next time without a model call.
+CREATE TABLE IF NOT EXISTS facts (
+  name_key TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  unit TEXT,
+  area TEXT,
+  category TEXT,
+  shelf_days INTEGER,
+  finish_days INTEGER,
+  seen INTEGER NOT NULL DEFAULT 1,
+  at TEXT NOT NULL
+);
+
+-- Messages this home has said before that the model understood and nobody undid: replayed for free, even with no AI allowance left.
+CREATE TABLE IF NOT EXISTS memo (
+  k TEXT PRIMARY KEY,
+  actions TEXT NOT NULL,
+  hits INTEGER NOT NULL DEFAULT 0,
+  at TEXT NOT NULL,
+  used TEXT,
+  bad INTEGER NOT NULL DEFAULT 0
+);

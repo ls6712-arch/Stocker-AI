@@ -164,8 +164,8 @@ async function main() {
   note('reminder: it is raised again every other day', pushes() === n0 + 3);
   await A.tick(env, at(15, 17));
   const muted = db.prepare("SELECT muted FROM reminders WHERE name_key = 'milk'").get();
-  const day15 = pushes() > n0 + 3 ? open(sentPushes[sentPushes.length - 1]) : { title: '' }; // the eggs are due by now, so a reminder may still go out, but not about milk
-  note('reminder: after three with no answer I stop asking about it', !/Milk/.test(day15.title + day15.body) && muted && muted.muted === 1, [muted, day15]);
+  const day15 = pushes() > n0 + 3 ? open(sentPushes[sentPushes.length - 1]) : { title: '' }; // the eggs are due by now, so a reminder may still go out, but not asking about milk running low (a best-by-today note is a separate rule)
+  note('reminder: after three with no answer I stop asking about it', !/Milk[^.]*running low/.test(day15.title + day15.body) && muted && muted.muted === 1, [muted, day15]);
   note('reminder: the app is told which items are quiet', (await call('GET', '/api/items', null, day(15))).data.learnt.muted.includes('milk'));
 
   // answers
@@ -175,7 +175,7 @@ async function main() {
   await call('POST', '/api/remind', { ids: [milk.id], answer: 'still', hour: 20 }, day(15));
   const later = await itemNamed('Milk', 15);
   const after = (await call('GET', '/api/remind', null, day(15))).data.preview;
-  note('answer: "still have it" pushes the next reminder back', later.finish_days > 8 && !/Milk/.test(JSON.stringify(after || '')), [later.finish_days, after]);
+  note('answer: "still have it" pushes the next reminder back', later.finish_days > 8 && !/Milk[^"]*running low/.test(JSON.stringify(after || '')), [later.finish_days, after]);
   await call('POST', '/api/remind', { ids: [eggs.id], answer: 'add', hour: 20 }, day(15));
   note('answer: "add to list" puts it on the list', (await itemNamed('Eggs', 15)).low === 1);
   await call('POST', '/api/remind', { ids: [eggs.id], answer: 'still', hour: 20 }, day(15));
@@ -288,6 +288,56 @@ async function main() {
   rv = (await call('GET', '/api/review', null, now)).data;
   note('review: "not a mistake" clears it without a test case', rv.cases.length === 1 && rv.groups.reduce((t, g) => t + g.count, 0) === 1, rv.groups);
   note('review: nothing a person typed changed a rule', bought.status === 200 && db.prepare("SELECT COUNT(*) AS n FROM settings WHERE k LIKE 'rule%' OR k LIKE 'prompt%'").get().n === 0);
+
+  // ---- 5. without AI credits, and recall without a model, in a fresh home ----
+  {
+    const db5 = new DatabaseSync(':memory:');
+    db5.exec(fs.readFileSync(path.join(ROOT, 'schema.sql'), 'utf8'));
+    let quota = false, modelCalls = 0;
+    const model = fakeModel();
+    const env5 = { ...env, DB: d1(db5), AI: { run: async (m, input) => { modelCalls++; if (quota) throw new Error('4006: you have used up your daily free allocation of 10,000 neurons'); return model.run(m, input); } } };
+    const call5 = async (method, p, body, today) => {
+      const res = await A.default.fetch(new Request('https://stocker.test' + p, { method, headers: { cookie: c5, 'content-type': 'application/json', origin: 'https://stocker.test', 'x-today': today || day(1) }, body: body ? JSON.stringify(body) : undefined }), env5);
+      return { status: res.status, data: await res.json().catch(() => ({})), res };
+    };
+    let c5 = '';
+    const l5 = await call5('POST', '/api/login', { pin: 'test1234', name: 'Sam' });
+    c5 = l5.res.headers.getSetCookie().map((c) => c.split(';')[0]).join('; ');
+    const say5 = (text) => call5('POST', '/api/chat', { text }, day(3));
+    const qty = (name) => (db5.prepare('SELECT qty FROM items WHERE name = ?').get(name) || {}).qty;
+    // with credits: a phrasing code cannot read goes to the model once, and is remembered
+    const m0 = modelCalls;
+    const w = await say5('picked up rice, the 5 kg bag of it');
+    note('recall: a phrasing code cannot read goes to the model', modelCalls > m0 && w.data.changes.length === 1, w.data);
+    note('recall: what the model worked out about the product is kept', !!db5.prepare("SELECT * FROM facts WHERE name_key = 'rice'").get());
+    const plain = await say5('bought 2 eggs');
+    note('quick: a plain update costs no model call', plain.data.via === 'code' && plain.data.changes.length === 1, plain.data);
+    // the allowance runs out
+    quota = true;
+    db5.prepare("INSERT INTO settings (k, v) VALUES ('aiq', ?)").run(new Date().toISOString().slice(0, 10));
+    const before = modelCalls;
+    const r1 = await say5('picked up rice, the 5 kg bag of it');
+    note('no credits: a remembered phrasing still works', r1.status === 200 && r1.data.changes.length === 1 && r1.data.via === 'memo', r1.data);
+    const r2 = await say5('used 1 egg');
+    note('no credits: a plain update still works', r2.status === 200 && qty('Eggs') === 1, [r2.data, qty('Eggs')]);
+    const r3 = await say5('do we have eggs?');
+    note('no credits: a plain question is answered from the home', r3.status === 200 && /\bone egg\b/.test(r3.data.reply), r3.data);
+    const r4 = await say5('I made a stir fry with whatever was left');
+    note('no credits: what code cannot read changes nothing, and it says so', r4.status === 200 && !r4.data.changes.length && /nothing was changed/.test(r4.data.reply), r4.data);
+    note('no credits: the model is never called', modelCalls === before, modelCalls - before);
+    const meals5 = await call5('POST', '/api/meals', {}, day(3));
+    note('no credits: dinner ideas still come, from code', meals5.status === 200 && Array.isArray(meals5.data.meals), meals5.data);
+    const bar = await call5('POST', '/api/scan/text', { text: 'MILK 3.99\nTOTAL 3.99' }, day(3));
+    note('no credits: a typed receipt is read line by line', bar.status === 200 && bar.data.actions.length === 1 && bar.data.actions[0].name === 'Milk', bar.data);
+    const photo = await call5('POST', '/api/scan/bill', { image: 'data:image/png;base64,AAAA' }, day(3));
+    note('no credits: a photo says the allowance is used up', photo.status === 429 && photo.data.error === 'ai_quota', photo.data);
+    // an undone reading is never replayed
+    await call5('POST', '/api/feedback', { kind: 'undo', said: 'picked up rice, the 5 kg bag of it', reply: '', route: 'update' }, day(3));
+    const r5 = await say5('picked up rice, the 5 kg bag of it');
+    note('recall: a reading that was undone is never replayed', !r5.data.changes.length && r5.data.via !== 'memo', r5.data);
+    const turns = (await call5('GET', '/api/scorecard', null, new Date().toISOString().slice(0, 10))).data.health[0]; // counters are stamped by the clock
+    note('health: turns without a model call are counted', turns.noModel > 0 && turns.noModel <= 100, turns);
+  }
 
   globalThis.fetch = realFetch;
   const rows = Object.entries(stats).map(([check, s]) => ({ check, ...s }));

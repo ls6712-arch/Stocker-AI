@@ -54,10 +54,10 @@ const HOME = [{ name: 'Whole Milk', qty: 1, unit: 'L', category: 'Dairy' }, { na
 const CASES = {
   today: '2026-11-13',
   cases: [
-    { id: 'always-pass', group: 'A', kind: 'chat', text: 'I used 2 eggs', inventory: HOME, checks: [{ stateQty: ['egg', 10, 10] }, { has: { action: 'use', name: 'egg' } }] },
-    { id: 'always-fail', group: 'A', kind: 'chat', text: 'Do we have eggs?', inventory: HOME, checks: [{ count: [0, 0] }, { replyHas: 'banana' }] },
-    { id: 'flaky', group: 'B', suite: 'capability', kind: 'chat', text: 'I bought the flaky butter', inventory: HOME, checks: [{ has: { action: 'add', name: 'butter' } }] },
-    { id: 'two-turns', group: 'B', suite: 'capability', kind: 'chat', turns: ['I bought milk', 'I bought milk'], inventory: HOME, checks: [{ stateQty: ['milk', 3, 3] }] },
+    { id: 'always-pass', group: 'A', kind: 'chat', text: 'I used 2 eggs for a cake', inventory: HOME, checks: [{ stateQty: ['egg', 10, 10] }, { has: { action: 'use', name: 'egg' } }] },
+    { id: 'always-fail', group: 'A', kind: 'chat', text: 'Do we have eggs for a cake?', inventory: HOME, checks: [{ count: [0, 0] }, { replyHas: 'banana' }] },
+    { id: 'flaky', group: 'B', suite: 'capability', kind: 'chat', text: 'I bought the flaky butter for later', inventory: HOME, checks: [{ has: { action: 'add', name: 'butter' } }] },
+    { id: 'two-turns', group: 'B', suite: 'capability', kind: 'chat', turns: ['I bought milk for later', 'I bought milk for later'], inventory: HOME, checks: [{ stateQty: ['milk', 3, 3] }] },
   ],
 };
 const env = (db, ai, version = 'v1aaaaaa') => ({ DB: db, AI: ai, TEXT_MODEL: 'text', VISION_MODEL: 'vision', CF_VERSION: { id: version + 'rest' }, ASSETS: { fetch: async () => new Response(JSON.stringify(CASES)) } });
@@ -160,7 +160,7 @@ async function finish(e, cap = 50) { let r; for (let i = 0; i < cap; i++) { r = 
   ok('allowance: it says when it will carry on', !!run.wait && /allowance/.test(run.err), run);
   ok('allowance: the trials already done are kept', (await db.prepare('SELECT COUNT(*) AS n FROM eval_trials').first()).n === run.next && run.next > 0);
   const again = await T.stepRun(e);
-  ok('allowance: no more calls until the next day', again.status === 'paused' && ai.calls === 4, [again, ai.calls]);
+  ok('allowance: no more calls until the next day', again.status === 'paused' && ai.calls === 4, [again, ai.calls, await db.prepare('SELECT case_id, calls, failed FROM eval_trials').all()]);
   const db2 = freshDb(), ai2 = model(); const e2 = env(db2, ai2);
   await T.migrate(e2);
   await db2.prepare('INSERT INTO settings (k, v) VALUES (?, ?)').bind('evalcalls:' + new Date().toISOString().slice(0, 10), '99').run();

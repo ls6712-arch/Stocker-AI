@@ -37,6 +37,43 @@ The same voice is used in the chat prompt (`VOICE` and `LIMITS` in `src/index.js
 
 The model never writes to the database. It proposes; code decides. This is the same separation larger agents use between the model and a permission layer.
 
+## Code first, the model second (and Stocker without AI credits)
+
+Most messages are plain: "add milk", "used 2 eggs", "we're out of coffee", "do we have rice?". Code reads those exactly and for free, before any model call. The model is only asked when code is not sure, and when the day's AI allowance is used up, the same code keeps Stocker working.
+
+| Step | What happens | Where |
+|---|---|---|
+| 1. Route | The fixed gate, as before: refuse, wipe, correct, answer or update | `route` |
+| 2. Read with code | A small grammar for the everyday verbs (bought, used, finished, out of, running low, need, add to the list, take off the list, "only 3 left"), amounts ("2 dozen", "a loaf of", "500g") and the things at home. It gives up, rather than guesses, on anything with a plan, a maybe, a negation, someone else, a dish, a pronoun it cannot resolve, an amount it cannot be sure of, or two tracked things with the same name | `quickParse` |
+| 3. Remember | A message this home said before, that the model understood and nobody undid, is replayed against the home as it is now | `memo`, `memoReplay` |
+| 4. A known dish | "Last time you made pasta you used…" is now asked before any model call | `recallDish` |
+| 5. The model | Only what is left. It gets the tracked things the message names (or every kitchen item for a dish), not the whole home | `structure`, `relevantNames` |
+| Answers | Code answers what it can be exact about: do we have it, how much, what is on the list, what to use first, how often you buy it, when it is next due, did I buy it, greetings, thanks, health and dose questions (a fixed "check the label" / "ask a pharmacist"), off-topic, other households, passcodes. The model answers the rest, and sees the urgent and named things in full and everything else by name only | `quickAnswer`, `answerTurn`, `answerRows` |
+
+### Three stores for recalling without a model
+
+| Store | What it holds | Written by | Never holds |
+|---|---|---|---|
+| `STAPLES` (in code) | About 170 everyday groceries and home supplies with their room, kind, unit, how long they keep and how long they last, plus their other names ("tp", "nappies", "dhania", "patis") | a person, in a commit | anything from a user |
+| `facts` (table) | What the model worked out about a product this home bought: room, kind, unit, how long it keeps. Up to 3,000 | the model's reading of a receipt or message, numbers and names only | rules, instructions |
+| `memo` (table) | Messages this home said before and the changes they meant. Up to 500. Marked bad, and never replayed, after an undo, a rejected guess or "Not right?" | a model reading that changed the home and was not a follow-up | dishes (guesses), follow-ups, anything a probe |
+
+None of these changes Tote's rules. They hold names and numbers, so a person typing something cannot teach Tote to behave differently.
+
+### When the AI allowance is used up
+
+| What | Without AI credits |
+|---|---|
+| Typed chat | Plain updates and questions work as usual. Anything code cannot read changes nothing, and Tote says so: "My AI allowance for today is used up, so I could not read that one, and nothing was changed. Short messages still work, like…" |
+| Remembered phrasings | Work, including other languages the model understood before ("atta khatam ho gaya") |
+| Barcodes | Work: the product name is matched to a staple or a fact; allergy checks still use the real label |
+| A typed or pasted receipt | Read line by line; only lines code recognises are kept |
+| Dinner ideas | The same kitchen on the same day gets the ideas already made; with no allowance, simple ideas from what needs using first |
+| Photos and voice | Need the model; the app says when the allowance resets and what still works |
+| The MCP `tell_tote` tool | Same as typed chat |
+
+If the allowance runs out in the middle of a turn, nothing has been applied yet when the update model is called, so the turn is re-read by code; an answer that fails after a change keeps the change and answers with code.
+
 ### What Tote deliberately cannot do
 
 Tote holds household data and reads untrusted content (receipts, product databases, typed text), so the model is given no way to send data anywhere: no email, no messages, no purchases, no web requests chosen by the model. Code makes two outbound calls, and the model controls neither:
@@ -58,6 +95,8 @@ Keep it that way; any future feature that sends something out (ordering, sharing
 | Medicine doses | Any dose-like reply is replaced with a pointer to the leaflet or a pharmacist | `guardReply` |
 | Off-topic requests, prompt leaks | Declined by instruction and tested in the evals | `LIMITS` |
 | Runaway cost or abuse | 40 model calls per 10 minutes and 400 per day for the whole home | `aiBudget` |
+| Code acting on a guess | The quick path gives up on plans, maybes, negations, someone else, dishes, pronouns, unclear amounts, two things with one name, nonsense amounts ("99 gold bars"), and run-together lists; tested on 362 hands-off phrasings by other writers | `quickParse`, `evals/quickpath.mjs` |
+| A wrong reading replayed | A remembered message is never replayed after an undo, a rejected guess or "Not right?", and only if what it uses is still tracked | `memoBad`, `memoReplay` |
 | Passcode guessing | 12 attempts per 10 minutes | `allow('login')` |
 | A wrong guess | Every scan and every chat change has Undo | app |
 | A photo that cannot be counted | The amount is left open and the app asks "How many?"; a photo never stacks on top of what is already tracked | `apply`, app |
@@ -161,7 +200,9 @@ Five layers, all in this repository. The approach follows Anthropic's "Demystify
 | Learning | `npm test` | No | 58 checks on pace, reminders (wording, retries, counting, Undo from the notification), the push message and the review loop, with the real SQL in memory |
 | Measuring | `npm test` | No | 43 checks that the scorecard's own numbers are right: the grader, pass@k and pass^k worked out by hand, isolation, the allowance, the health counters |
 | Pace | `npm run test:pace` | No | Months of shopping for 1,000 households (bulk buys, holidays, shopping early or late); scores how often a reminder lands the day or two before they run out |
-| Live agent | runs itself, see below | Yes | 68 tasks against the real models, graded on the outcome |
+| Quick path | `npm test` | No | The code that reads messages without a model, on 629 phrasings by other writers: every question, chat, dish, health, attack and correction left alone, and the updates it reads, read right. Plus 68 both-direction checks |
+| Without a model | `npm run test:lean` | No | Every live task through the real `evalCase()` with a model that refuses every call: the "Without AI credits" tasks are graded exactly, and it counts how many live tasks need no model call at all |
+| Live agent | runs itself, see below | Yes | 108 tasks against the real models, graded on the outcome. Tasks marked `offline` run as if the allowance were used up (any model call fails); `maxCalls` checks what a task may cost |
 
 ### Live runs and the scorecard
 
@@ -175,9 +216,10 @@ Five layers, all in this repository. The approach follows Anthropic's "Demystify
 | When runs happen | Within minutes of every deploy (one trial of every task). Then the same version again on the next two nights, so every task has three trials. Then once a week, because the hosted model can change. "Run a check now" on the scorecard starts one by hand | `autoRuns`, cron every minute |
 | Cost | A few trials a minute, at most 100 model calls a day, so the household's own chats are never short. If Cloudflare's daily AI allowance runs out, the run pauses and carries on the next UTC day | `EVAL_DAY`, `stepRun` |
 | Numbers | pass@1 (share of trials that pass), pass@k (passed at least once), pass^k (passed every time: what a household feels). Pooled across all runs of one version | `summarize`, `scorecard` |
+| Cost | Model calls and tokens per task (Workers AI's own count when it gives one, otherwise 4 characters a token), and the share of tasks done with no model call | `tokensOf`, `summarize` |
 | What changed | Tasks that broke or got fixed since the run before, flaky tasks, and capability tasks ready to graduate (passed every trial of the current version) | `scorecard` |
 | Reading failures | Every failed trial keeps what was said, what Tote did, its reply and which checks failed. Mark each as Tote's mistake or an unfair test; the share of unfair tests is on the scorecard | `/api/scorecard/verdict` |
-| Real use | Week by week from the app: misses, undo, corrections, said twice, not found, typical reply time, reminders sent and how many led to the list, and how many days off the learned pace was when the item was bought again. Kept as counters; nothing private | `health`, `bump` |
+| Real use | Week by week from the app: misses, undo, corrections, said twice, not found, typical reply time, chat turns done without a model call, tokens per turn, reminders sent and how many led to the list, and how many days off the learned pace was when the item was bought again. Kept as counters; nothing private | `health`, `bump` |
 | Offline history | `npm run track -- --note="what changed"` runs the offline suites and appends the scores to `public/evals/history.json`, shown on the scorecard | `evals/track.mjs` |
 
 ### Training log
@@ -186,6 +228,8 @@ Five layers, all in this repository. The approach follows Anthropic's "Demystify
 |---|---|---|
 | 14 Nov | Scorecard and capability tasks added | Live baseline (version 009431f7): regression 96.1%, capability 64.7% (partial 78.9%), on voice 100%, typical reply 4.0 s, slowest 5% 15.5 s |
 | 15 Nov | Round 1: follow-ups with the last two exchanges as context, plans and maybes change nothing, corrections like "2 not 3", learned pace in answers. From reading the baseline failures: answers may not claim a change they did not make; "bought" before an untracked thing is a purchase; an instruction line on a receipt is dropped, not the receipt. Two unfair tests fixed | Offline: all suites pass, router held-out 97.3%. Live: on the scorecard after the next run |
+
+| 15 Nov | Code first: a quick path reads plain messages and answers plain questions with no model; facts and memo tables; Stocker works with no AI allowance (chat, barcodes, typed receipts, dinner ideas); the model sees only the relevant part of the home. 32 new live tasks ("Without AI credits", "Costs nothing") | Offline, exact (no model involved): Without AI credits 4.3% → 100% (23 tasks); live tasks needing no model call 9.4% → 52.9% (8 → 45 of 85), all 45 pass. Quick path on 629 phrasings by other writers, first sight: 100% left alone, 19.1% read, 95% right; after one round of general fixes 24.4% read, 100% right. Cost on those 629 against a 120-item home, stand-in model: calls per message 1.44 → 1.10, tokens per message about 4,000 → 2,500. Live: on the scorecard after the next run |
 
 ### The weekly loop
 

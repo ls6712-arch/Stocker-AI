@@ -1224,7 +1224,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     ai_failed:'I could not make sense of that one. Nothing was changed. Try again in a moment.',bad_image:'I could not use that photo. Try another, a little closer and flatter.',
     bad_audio:'That recording was too long for me. Keep voice notes under a minute.',silent:"I couldn't hear anything in that. Try again a little closer to the phone.",
     unknown_product:"I don't know that barcode. Tell me what it is instead, or type it.",bad_code:"That doesn't look like a barcode number.",
-    ai_quota:'I have used up today\u2019s free AI allowance, so I cannot read photos, listen or chat until it resets at '+new Date(Date.UTC(2000,0,1,0,0)).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})+'. You can still add things by hand and use your list.',
+    ai_quota:'I have used up today\u2019s free AI allowance, so I cannot read photos or listen until it resets at '+new Date(Date.UTC(2000,0,1,0,0)).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})+'. Typed messages like \u201cadd milk\u201d, barcodes, your list and adding by hand still work.',
     slow_down:'That is a lot at once. Give me a few minutes to catch up, then try again.',
     empty:'Write something first.',offline:'You seem to be offline. Nothing was changed.',server:'Something went wrong on my side. Nothing was changed. Try again.'};
   var lastScan=null;
@@ -1426,6 +1426,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     if(busy)return;setBusy('Thinking about dinner');var d;
     try{d=await api('/api/meals',{method:'POST'})}catch(e){setBusy(null);if(e.code!=='locked')toast(e.code==='offline'?COPY.offline:'I could not come up with ideas just now. Try again in a moment.');return}
     setBusy(null);
+    if(d.simple&&d.meals&&d.meals.length)toast('Simple ideas from what needs using first, while my AI allowance resets.');
     if(!d.meals||!d.meals.length){toast(d.few?'Add a few more kitchen items first, then I can suggest dinners.':'I could not find a dinner in what you have. Try again after your next shop.');return}
     var ul=$('mealList');ul.textContent='';
     d.meals.forEach(function(m){
