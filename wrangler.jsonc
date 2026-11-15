@@ -20,6 +20,10 @@
   "vars": {
     "VISION_MODEL": "@cf/meta/llama-3.2-11b-vision-instruct",
     "TEXT_MODEL": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+    // everyday jobs go to this cheaper model first; its work is checked by code, and anything it gets wrong goes to TEXT_MODEL.
+    // Set DELEGATE to "off" to send everything to TEXT_MODEL.
+    "SMALL_MODEL": "@cf/meta/llama-3.1-8b-instruct-fp8-fast",
+    "DELEGATE": "on",
     "SPEECH_MODEL": "@cf/openai/whisper-large-v3-turbo",
     "IMAGE_MODEL": "@cf/black-forest-labs/flux-1-schnell"
   },

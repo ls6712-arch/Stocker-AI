@@ -50,6 +50,16 @@ Most messages are plain: "add milk", "used 2 eggs", "we're out of coffee", "do w
 | 5. The model | Only what is left. It gets the tracked things the message names (or every kitchen item for a dish), not the whole home | `structure`, `relevantNames` |
 | Answers | Code answers what it can be exact about: do we have it, how much, what is on the list, what to use first, how often you buy it, when it is next due, did I buy it, greetings, thanks, health and dose questions (a fixed "check the label" / "ask a pharmacist"), off-topic, other households, passcodes. The model answers the rest, and sees the urgent and named things in full and everything else by name only | `quickAnswer`, `answerTurn`, `answerRows` |
 
+### Delegation: the cheapest model that can do the job
+
+| Tier | Model | Price per million tokens (in / out) | Takes |
+|---|---|---|---|
+| Code | none | free | Plain updates and questions (above) |
+| Small | `SMALL_MODEL`, Llama 3.1 8B fp8 fast | $0.045 / $0.384 | Short English updates with no dish, no safety words, no allergy at home and no chat to follow; open questions not about cooking, diets, food safety or medicine |
+| Large | `TEXT_MODEL`, Llama 3.3 70B fp8 fast | $0.293 / $2.253 | Everything else: dishes (its guesses are asked about first), other languages, follow-ups, corrections, homes with allergies, receipts, shelves, dinner ideas |
+
+The small model's work is checked by code before it is used (`smallOk`, and the answer checks in `chatAnswer`). It goes up to the large model when: it is not JSON, it found nothing, it names something the message did not, it guessed from a dish, it takes something off the home without words that say so, an amount is unbelievable; or, for an answer, a safety or claims check had to step in, it is off voice, or it states a number the home and the question do not contain. The small model has no JSON mode on Workers AI, so it is asked for JSON in words. `DELEGATE=off` in `wrangler.jsonc` sends everything to the large model. `tierFor` decides; `evals/delegate.mjs` tests it.
+
 ### Three stores for recalling without a model
 
 | Store | What it holds | Written by | Never holds |
@@ -202,7 +212,8 @@ Five layers, all in this repository. The approach follows Anthropic's "Demystify
 | Pace | `npm run test:pace` | No | Months of shopping for 1,000 households (bulk buys, holidays, shopping early or late); scores how often a reminder lands the day or two before they run out |
 | Quick path | `npm test` | No | The code that reads messages without a model, on 629 phrasings by other writers: every question, chat, dish, health, attack and correction left alone, and the updates it reads, read right. Plus 68 both-direction checks |
 | Without a model | `npm run test:lean` | No | Every live task through the real `evalCase()` with a model that refuses every call: the "Without AI credits" tasks are graded exactly, and it counts how many live tasks need no model call at all |
-| Live agent | runs itself, see below | Yes | 108 tasks against the real models, graded on the outcome. Tasks marked `offline` run as if the allowance were used up (any model call fails); `maxCalls` checks what a task may cost |
+| Delegation | `npm test` | No | Which tier each of 629 phrasings by other writers goes to (no dish, health question or correction may go small), the checks that send a small model's mistakes up, and an estimated cost with and without delegation |
+| Live agent | runs itself, see below | Yes | 114 tasks against the real models, graded on the outcome. Tasks marked `offline` run as if the allowance were used up (any model call fails); `maxCalls` checks what a task may cost |
 
 ### Live runs and the scorecard
 
@@ -216,7 +227,7 @@ Five layers, all in this repository. The approach follows Anthropic's "Demystify
 | When runs happen | Within minutes of every deploy (one trial of every task). Then the same version again on the next two nights, so every task has three trials. Then once a week, because the hosted model can change. "Run a check now" on the scorecard starts one by hand | `autoRuns`, cron every minute |
 | Cost | A few trials a minute, at most 100 model calls a day, so the household's own chats are never short. If Cloudflare's daily AI allowance runs out, the run pauses and carries on the next UTC day | `EVAL_DAY`, `stepRun` |
 | Numbers | pass@1 (share of trials that pass), pass@k (passed at least once), pass^k (passed every time: what a household feels). Pooled across all runs of one version | `summarize`, `scorecard` |
-| Cost | Model calls and tokens per task (Workers AI's own count when it gives one, otherwise 4 characters a token), and the share of tasks done with no model call | `tokensOf`, `summarize` |
+| Cost | Dollars per 1,000 tasks at Cloudflare's published prices (`costOf`, `maxCost`); model calls and tokens per task (Workers AI's own count when it gives one, otherwise 4 characters a token), and the share of tasks done with no model call | `tokensOf`, `summarize` |
 | What changed | Tasks that broke or got fixed since the run before, flaky tasks, and capability tasks ready to graduate (passed every trial of the current version) | `scorecard` |
 | Reading failures | Every failed trial keeps what was said, what Tote did, its reply and which checks failed. Mark each as Tote's mistake or an unfair test; the share of unfair tests is on the scorecard | `/api/scorecard/verdict` |
 | Real use | Week by week from the app: misses, undo, corrections, said twice, not found, typical reply time, chat turns done without a model call, tokens per turn, reminders sent and how many led to the list, and how many days off the learned pace was when the item was bought again. Kept as counters; nothing private | `health`, `bump` |
@@ -230,6 +241,8 @@ Five layers, all in this repository. The approach follows Anthropic's "Demystify
 | 15 Nov | Round 1: follow-ups with the last two exchanges as context, plans and maybes change nothing, corrections like "2 not 3", learned pace in answers. From reading the baseline failures: answers may not claim a change they did not make; "bought" before an untracked thing is a purchase; an instruction line on a receipt is dropped, not the receipt. Two unfair tests fixed | Offline: all suites pass, router held-out 97.3%. Live: on the scorecard after the next run |
 
 | 15 Nov | Code first: a quick path reads plain messages and answers plain questions with no model; facts and memo tables; Stocker works with no AI allowance (chat, barcodes, typed receipts, dinner ideas); the model sees only the relevant part of the home. 32 new live tasks ("Without AI credits", "Costs nothing") | Offline, exact (no model involved): Without AI credits 4.3% → 100% (23 tasks); live tasks needing no model call 9.4% → 52.9% (8 → 45 of 85), all 45 pass. Quick path on 629 phrasings by other writers, first sight: 100% left alone, 19.1% read, 95% right; after one round of general fixes 24.4% read, 100% right. Cost on those 629 against a 120-item home, stand-in model: calls per message 1.44 → 1.10, tokens per message about 4,000 → 2,500. Live: on the scorecard after the next run |
+
+| 15 Nov | Delegation: a small model (8B, about a sixth of the price) takes everyday updates and questions code could not read; code checks its work and sends mistakes to the large model. Cost per task in dollars on the scorecard; 6 new live tasks ("Right model for the job") | Offline: on 629 phrasings by other writers, 49.9% of model jobs go to the small model, and after widening the dish and food-safety words no dish, health question or correction does (first sight: 9 would have). Estimated cost on those messages, stand-in answers: $0.425 → $0.262 per 1,000. Whether the small model reads well enough is only known live: the escalation rate and the regression suite on the scorecard are the gate |
 
 ### The weekly loop
 
