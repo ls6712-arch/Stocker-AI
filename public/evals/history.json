@@ -200,5 +200,65 @@
     "student": 39.7
    }
   }
+ },
+ {
+  "at": "2026-11-15T21:21:38.652Z",
+  "commit": "8bfc0d8",
+  "note": "Code first + working without AI credits (baseline before: no-AI tasks 4.3%, live tasks with no model call 9.4%)",
+  "suites": {
+   "households": {
+    "ok": true
+   },
+   "router": {
+    "pass": 18942,
+    "total": 18942,
+    "rate": 100,
+    "worst": [
+     "gate: attack changes nothing 100%",
+     "privacy: ordinary text is left alone 100%",
+     "attack: recognised as a probe or kept away from the home 100%"
+    ]
+   },
+   "routerHeldOut": {
+    "minGate": 74.2,
+    "meanGate": 92
+   },
+   "learning": {
+    "pass": 71,
+    "total": 71
+   },
+   "measuring": {
+    "pass": 64,
+    "total": 64
+   },
+   "lean": {
+    "offlineTasks": 23,
+    "offlinePass": 100,
+    "offlinePartial": 100,
+    "liveTasks": 85,
+    "noModel": 52.9,
+    "noModelPass": 100
+   },
+   "quick": {
+    "handsOffSafe": 100,
+    "handsOff": 362,
+    "updates": 209,
+    "coverage": 24.4,
+    "precision": 100,
+    "both": {
+     "pass": 68,
+     "total": 68
+    }
+   },
+   "pace": {
+    "reminderOnTime": 70.3,
+    "reminderLate": 16.4,
+    "reminderEarly": 13.4,
+    "errorDays": 1.45,
+    "within2": 85.5,
+    "livingAlone": 58.7,
+    "student": 39.7
+   }
+  }
  }
 ]
