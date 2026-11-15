@@ -1335,7 +1335,7 @@ function quickMeals(rows, profile, today) {
   return { meals: out.slice(0, 3), simple: true };
 }
 // A typed or pasted receipt read line by line, for when the model is not available: only lines code recognises are kept.
-function quickReceipt(text, rows) {
+function quickReceipt(text, rows, profile) {
   const actions = [];
   for (const line0 of dropOrders(String(text)).split('\n')) {
     const line = line0.toLowerCase().replace(/\s+/g, ' ').trim();
@@ -1354,7 +1354,7 @@ function quickReceipt(text, rows) {
     const u = unit === 'gal' ? 'L' : unit || (r && r !== 'many' ? r.unit : 'pcs');
     actions.push({ action: 'add', name, quantity: unit === 'gal' ? convert(qty, 'gal', 'L') : qty, unit: u, sure: true, fact: f, price: price ? Number(price) : 0 });
   }
-  const out = mkActions(actions.slice(0, 40), null);
+  const out = mkActions(actions.slice(0, 40), profile); // allergy and diet warnings come from code here too
   out.actions.forEach((a, i) => { a.price = actions[i].price || 0; });
   return out;
 }
@@ -1961,7 +1961,7 @@ async function evalCase(env, c, day) {
   let r = { actions: [], proposed: [], reply: '', blocked: false };
   const said = [], history = [];
   if (c.kind === 'receipt' || c.kind === 'shelf') {
-    const out = c.offline ? quickReceipt(String(c.text).slice(0, 2000), rows) : sanitize(await structure(e, c.kind === 'shelf' ? 'shelf' : 'bill', String(c.text).slice(0, 2000), day, rows.map((x) => x.name + ' (' + x.qty + ' ' + x.unit + ')'), profile), c.kind === 'shelf' ? 'shelf' : 'bill');
+    const out = c.offline ? quickReceipt(String(c.text).slice(0, 2000), rows, profile) : sanitize(await structure(e, c.kind === 'shelf' ? 'shelf' : 'bill', String(c.text).slice(0, 2000), day, rows.map((x) => x.name + ' (' + x.qty + ' ' + x.unit + ')'), profile), c.kind === 'shelf' ? 'shelf' : 'bill');
     if (!restricted(profile)) out.actions.forEach((a) => { a.warn = ''; });
     r = { actions: out.actions, proposed: [], reply: '', blocked: false };
     said.push(String(c.text).slice(0, 300));
@@ -2578,7 +2578,7 @@ async function api(request, env, url) {
       let out = null;
       // a barcode names the product: when code already knows that kind of thing, no model call is needed
       if (product) { const f = await factFor(env, product.name || product.text); if (f || !ai) out = mkActions([{ action: 'add', name: (/[a-z]/.test(product.name) ? product.name : titleCase(String(product.name || product.text).toLowerCase())).slice(0, 60), quantity: 1, unit: f ? f.unit : 'pcs', sure: true, fact: f }], profile); }
-      if (!out && !ai && kind === 'text') { const rows = (await env.DB.prepare('SELECT name, qty, unit FROM items').all()).results; out = quickReceipt(text, rows); out.offline = true; }
+      if (!out && !ai && kind === 'text') { const rows = (await env.DB.prepare('SELECT name, qty, unit FROM items').all()).results; out = quickReceipt(text, rows, profile); out.offline = true; }
       if (!out) { out = sanitize(await structure(env, kind, text, today, known, profile), kind); await learnFacts(env, out.actions); }
       if (!restricted(profile)) out.actions.forEach((a) => { a.warn = ''; });
       // a barcode gives real label data, which beats a guess from the product name
