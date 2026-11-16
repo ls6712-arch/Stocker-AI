@@ -6393,6 +6393,523 @@
     }
    ],
    "note": "metric amounts and 'x 4' packs"
+  },
+  {
+   "id": "lean-tip",
+   "group": "Right model for the job",
+   "suite": "capability",
+   "kind": "chat",
+   "inventory": [
+    {
+     "name": "Whole Milk",
+     "qty": 1,
+     "unit": "L",
+     "category": "Dairy"
+    },
+    {
+     "name": "Eggs",
+     "qty": 12,
+     "unit": "pcs",
+     "category": "Dairy"
+    },
+    {
+     "name": "Bread",
+     "qty": 1,
+     "unit": "pcs",
+     "category": "Bakery"
+    },
+    {
+     "name": "Spaghetti",
+     "qty": 500,
+     "unit": "g",
+     "category": "Pantry"
+    },
+    {
+     "name": "Tomato Pasta Sauce",
+     "qty": 1,
+     "unit": "pcs",
+     "category": "Pantry"
+    },
+    {
+     "name": "Rice",
+     "qty": 2,
+     "unit": "kg",
+     "category": "Pantry"
+    },
+    {
+     "name": "Baby Spinach",
+     "qty": 1,
+     "unit": "pack",
+     "category": "Produce",
+     "expiry": "2026-11-14"
+    },
+    {
+     "name": "Coffee",
+     "qty": 1,
+     "unit": "pack",
+     "category": "Pantry"
+    },
+    {
+     "name": "Diapers",
+     "qty": 20,
+     "unit": "pcs",
+     "area": "Kids",
+     "category": "Diapering"
+    },
+    {
+     "name": "Dish Soap",
+     "qty": 1,
+     "unit": "pcs",
+     "area": "Cleaning",
+     "category": "Dishes"
+    }
+   ],
+   "text": "any tips to keep cilantro fresh longer?",
+   "checks": [
+    {
+     "count": [
+      0,
+      0
+     ]
+    },
+    {
+     "replyHas": "water|towel|fridge|jar|stem|wrap"
+    },
+    {
+     "maxCost": 0.0002
+    }
+   ]
+  },
+  {
+   "id": "lean-stale",
+   "group": "Right model for the job",
+   "suite": "capability",
+   "kind": "chat",
+   "inventory": [
+    {
+     "name": "Whole Milk",
+     "qty": 1,
+     "unit": "L",
+     "category": "Dairy"
+    },
+    {
+     "name": "Eggs",
+     "qty": 12,
+     "unit": "pcs",
+     "category": "Dairy"
+    },
+    {
+     "name": "Bread",
+     "qty": 1,
+     "unit": "pcs",
+     "category": "Bakery"
+    },
+    {
+     "name": "Spaghetti",
+     "qty": 500,
+     "unit": "g",
+     "category": "Pantry"
+    },
+    {
+     "name": "Tomato Pasta Sauce",
+     "qty": 1,
+     "unit": "pcs",
+     "category": "Pantry"
+    },
+    {
+     "name": "Rice",
+     "qty": 2,
+     "unit": "kg",
+     "category": "Pantry"
+    },
+    {
+     "name": "Baby Spinach",
+     "qty": 1,
+     "unit": "pack",
+     "category": "Produce",
+     "expiry": "2026-11-14"
+    },
+    {
+     "name": "Coffee",
+     "qty": 1,
+     "unit": "pack",
+     "category": "Pantry"
+    },
+    {
+     "name": "Diapers",
+     "qty": 20,
+     "unit": "pcs",
+     "area": "Kids",
+     "category": "Diapering"
+    },
+    {
+     "name": "Dish Soap",
+     "qty": 1,
+     "unit": "pcs",
+     "area": "Cleaning",
+     "category": "Dishes"
+    }
+   ],
+   "text": "the bread went stale so I tossed it",
+   "checks": [
+    {
+     "stateQty": [
+      "bread",
+      0,
+      0
+     ]
+    },
+    {
+     "maxCost": 0.0002
+    }
+   ]
+  },
+  {
+   "id": "lean-yogurt",
+   "group": "Right model for the job",
+   "suite": "capability",
+   "kind": "chat",
+   "inventory": [
+    {
+     "name": "Whole Milk",
+     "qty": 1,
+     "unit": "L",
+     "category": "Dairy"
+    },
+    {
+     "name": "Eggs",
+     "qty": 12,
+     "unit": "pcs",
+     "category": "Dairy"
+    },
+    {
+     "name": "Bread",
+     "qty": 1,
+     "unit": "pcs",
+     "category": "Bakery"
+    },
+    {
+     "name": "Spaghetti",
+     "qty": 500,
+     "unit": "g",
+     "category": "Pantry"
+    },
+    {
+     "name": "Tomato Pasta Sauce",
+     "qty": 1,
+     "unit": "pcs",
+     "category": "Pantry"
+    },
+    {
+     "name": "Rice",
+     "qty": 2,
+     "unit": "kg",
+     "category": "Pantry"
+    },
+    {
+     "name": "Baby Spinach",
+     "qty": 1,
+     "unit": "pack",
+     "category": "Produce",
+     "expiry": "2026-11-14"
+    },
+    {
+     "name": "Coffee",
+     "qty": 1,
+     "unit": "pack",
+     "category": "Pantry"
+    },
+    {
+     "name": "Diapers",
+     "qty": 20,
+     "unit": "pcs",
+     "area": "Kids",
+     "category": "Diapering"
+    },
+    {
+     "name": "Dish Soap",
+     "qty": 1,
+     "unit": "pcs",
+     "area": "Cleaning",
+     "category": "Dishes"
+    }
+   ],
+   "text": "grabbed yogurt cups on the way home, like 6 of them",
+   "checks": [
+    {
+     "has": {
+      "action": "add",
+      "name": "yogurt"
+     }
+    },
+    {
+     "stateQty": [
+      "yogurt",
+      6,
+      6
+     ]
+    },
+    {
+     "maxCost": 0.0002
+    }
+   ]
+  },
+  {
+   "id": "lean-rice-much",
+   "group": "Right model for the job",
+   "suite": "capability",
+   "kind": "chat",
+   "inventory": [
+    {
+     "name": "Whole Milk",
+     "qty": 1,
+     "unit": "L",
+     "category": "Dairy"
+    },
+    {
+     "name": "Eggs",
+     "qty": 12,
+     "unit": "pcs",
+     "category": "Dairy"
+    },
+    {
+     "name": "Bread",
+     "qty": 1,
+     "unit": "pcs",
+     "category": "Bakery"
+    },
+    {
+     "name": "Spaghetti",
+     "qty": 500,
+     "unit": "g",
+     "category": "Pantry"
+    },
+    {
+     "name": "Tomato Pasta Sauce",
+     "qty": 1,
+     "unit": "pcs",
+     "category": "Pantry"
+    },
+    {
+     "name": "Rice",
+     "qty": 2,
+     "unit": "kg",
+     "category": "Pantry"
+    },
+    {
+     "name": "Baby Spinach",
+     "qty": 1,
+     "unit": "pack",
+     "category": "Produce",
+     "expiry": "2026-11-14"
+    },
+    {
+     "name": "Coffee",
+     "qty": 1,
+     "unit": "pack",
+     "category": "Pantry"
+    },
+    {
+     "name": "Diapers",
+     "qty": 20,
+     "unit": "pcs",
+     "area": "Kids",
+     "category": "Diapering"
+    },
+    {
+     "name": "Dish Soap",
+     "qty": 1,
+     "unit": "pcs",
+     "area": "Cleaning",
+     "category": "Dishes"
+    }
+   ],
+   "text": "is 2 kg of rice a lot for one person?",
+   "checks": [
+    {
+     "count": [
+      0,
+      0
+     ]
+    },
+    {
+     "replyHas": "rice"
+    },
+    {
+     "maxCost": 0.0002
+    }
+   ]
+  },
+  {
+   "id": "lean-dish-stays-careful",
+   "group": "Right model for the job",
+   "suite": "capability",
+   "kind": "chat",
+   "inventory": [
+    {
+     "name": "Whole Milk",
+     "qty": 1,
+     "unit": "L",
+     "category": "Dairy"
+    },
+    {
+     "name": "Eggs",
+     "qty": 12,
+     "unit": "pcs",
+     "category": "Dairy"
+    },
+    {
+     "name": "Bread",
+     "qty": 1,
+     "unit": "pcs",
+     "category": "Bakery"
+    },
+    {
+     "name": "Spaghetti",
+     "qty": 500,
+     "unit": "g",
+     "category": "Pantry"
+    },
+    {
+     "name": "Tomato Pasta Sauce",
+     "qty": 1,
+     "unit": "pcs",
+     "category": "Pantry"
+    },
+    {
+     "name": "Rice",
+     "qty": 2,
+     "unit": "kg",
+     "category": "Pantry"
+    },
+    {
+     "name": "Baby Spinach",
+     "qty": 1,
+     "unit": "pack",
+     "category": "Produce",
+     "expiry": "2026-11-14"
+    },
+    {
+     "name": "Coffee",
+     "qty": 1,
+     "unit": "pack",
+     "category": "Pantry"
+    },
+    {
+     "name": "Diapers",
+     "qty": 20,
+     "unit": "pcs",
+     "area": "Kids",
+     "category": "Diapering"
+    },
+    {
+     "name": "Dish Soap",
+     "qty": 1,
+     "unit": "pcs",
+     "area": "Cleaning",
+     "category": "Dishes"
+    }
+   ],
+   "text": "made egg fried rice for the kids tonight",
+   "checks": [
+    {
+     "confirm": true
+    },
+    {
+     "has": {
+      "action": "use",
+      "name": "egg"
+     }
+    },
+    {
+     "stateQty": [
+      "egg",
+      12,
+      12
+     ]
+    }
+   ]
+  },
+  {
+   "id": "lean-other-language",
+   "group": "Right model for the job",
+   "suite": "capability",
+   "kind": "chat",
+   "inventory": [
+    {
+     "name": "Whole Milk",
+     "qty": 1,
+     "unit": "L",
+     "category": "Dairy"
+    },
+    {
+     "name": "Eggs",
+     "qty": 12,
+     "unit": "pcs",
+     "category": "Dairy"
+    },
+    {
+     "name": "Bread",
+     "qty": 1,
+     "unit": "pcs",
+     "category": "Bakery"
+    },
+    {
+     "name": "Spaghetti",
+     "qty": 500,
+     "unit": "g",
+     "category": "Pantry"
+    },
+    {
+     "name": "Tomato Pasta Sauce",
+     "qty": 1,
+     "unit": "pcs",
+     "category": "Pantry"
+    },
+    {
+     "name": "Rice",
+     "qty": 2,
+     "unit": "kg",
+     "category": "Pantry"
+    },
+    {
+     "name": "Baby Spinach",
+     "qty": 1,
+     "unit": "pack",
+     "category": "Produce",
+     "expiry": "2026-11-14"
+    },
+    {
+     "name": "Coffee",
+     "qty": 1,
+     "unit": "pack",
+     "category": "Pantry"
+    },
+    {
+     "name": "Diapers",
+     "qty": 20,
+     "unit": "pcs",
+     "area": "Kids",
+     "category": "Diapering"
+    },
+    {
+     "name": "Dish Soap",
+     "qty": 1,
+     "unit": "pcs",
+     "area": "Cleaning",
+     "category": "Dishes"
+    }
+   ],
+   "text": "se acabaron los huevos",
+   "checks": [
+    {
+     "stateQty": [
+      "egg",
+      0,
+      0
+     ]
+    }
+   ]
   }
  ]
 }

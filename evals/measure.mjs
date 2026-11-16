@@ -11,7 +11,7 @@ import { fileURLToPath, pathToFileURL } from 'url';
 import { loadAgent } from './load.mjs';
 
 const ROOT = fileURLToPath(new URL('../', import.meta.url));
-const NAMES = ['migrate', 'queueRun', 'stepRun', 'autoRuns', 'summarize', 'scorecard', 'health', 'gradeCheck', 'simApply', 'simRows', 'evalCase', 'evalCases', 'apply', 'bump', 'weekOf', 'onVoice', 'noteTurn', 'route', 'converse', 'chatAnswer', 'noFalseClaims', 'verbBefore', 'dropOrders', 'lineAmount', 'enrich'];
+const NAMES = ['costOf', 'migrate', 'queueRun', 'stepRun', 'autoRuns', 'summarize', 'scorecard', 'health', 'gradeCheck', 'simApply', 'simRows', 'evalCase', 'evalCases', 'apply', 'bump', 'weekOf', 'onVoice', 'noteTurn', 'route', 'converse', 'chatAnswer', 'noFalseClaims', 'verbBefore', 'dropOrders', 'lineAmount', 'enrich'];
 const T = await loadAgent(NAMES);
 
 function d1(db) {
@@ -78,6 +78,8 @@ async function finish(e, cap = 50) { let r; for (let i = 0; i < cap; i++) { r = 
   ok('voice: an emoji is off-voice', !T.onVoice('All done 🎉'));
   ok('voice: calling it the inventory is off-voice', !T.onVoice('I updated your inventory.'));
   ok('voice: a plain calm reply is on-voice', T.onVoice('I put milk on your list.'));
+  ok('grader: maxCost passes at the limit and fails above it', T.gradeCheck({ maxCost: 0.001 }, { cost: 0.001 }, [], [])[0] && !T.gradeCheck({ maxCost: 0.0001 }, { cost: 0.0002 }, [], [])[0]);
+  ok('cost: a call is priced by its model, an unknown model as the large one', T.costOf('@cf/meta/llama-3.1-8b-instruct-fp8-fast', {}, { response: 'x', usage: { prompt_tokens: 1e6, completion_tokens: 0, total_tokens: 1e6 } }) === 0.045 && T.costOf('@cf/x/unknown', {}, { response: 'x', usage: { prompt_tokens: 1e6, completion_tokens: 0, total_tokens: 1e6 } }) === 0.293);
   ok('grader: maxCalls passes at the limit and fails above it', T.gradeCheck({ maxCalls: 1 }, { calls: 1 }, [], [])[0] && !T.gradeCheck({ maxCalls: 0 }, { calls: 1 }, [], [])[0]);
 }
 
@@ -263,7 +265,7 @@ async function finish(e, cap = 50) { let r; for (let i = 0; i < cap; i++) { r = 
 // ---- the real cases file is well formed ----
 {
   const data = JSON.parse(fs.readFileSync(path.join(ROOT, 'public/evals/cases.json'), 'utf8'));
-  const known = ['appliedCount', 'confirm', 'noteHas', 'has', 'hasNot', 'count', 'maxQuantity', 'sure', 'unsure', 'warned', 'notWarned', 'useBetween', 'blocked', 'replyHas', 'replyNot', 'replyMax', 'stateQty', 'onList', 'notOnList', 'maxCalls', 'replyMaxNames'];
+  const known = ['appliedCount', 'confirm', 'noteHas', 'has', 'hasNot', 'count', 'maxQuantity', 'sure', 'unsure', 'warned', 'notWarned', 'useBetween', 'blocked', 'replyHas', 'replyNot', 'replyMax', 'stateQty', 'onList', 'notOnList', 'maxCalls', 'replyMaxNames', 'maxCost'];
   const ids = new Set();
   for (const c of data.cases) {
     ok('cases: every id is unique', !ids.has(c.id), c.id); ids.add(c.id);
