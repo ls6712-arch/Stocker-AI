@@ -14,6 +14,7 @@
     "test:pace": "node evals/pace.mjs",
     "test:lean": "node --no-warnings evals/lean.mjs",
     "test:uat": "node --no-warnings evals/acceptance.mjs",
+    "test:finish": "node evals/finish-audit.cjs",
     "glossary": "node scripts/glossary.mjs",
     "test:world": "node --no-warnings evals/world.mjs --set=heldout2"
   },

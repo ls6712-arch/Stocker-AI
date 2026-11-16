@@ -24,7 +24,7 @@ const d=n=>{const x=new Date();x.setDate(x.getDate()+n);return x.getFullYear()+'
  await p.click('[data-tab=pantry]');await p.waitForTimeout(200);await p.evaluate(()=>window.scrollTo(0,900));await p.waitForTimeout(100);const y0=await p.evaluate(()=>scrollY);
  await p.click('[data-tab=list]');await p.click('[data-tab=pantry]');await p.waitForTimeout(200);const y1=await p.evaluate(()=>scrollY);
  check('Scroll position in At home is remembered when you come back',y0>300&&Math.abs(y1-y0)<60,'was '+y0+', now '+y1);
- await p.evaluate(()=>window.scrollTo(0,900));await p.locator('.ihead').nth(12).click();await p.waitForTimeout(200);const y2=await p.evaluate(()=>scrollY);
+ await p.evaluate(()=>window.scrollTo(0,900));await p.locator('.ihead').nth(12).click();await p.waitForTimeout(500);/* the opened item unfolds over 0.3 s; a click by the test tool while it moves scrolls the page itself, which a finger does not */const y2=await p.evaluate(()=>scrollY);
  await p.locator('.ipanel .acts button',{hasText:'Essential'}).first().click().catch(()=>{});await p.waitForTimeout(600);const y3=await p.evaluate(()=>scrollY);
  check('Changing an item does not jump the page',Math.abs(y3-y2)<60,'was '+y2+', now '+y3);
  await p.fill('#search','Item 05');await p.waitForTimeout(200);await p.click('[data-tab=today]');await p.click('[data-tab=pantry]');await p.waitForTimeout(200);
