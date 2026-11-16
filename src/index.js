@@ -2722,29 +2722,6 @@ async function api(request, env, url) {
     }
   }
 
-  // Evals: run the agent against a made-up home without touching the real one. Nothing is read from or written to the inventory.
-  if (path === '/api/eval' && method === 'POST') {
-    const body = (await request.json().catch(() => null)) || {};
-    if (!(await allow(env, 'eval', 10, 90)) || !(await allow(env, 'evalday', 1440, 400))) return json({ error: 'slow_down' }, 429);
-    try {
-      const text = String(body.text || '').slice(0, 2000);
-      const rows = (Array.isArray(body.inventory) ? body.inventory : []).slice(0, 60).map((r) => ({ name: String(r.name || '').slice(0, 60), qty: num(r.qty, 1), unit: String(r.unit || 'pcs').slice(0, 8), expiry: isDate(r.expiry) ? r.expiry : null, frozen: 0, low: 0, area: String(r.area || 'Kitchen'), expiry_est: r.est ? 1 : 0, category: String(r.category || '') }));
-      const profile = body.profile ? cleanProfile(body.profile) : null;
-      const day = isDate(body.today) ? body.today : today;
-      if (body.kind === 'receipt' || body.kind === 'shelf') {
-        const out = sanitize(await structure(env, body.kind === 'shelf' ? 'shelf' : 'bill', text, day, rows.map((r) => r.name + ' (' + r.qty + ' ' + r.unit + ')'), profile), body.kind === 'shelf' ? 'shelf' : 'bill');
-        out.actions.forEach((a) => enrich(a, profile, text));
-        if (!restricted(profile)) out.actions.forEach((a) => { a.warn = ''; });
-        return json({ actions: out.actions, reply: '', blocked: false });
-      }
-      const list = [];
-      const t = await takeTurn({ ...env, DB: null, MEMO: new Map() }, { text: text.slice(0, 600), history: [], rows, profile, today: day, ai: body.offline ? false : true, learn: false, list: async () => list, reload: async () => rows, apply: async (out) => simApply(rows, list, out.actions) });
-      return json({ actions: t.actions, proposed: t.proposal, reply: t.reply, blocked: t.blocked, route: t.route, via: t.via });
-    } catch (e) {
-      return aiFail(env, e, 'eval');
-    }
-  }
-
   // ---- the scorecard: eval runs over time, and how Tote is doing with real people ----
   if (path === '/api/scorecard' && method === 'GET') return json(await scorecard(env, today, Number(url.searchParams.get('run')) || 0));
   if (path === '/api/scorecard/run' && method === 'POST') {
