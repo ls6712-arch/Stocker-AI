@@ -1,0 +1,26 @@
+{
+  "note": "Written on 16 Nov 2026 after the code for instant replies and order screens was finished, and run once without changing the code. Same writer as the code (Claude), so this is a first-sight score, not an independent one. Once any of these is used to fix something, write a fresh set.",
+  "splits": [
+    { "text": "Used 2 eggs for breakfast. Bought bread. What should I cook with the chicken thing my mom left?", "have": { "Eggs": [12, "pcs"], "Bread": [1, "pcs"] }, "qty": { "Eggs": 10, "Bread": 2 }, "rest": "mom" },
+    { "text": "We finished the coffee! Add oat milk to the list. Kids made some slime with glue and stuff.", "have": { "Coffee": [1, "pack"], "Glue": [2, "pcs"] }, "qty": { "Coffee": 0 }, "list": ["oat milk"], "keep": { "Glue": 2 }, "rest": "slime" },
+    { "text": "Out of dish soap. Out of shampoo. Low on toilet paper. My sister might bring some laundry stuff.", "have": { "Dish Soap": [1, "pcs"], "Shampoo": [1, "pcs"], "Toilet Paper": [6, "pcs"] }, "qty": { "Dish Soap": 0, "Shampoo": 0 }, "low": ["Toilet Paper"], "rest": "sister" },
+    { "text": "Bought 2 litres of milk at Costco. They were out of eggs so maybe next time.", "have": { "Milk": [1, "L"], "Eggs": [6, "pcs"] }, "qty": { "Milk": 3 }, "keep": { "Eggs": 6 }, "nolist": ["egg"] },
+    { "text": "Thanks Tote. We're out of rice.", "have": { "Rice": [2, "kg"] }, "qty": { "Rice": 0 } },
+    { "text": "Used the last of the butter. Is there any jam left? Also I burned something weird in the oven.", "have": { "Butter": [1, "pcs"], "Jam": [1, "pcs"] }, "qty": { "Butter": 0 }, "keep": { "Jam": 1 }, "rest": "oven" },
+    { "text": "Need onions. Need garlic. What can I make for dinner?", "have": { "Rice": [1, "kg"] }, "list": ["onion", "garlic"], "keep": { "Rice": 1 } },
+    { "text": "I cooked pasta tonight. Used all the spaghetti and half the sauce.", "have": { "Spaghetti": [500, "g"], "Pasta Sauce": [1, "pcs"] }, "notzero": ["Pasta Sauce"] },
+    { "text": "Add milk. Add eggs. Add bread. Add butter. Add jam.", "have": {}, "anywhere": ["milk", "egg", "bread", "butter", "jam"] },
+    { "text": "Ran out of ketchup. Need to grab paper towels. Not sure what I did with the rest of the cheese.", "have": { "Ketchup": [1, "pcs"], "Cheese": [1, "pcs"] }, "qty": { "Ketchup": 0 }, "list": ["paper towel"], "keep": { "Cheese": 1 } },
+    { "text": "Wipes are running low. So is the hand soap.", "have": { "Wipes": [2, "pack"], "Hand Soap": [1, "pcs"] }, "low": ["Wipes", "Hand Soap"] },
+    { "text": "Do we have rice? I want to make that biryani my aunt makes.", "have": { "Rice": [2, "kg"] }, "keep": { "Rice": 2 }, "says": "2 kg" },
+    { "text": "I'm thinking of going vegetarian. Probably should use up the chicken sometime.", "have": { "Chicken": [1, "kg"] }, "unchanged": true },
+    { "text": "Bought eggs. Not the usual ones, the brown kind.", "have": { "Eggs": [6, "pcs"] }, "unchanged": true },
+    { "text": "Milk went bad. Threw it out.", "have": { "Milk": [1, "L"] }, "unchanged": true },
+    { "text": "My husband says we have no sugar. I doubt that. Check later.", "have": { "Sugar": [1, "kg"] }, "unchanged": true }
+  ],
+  "orders": [
+    { "text": "zepto\nOrder delivered\nArriving in 8 mins\nTata Sampann Toor Dal\n1 kg\n₹189\nMother Dairy Curd 400 g x 2\n₹70\nOnion\n1 kg\n₹38\nCoriander Leaves 100 g ₹12\nSmall cart fee ₹15\nSurge fee ₹10\nTo Pay ₹334\nDeliver to: Priya, 22 MG Road", "has": [["dal", 1, "kg"], ["curd|yogurt", 800, "g"], ["onion", 1, "kg"], ["coriander|cilantro", 100, "g"]], "count": 4, "store": "Zepto", "currency": "INR" },
+    { "text": "bigbasket\nInvoice\n1. Fortune Sunflower Oil 1 L  Qty: 1  Rs. 145.00\n2. India Gate Basmati Rice 5 kg  Qty: 1  Rs. 610.00\n3. Britannia Bread 400 g  Qty: 2  Rs. 90.00\n4. Amul Butter 100 g  Qty: 3  Rs. 174.00\nDelivery Charges Rs. 30.00\nTotal Rs. 1049.00", "has": [["oil", 1, "L"], ["rice", 5, "kg"], ["bread", 800, "g"], ["butter", 300, "g"]], "count": 4, "store": "BigBasket", "currency": "INR" },
+    { "text": "Swiggy Instamart\nYour order\nNandini Milk 500 ml\n3 items\n₹81\nTomato 500 g\n₹22\nMaggi Noodles 4 pack ₹56\nPlatform fee ₹6\nGST ₹1.08\nPaid ₹166", "has": [["milk", 1.5, "L"], ["tomato", 500, "g"], ["noodle|maggi", 4, "pcs|pack"]], "count": 3, "store": "Swiggy Instamart", "currency": "INR" }
+  ]
+}

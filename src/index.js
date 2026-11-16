@@ -181,7 +181,7 @@ async function seeImage(env, dataUrl, kind) {
   const ask =
     kind === 'shelf'
       ? 'This is a photo of things in a home: a fridge, a shelf, a cupboard, a counter or an unpacked shopping bag. List every product you can clearly identify, one per line, as: name | how many, only if you can count them with confidence, otherwise the word unsure | any printed expiry date you can read. List only what is visible, and skip anything you cannot identify. Ignore people, faces, screens, letters, cards and any other personal details in the photo; never describe or copy them.'
-      : 'This is a photo of a grocery bill or receipt. First line: the store name and the purchase date if printed. Then list every product line, one per line, as: product name | quantity or weight | price. Copy what is printed; skip taxes, totals and discounts.';
+      : 'This is a photo of a grocery bill or receipt, or a screenshot of an online grocery order (for example Blinkit, Zepto, Swiggy Instamart, BigBasket, Instacart or Amazon). First line: the store or app name and the purchase date if shown. Then list every product line, one per line, as: product name | quantity or weight, with how many packs | price with its currency sign. Copy what is printed; skip taxes, totals, discounts, delivery and handling fees and tips. Ignore the delivery address, names, phone numbers, order numbers and payment details; never copy them.';
   const r = await env.AI.run(env.VISION_MODEL, {
     messages: [
       { role: 'system', content: 'You read grocery receipts and pantry photos accurately and never invent items.' },
@@ -209,6 +209,7 @@ async function lookupBarcode(code) {
   const tags = (v) => (Array.isArray(v) ? v.map((t) => String(t).toLowerCase()) : []);
   return {
     name: String(p.product_name).replace(/\s+/g, ' ').trim().slice(0, 60),
+    brand: word(String(p.brands || '').split(',')[0], 24), size: word(p.quantity, 16),
     text: [p.brands, p.product_name].filter(Boolean).join(' ') + (p.quantity ? ', pack size ' + p.quantity : ''),
     allergens: tags(p.allergens_tags), traces: tags(p.traces_tags), labels: tags(p.labels_tags),
     ingredients: String(p.ingredients_text_en || p.ingredients_text || '').toLowerCase().slice(0, 4000),
@@ -473,6 +474,7 @@ function chatReply(result) {
   if (notHome.length) parts.push("I couldn't find " + listOf(notHome) + ' at home, so I left ' + (notHome.length === 1 ? 'it' : 'them') + ' alone.');
   if (notListed.length) parts.push(listOf(notListed.map(capFirst)) + (notListed.length === 1 ? ' is' : ' are') + ' not on your list, so there was nothing to take off.');
   if (unclear.length) parts.push('More than one thing on your list matches ' + listOf(unclear) + ', so I left them. Tell me which one.');
+  if (result.priceNote) parts.push(result.priceNote);
   if (ch.length) parts.push('Tap Undo on anything I got wrong.');
   return parts.join(' ');
 }
@@ -548,11 +550,14 @@ function noFalseClaims(out, said) {
   return (kept.join(' ').trim() + ' I have not changed anything yet. ' + (item ? 'Say "add ' + item.trim() + '" and I will put it on your list.' : 'Tell me what to add or change and I will do it.')).trim();
 }
 // one message may not quietly empty the house
-function tooMuch(actions, rows) {
+function tooMuch(actions, rows, spent) {
   const left = (name) => { const r = (rows || []).find((x) => x.name.toLowerCase() === String(name).toLowerCase()); return r ? r.qty : Infinity; };
   const gone = actions.filter((a) => (a.action === 'use' && (a.quantity === 0 || a.quantity >= left(a.name))) || (a.action === 'set' && a.quantity === 0)), uses = actions.filter((a) => a.action !== 'add' && a.action !== 'list');
-  return gone.length > 4 || uses.length > 10 || actions.length > 25 ? { gone: gone.map((a) => a.name), n: actions.length } : null;
+  // a long message is read in two parts (fastTurn): the limits are for the whole message, so the first part's count is carried over
+  const g0 = clamp(Math.round(num(spent && spent.gone, 0)), 0, 99), u0 = clamp(Math.round(num(spent && spent.uses, 0)), 0, 99);
+  return (gone.length && gone.length + g0 > 4) || (uses.length && uses.length + u0 > 10) || actions.length > 25 ? { gone: gone.map((a) => a.name), n: actions.length + u0, counts: { gone: gone.length, uses: uses.length } } : null;
 }
+const spentBy = (actions, rows) => { const left = (name) => { const r = (rows || []).find((x) => x.name.toLowerCase() === String(name).toLowerCase()); return r ? r.qty : Infinity; }; return { gone: actions.filter((a) => (a.action === 'use' && (a.quantity === 0 || a.quantity >= left(a.name))) || (a.action === 'set' && a.quantity === 0)).length, uses: actions.filter((a) => a.action !== 'add' && a.action !== 'list').length }; };
 
 
 // ---------- world groceries ----------
@@ -884,7 +889,7 @@ const ROUTE_REPLY = {
   correct: 'No problem. To take back something I just did, tap Undo next to it. Or tell me how it really is, like "we have 6 eggs", and I will set it.',
 };
 // The whole turn up to the point of writing: used by the chat, the MCP tool and the evals, so all three test the same agent.
-async function converse(env, text, history, rows, profile, today, learn, ai = true) {
+async function converse(env, text, history, rows, profile, today, learn, ai = true, spent = null) {
   text = scrub(text);
   let way = route(text, profile && profile.buddy), fromHistory = false;
   // "sorry, 2 not 3" right after I changed something is a fix to that change: with the chat to go on, the model can make it right
@@ -910,7 +915,7 @@ async function converse(env, text, history, rows, profile, today, learn, ai = tr
   // "we're out of chicken" with ground chicken and chicken thighs at home: ask, never pick one
   const which = whichOne(text, out.actions, rows);
   if (which) return { out: { actions: [] }, proposal: [], blocked: false, route: way, via, reply: 'I have ' + listOf(which.map((r) => lname(r.name))) + ' at home. Which one do you mean?' };
-  const big = tooMuch(out.actions, rows);
+  const big = tooMuch(out.actions, rows, spent);
   if (big) return { out: { actions: [] }, proposal: [], blocked: true, route: 'wipe', via, reply: 'That would change ' + big.n + ' things at once' + (big.gone.length ? ', and use up ' + listOf(big.gone.slice(0, 5)) : '') + '. To be careful I have not changed anything. Tell me a few at a time, or scan a receipt for a big shop.' };
   // What they said outright is done straight away. What I worked out from a dish is only my guess, so I ask first.
   const find = (name) => rows.find((r) => r.name.toLowerCase() === name.toLowerCase()) || rows.find((r) => r.name.toLowerCase().includes(name.toLowerCase()));
@@ -1007,7 +1012,7 @@ async function takeTurn(env, t) {
     const result = await t.apply(out);
     return { ...base, reply: chatReply(result) + (stay.length && result.changes.length ? ' I kept ' + listOf(stay.map(lname)) + '.' : ''), changes: result.changes, missed: result.missed || [], actions: out.actions, out };
   }
-  const turn = await converse(env, text, history, t.rows, profile, today, t.learn, ai);
+  const turn = await converse(env, text, history, t.rows, profile, today, t.learn, ai, t.spent || null);
   if (turn.reply) return { reply: turn.reply, changes: [], missed: [], proposal: [], route: turn.route, blocked: turn.blocked, via: turn.via, actions: [], intent: '', offline: !!turn.offline };
   const out = turn.out;
   const result = flag(out.actions.length ? await t.apply(out) : { changes: [], missed: [] });
@@ -1022,6 +1027,60 @@ async function takeTurn(env, t) {
   if (turn.recallable && result.changes.length) await memoPut(env, text, out.actions);
   if (turn.via === 'model') await learnFacts(env, out.actions);
   return { reply, changes: result.changes, missed: result.missed || [], proposal: turn.proposal, remembered: turn.remembered || '', route: turn.route, blocked: false, via, actions: out.actions, intent: out.intent, out };
+}
+// ---------- instant replies ----------
+// A long message usually holds a few plain facts and one thing only a model can read: "I'm making some kind of tacos. We're out
+// of milk. Put diapers and wipes on the list." Before, all of it waited for the model. Now the app sends it here first: code does
+// the sentences it is certain of in one go, answers the questions it can be exact about, and hands back the rest, word for word,
+// for the usual turn. It never splits when one sentence leans on or takes back another, and the limits on one message hold across
+// both halves (the count is carried in `spent`).
+const ABBR = /\b(oz|lb|lbs|pkg|pk|ct|qt|pt|gal|tsp|tbsp|approx|no|vs|etc|st|dr|mr|mrs|ms|eg|ie|fl)\.$/i;
+const LEANS = /\b(it|its|that|them|those|these|this one|the same|both|either|the rest|the others?|one of|ones?)\b/i;
+const TAKE_BACK = /\b(actually|wait|scratch that|never ?mind|instead|i meant|sorry|oops|whoops|not that|don'?t|do not|undo|cancel|ignore|forget (?:it|that))\b/i;
+function splitTurn(raw) {
+  const text = String(raw || '').replace(/\s+/g, ' ').trim(), parts = [];
+  let cur = '';
+  for (const piece of text.split(/(?<=[.!?])\s+/)) { cur = cur ? cur + ' ' + piece : piece; if (ABBR.test(cur)) continue; parts.push(cur); cur = ''; }
+  if (cur) parts.push(cur);
+  if (parts.length < 2 || parts.length > 8 || TAKE_BACK.test(text) || parts.some((p) => LEANS.test(p))) return null;
+  return parts;
+}
+async function fastTurn(env, t) {
+  const { text, profile, today } = t, buddy = profile && profile.buddy;
+  const idle = { fast: true, reply: '', changes: [], missed: [], rest: text, said: '', route: '', via: 'none', actions: [], blocked: false };
+  const parts = splitTurn(scrub(text));
+  if (!parts) return idle;
+  const lead = (p) => p.replace(/^(?:oh,? )?(?:and also|and|also|plus|then)[, ]+/i, '');
+  const ways = parts.map((p) => route(lead(p), buddy));
+  if (ways.some((w) => w === 'refuse' || w === 'wipe' || w === 'correct')) return idle;
+  const plan = [], acts = [];
+  for (let i = 0; i < parts.length; i++) {
+    const s = lead(parts[i]);
+    if (ways[i] === 'answer') { plan.push({ kind: 'ask', s, raw: parts[i] }); continue; }
+    const out = await quickParse(env, s, t.rows, profile, [], false);
+    if (out && out.actions.length && !out.actions.some((a) => a.inferred) && !whichOne(s, out.actions, t.rows)) { plan.push({ kind: 'do', raw: parts[i] }); acts.push(...out.actions); }
+    else plan.push({ kind: 'wait', raw: parts[i] });
+  }
+  if (!restricted(profile)) acts.forEach((a) => { a.warn = ''; });
+  const big = tooMuch(acts, t.rows);
+  if (big) return { ...idle, rest: '', said: text, blocked: true, route: 'wipe', via: 'code', reply: 'That would change ' + big.n + ' things at once' + (big.gone.length ? ', and use up ' + listOf(big.gone.slice(0, 5)) : '') + '. To be careful I have not changed anything. Tell me a few at a time, or scan a receipt for a big shop.' };
+  let result = { changes: [], missed: [] };
+  if (acts.length) {
+    result = await t.apply({ intent: 'update', store: '', bought: '', currency: '', actions: acts });
+    for (const c of result.changes || []) if (c.action === 'add' || c.action === 'list' || c.action === 'set') { const k = clashOf(c.name, profile, c.action === 'list' ? '' : c.area); if (k) { c.clash = k; if (!c.warn) c.warn = clashWarn(k); } }
+  }
+  const said = [];
+  if ((result.changes || []).length || (result.missed || []).length) said.push(chatReply(result));
+  for (const p of plan) {
+    if (p.kind !== 'ask') continue;
+    const a = await quickAnswer(env, p.s, acts.length ? await t.reload() : t.rows, await t.list(), today, profile, false);
+    if (a) { p.kind = 'told'; said.push(a); } else p.kind = 'wait';
+  }
+  if (!said.length) return idle;
+  return {
+    fast: true, reply: said.join(' '), changes: result.changes || [], missed: result.missed || [], rest: plan.filter((p) => p.kind === 'wait').map((p) => p.raw).join(' '),
+    said: plan.filter((p) => p.kind !== 'wait').map((p) => p.raw).join(' '), spent: spentBy(acts, t.rows), route: acts.length ? 'update' : 'answer', via: 'code', actions: acts, blocked: false,
+  };
 }
 // which kind of verb last came before a thing in the message: "used the diapers, bought wipes and 2 bananas" -> bananas: buy
 function verbBefore(text, name) {
@@ -1666,6 +1725,7 @@ async function quickAnswer(env, raw, rows, list, today, profile, ai) {
   if (/\b(passcode|password|pin code|api key|secret)\b/.test(t)) return 'That is not something I can share. I can tell you what is at home, what needs using up, or what is on your list.';
   if (/\b(other|another|different)\s+(?:stocker\s+)?(users?|households?|homes?|families|people|accounts?)\b|\bsomeone else'?s\b|\beveryone else\b/.test(t)) return 'I only look after this home, and I know nothing about anyone else. I can tell you what is here, though.';
   if (/\b(order|buy|purchase|deliver|checkout)\b.{0,30}\b(for me|online|groceries|delivered)\b/.test(t) && /^(can|could|will|would|please)\b/.test(bare)) return 'I cannot order or buy anything for you. I can put things on your list, so you have it ready when you shop.';
+  { const paid = await priceAnswer(env, t, rows, today); if (paid) return paid; }
   if (OFFTOPIC.test(t.replace(/^(?:can you|could you|please)\s+/, ''))) return AWAY_REPLY;
   if (/how do you know (?:the |when |about )?(?:best[- ]?before|expiry|use[- ]by|dates?|when)|where do (?:the )?dates come from|are (?:the|those) dates (?:real|right|accurate)/.test(t)) return 'When a date is printed on the pack or the receipt, I use it. Otherwise it is my estimate from how long that kind of thing usually keeps, so trust your eyes and nose over my guess.';
   if (/^(?:what can you do|what do you do|how (?:do|does) (?:this|you|tote|it) work|help)\b/.test(bare)) return 'Tell me what you bought, used or ran out of, or snap a receipt, and I keep track. Ask what is at home, what to use first, or what is on your list.';
@@ -1742,27 +1802,56 @@ function quickMeals(rows, profile, today) {
   return { meals: out.slice(0, 3), simple: true };
 }
 // A typed or pasted receipt read line by line, for when the model is not available: only lines code recognises are kept.
+// A receipt is no longer only paper. In India most groceries arrive from Blinkit, Zepto, Instamart or BigBasket, and the "receipt"
+// is the order screen: one item over two or three lines, whole-rupee prices, "500 ml x 2", then fees, the address and how it was paid.
+const STORE_NAMES = [['Blinkit', /\bblinkit\b/i], ['Zepto', /\bzepto\b/i], ['Swiggy Instamart', /\binstamart\b/i], ['BigBasket', /\bbig ?basket\b/i], ['Instacart', /\binstacart\b/i], ['Amazon Fresh', /\bamazon fresh\b/i], ['Walmart', /\bwalmart\b/i], ['Weee!', /\bweee\b/i]];
+const storeOf = (text) => { const head = String(text || '').slice(0, 400), hit = STORE_NAMES.find((x) => x[1].test(head)); return hit ? hit[0] : ''; };
+const currencyOf = (text) => (/₹|\brs\.? ?\d|\binr\b/i.test(text) ? 'INR' : /\$\s?\d/.test(text) ? 'USD' : /£\s?\d/.test(text) ? 'GBP' : /€\s?\d/.test(text) ? 'EUR' : '');
+const MONEY_RX = /(?:₹|\brs\.?|\binr\b|\$|£|€)\s*(\d+(?:\.\d{1,2})?)/gi;
+const NOT_ITEM = /\b(sub\s?total|total|tax|vat|gst|bag|coupon|discount|savings|saved|change|cash|card|visa|balance|tender|points|thank|charges?|fees?|tip|order(?:ed|s)?|deliver\w*|paid|payment|upi|invoice|address|wallet|cashback|promo|refund|rider|rating|reorder|support|\d+ min(?:ute)?s?)\b/;
+const SIZE_WORDS = 'kg|kgs|g|gm|gms|lb|lbs|oz|l|ltr|litres?|liters?|ml|gal';
+// a line that holds only an amount or a price ("500 ml x 2", "₹58") belongs to the item on the line above it
+function orderLines(text) {
+  const out = [];
+  for (const l0 of String(text).split('\n')) {
+    const l = l0.replace(/\s+/g, ' ').trim();
+    if (!l) continue;
+    const words = l.toLowerCase().replace(MONEY_RX, ' ').replace(new RegExp('\\bqty:?\\s*\\d+|(?<![a-z])[x×]\\s*\\d+|\\d+\\s*[x×]|\\d+(?:\\.\\d+)?\\s*(?:' + SIZE_WORDS + '|pcs?|pieces?|pack|pk|ct|units?)\\b|\\bmrp\\b', 'g'), ' ').replace(/[^a-z]+/g, '');
+    if (!words && /\d/.test(l) && out.length && /[a-z]{3}/i.test(out[out.length - 1])) out[out.length - 1] += ' ' + l; else out.push(l);
+  }
+  return out;
+}
 function quickReceipt(text, rows, profile) {
-  const actions = [];
-  for (const line0 of dropOrders(String(text)).split('\n')) {
-    const line = line0.toLowerCase().replace(/\s+/g, ' ').trim();
-    if (!line || /\b(sub\s?total|total|tax|vat|gst|bag|coupon|discount|savings|change|cash|card|visa|balance|tender|points|thank)\b/.test(line)) continue;
-    const price = (line.match(/(-?\d+\.\d{2})\s*[a-z]?$/) || [])[1];
-    if (price && Number(price) < 0) continue;
-    let rest = line.replace(/(-?\d+\.\d{2})\s*[a-z]?$/, '').trim(), qty = 1, unit = '';
-    const n = rest.match(/^(\d+)\s*(?:x|@)?\s+/); if (n) { qty = Number(n[1]); rest = rest.slice(n[0].length); }
-    const ct = rest.match(/\b(\d+)\s*(?:ct|pk|pack)\b/); if (ct) { qty = Number(ct[1]); rest = rest.replace(ct[0], ' '); }
-    const wt = rest.match(/\b(\d+(?:\.\d+)?)\s*(kg|g|lb|lbs|oz|l|ml|gal)\b/); if (wt) { qty = Number(wt[1]); unit = UNIT_WORDS[wt[2]] || wt[2]; rest = rest.replace(wt[0], ' '); }
+  const actions = [], src = dropOrders(String(text));
+  for (const line0 of orderLines(src)) {
+    const line = line0.toLowerCase().replace(/(\d),(\d{3})\b/g, '$1$2').replace(/\s+/g, ' ').trim();
+    if (!line || NOT_ITEM.test(line)) continue;
+    let rest = line, price = 0, mult = 1, qty = 1, unit = '', sized = false;
+    const marked = [...rest.matchAll(MONEY_RX)];
+    if (marked.length) { price = Number(marked[marked.length - 1][1]); rest = rest.replace(MONEY_RX, ' ').replace(/\s+/g, ' ').trim(); }
+    else { const m = rest.match(/(-?\d+\.\d{2})\s*[a-z]?$/); if (m) { if (Number(m[1]) < 0) continue; price = Number(m[1]); rest = rest.replace(/(-?\d+\.\d{2})\s*[a-z]?$/, '').trim(); } }
+    // how many packs: "Qty 2", "x 2", "2 x", or a small number in front
+    const q = rest.match(/\bqty:?\s*(\d{1,2})\b/) || rest.match(new RegExp('(?<![a-z])[x×]\\s*(\\d{1,2})\\b(?!\\s*(?:' + SIZE_WORDS + ')\\b)')) || rest.match(/\b(\d{1,2})\s*[x×](?=\s|$)/);
+    if (q) { mult = Number(q[1]) || 1; rest = rest.replace(q[0], ' ').replace(/\s+/g, ' ').trim(); }
+    const n = rest.match(new RegExp('^(\\d+)\\s*@?\\s+(?!(?:' + SIZE_WORDS + '|ct|pk|pack|pcs?|pieces?|dz|doz|dozen)\\b)'));
+    if (n) { if (Number(n[1]) <= 24) mult *= Number(n[1]); rest = rest.slice(n[0].length); }
+    const ct = rest.match(/\b(\d+)\s*(?:ct|pk|pack|pcs?|pieces?|nos)\b/); if (ct) { qty = Number(ct[1]); sized = true; rest = rest.replace(ct[0], ' '); }
+    const wt = rest.match(new RegExp('\\b(\\d+(?:\\.\\d+)?)\\s*(' + SIZE_WORDS + ')\\b')); if (wt) { qty = Number(wt[1]); unit = UNIT_WORDS[wt[2]] || ({ ltr: 'L', kgs: 'kg', gm: 'g', gms: 'g' })[wt[2]] || (/^lit/.test(wt[2]) ? 'L' : wt[2]); sized = true; rest = rest.replace(wt[0], ' '); }
     rest = rest.replace(/\b(dz|doz)\b/, 'dozen').replace(/[^a-z ]+/g, ' ').replace(/\s+/g, ' ').trim();
     if (/\bdozen\b/.test(rest)) { qty = 12 * (qty || 1); rest = rest.replace(/\bdozen\b/, '').trim(); }
-    const f = stapleFor(rest), r = findRow(f ? f.name : rest, rows);
-    if (!f && !(r && r !== 'many')) continue; // a line code cannot read is left out rather than guessed
-    const name = r && r !== 'many' ? r.name : f.name;
-    const u = unit === 'gal' ? 'L' : unit || (r && r !== 'many' ? r.unit : 'pcs');
-    actions.push({ action: 'add', name, quantity: unit === 'gal' ? convert(qty, 'gal', 'L') : qty, unit: u, sure: true, fact: f, price: price ? Number(price) : 0 });
+    if (mult > 1) { qty *= mult; if (unit === 'ml' && qty >= 1000) { qty /= 1000; unit = 'L'; } else if (unit === 'g' && qty >= 1000) { qty /= 1000; unit = 'kg'; } }
+    const f = stapleFor(rest), r = findRow(f ? f.name : rest, rows), tracked = r && r !== 'many';
+    // a world grocery code knows ("toor dal", "paneer") counts too, but only on a line that looks like an item: it has a price or a size
+    const g = !f && !tracked && (price > 0 || sized) ? itemInfo(rest) : null;
+    if (!f && !tracked && !g) continue; // a line code cannot read is left out rather than guessed
+    const fact = f || (g ? { name: g.name, area: g.area, category: g.category, shelfLifeDays: g.keep } : null);
+    const name = tracked ? r.name : fact.name;
+    const u = unit === 'gal' ? 'L' : unit || (tracked ? r.unit : 'pcs');
+    actions.push({ action: 'add', name, quantity: unit === 'gal' ? convert(qty, 'gal', 'L') : qty, unit: u, sure: true, fact, price: price || 0 });
   }
   const out = mkActions(actions.slice(0, 40), profile); // allergy and diet warnings come from code here too
   out.actions.forEach((a, i) => { a.price = actions[i].price || 0; });
+  out.store = storeOf(src); out.currency = currencyOf(src);
   return out;
 }
 const OFFLINE_UPDATE = 'My AI allowance for today is used up, so I could not read that one, and nothing was changed. Short messages still work, like "add milk", "used 2 eggs" or "we are out of rice".';
@@ -1788,6 +1877,81 @@ async function answerTurn(env, text, history, rows, list, today, profile, missed
   return { reply: OFFLINE_ANSWER, via: 'none' };
 }
 
+// ---------- price memory, food used in time, and handing the list to a store ----------
+const CUR_SIGN = { INR: '₹', USD: '$', GBP: '£', EUR: '€' };
+const r2 = (v) => Math.round(v * 100) / 100;
+function money(n, cur) {
+  const v = r2(Number(n) || 0), whole = Number.isInteger(v) && cur !== 'USD' && cur !== 'GBP' && cur !== 'EUR';
+  return (CUR_SIGN[cur] || '') + (whole ? String(v) : v.toFixed(2)) + (cur && !CUR_SIGN[cur] ? ' ' + cur : '');
+}
+const perUnit = (u) => (u === 'pcs' ? 'each' : 'per ' + u);
+// One price per purchase, per unit, so a 2 L bottle and a 1 L carton can be compared. Kept only when the amount was read, not guessed.
+// Returns a note when this price is at least a tenth away from what this home usually pays (the middle of its last five).
+async function notePrice(env, key, a, day, store, currency) {
+  if (!(a.price > 0) || !a.sure || !(a.quantity > 0) || !day) return null;
+  const now = a.price / a.quantity, cur = currency || '';
+  const prev = (await env.DB.prepare("SELECT unit_price FROM prices WHERE name_key = ? AND unit = ? AND COALESCE(currency, '') = ? ORDER BY day DESC, id DESC LIMIT 5").bind(key, a.unit, cur).all()).results.map((x) => x.unit_price).sort((x, y) => x - y);
+  await env.DB.prepare('INSERT INTO prices (name_key, day, unit_price, unit, qty, amount, currency, store) VALUES (?, ?, ?, ?, ?, ?, ?, ?)').bind(key, day, now, a.unit, a.quantity, a.price, currency || null, store || null).run();
+  if (!prev.length) return null;
+  const was = prev.length % 2 ? prev[(prev.length - 1) / 2] : (prev[prev.length / 2 - 1] + prev[prev.length / 2]) / 2;
+  if (!(was > 0) || Math.abs(now - was) / was < 0.1) return null;
+  return { now: r2(now), was: r2(was), unit: a.unit, currency: cur, dir: now > was ? 'up' : 'down' };
+}
+// said plainly and without judgement: Tote never makes anyone feel bad about money
+const priceLine = (name, p) => name + ' was ' + money(p.now, p.currency) + ' ' + perUnit(p.unit) + ' this time. You usually pay about ' + money(p.was, p.currency) + '.';
+const dropPrice = (env, key) => env.DB.prepare('DELETE FROM prices WHERE id = (SELECT MAX(id) FROM prices WHERE name_key = ?)').bind(key).run().catch(() => {});
+// "what did we pay for milk?", "price of rice", "how much does paneer cost?": answered from this home's own receipts, never guessed
+const PRICE_Q = [
+  /\b(?:what|how much) (?:did|do|have) (?:i|we|you) (?:pay|paid|spend|spent) (?:for|on) (?:the |my |our |a |an |some )?(.+?)(?: last time| last| usually| normally)?\??$/,
+  /\b(?:price|cost) of (?:the |my |our |a |an |some )?(.+?)\??$/,
+  /\b(?:what|how much) (?:does|do|did|is|are|was|were) (?:the |my |our |a |an |some )?(.+?) cost(?: last time| usually| us| me)?\??$/,
+];
+async function priceAnswer(env, t, rows, today) {
+  const m = PRICE_Q.map((rx) => t.match(rx)).find(Boolean);
+  if (!m) return null;
+  if (!env || !env.DB) return null;
+  const thing = m[1].replace(/[^a-z0-9' ]+/g, ' ').trim(), r = findRow(thing, rows);
+  if (r === 'many') return 'More than one thing at home matches ' + thing + '. Tell me which one and I will look up what you paid.';
+  const key = r ? keyOf(r.name) : keyOf(thing);
+  let got = (await env.DB.prepare('SELECT * FROM prices WHERE name_key = ? ORDER BY day DESC, id DESC LIMIT 2').bind(key).all()).results;
+  if (!got.length && !r) got = (await env.DB.prepare('SELECT * FROM prices WHERE name_key = (SELECT name_key FROM prices WHERE instr(name_key, ?) > 0 ORDER BY length(name_key) LIMIT 1) ORDER BY day DESC, id DESC LIMIT 2').bind(key).all()).results;
+  if (!got.length) return 'I have not seen a price for ' + (r ? lname(r.name) : thing) + ' yet. Scan a receipt or an order with it on, and I will remember what you paid.';
+  const p = got[0], name = r ? r.name : titleCase(p.name_key);
+  return 'You paid ' + money(r2(p.unit_price), p.currency) + ' ' + perUnit(p.unit) + ' for ' + lname(name) + ' ' + (p.day === today ? 'today' : 'on ' + niceDate(p.day, today)) + (p.store ? ' at ' + p.store : '') + '.' + (got[1] && got[1].unit === p.unit ? ' The time before it was ' + money(r2(got[1].unit_price), got[1].currency) + '.' : '');
+}
+// Food used in time: something in the kitchen finished in its last three days (or on its date) instead of being thrown away.
+// That is the number behind "nothing is thrown away". It is recorded when the last of it goes, and taken back by Undo (noteBack).
+async function noteSaved(env, row, today) {
+  try {
+    if ((row.area || 'Kitchen') !== 'Kitchen' || row.frozen || !isDate(row.expiry) || !(row.qty > 0)) return;
+    const left = dayGap(today, row.expiry);
+    if (left < 0 || left > 3) return;
+    const p = await env.DB.prepare('SELECT unit_price, unit, currency FROM prices WHERE name_key = ? ORDER BY day DESC, id DESC LIMIT 1').bind(row.name_key).first();
+    const worth = p && p.unit === row.unit ? r2(p.unit_price * row.qty) : null;
+    await env.DB.prepare('INSERT INTO saves (name_key, name, day, left_days, amount, currency) VALUES (?, ?, ?, ?, ?, ?)').bind(row.name_key, row.name, today, left, worth, worth === null ? null : p.currency || null).run();
+  } catch (e) { console.error('save not noted', String((e && e.message) || e)); }
+}
+// Where a list can be handed over. Each is a search on that store's own site for one item: no store here lets another app fill a
+// basket without a business agreement, so Tote opens the store at the item and the person adds it. Built by code, never by the
+// model, and opened only by a tap. A store with no shop online (Patel Brothers, H Mart) gets no link rather than a made-up one.
+const SHOPS = [
+  { name: 'Blinkit', where: 'IN', rx: /blinkit|grofers/i, url: 'https://blinkit.com/s/?q={q}' },
+  { name: 'Zepto', where: 'IN', rx: /zepto/i, url: 'https://www.zeptonow.com/search?query={q}' },
+  { name: 'Swiggy Instamart', where: 'IN', rx: /instamart|swiggy/i, url: 'https://www.swiggy.com/instamart/search?query={q}' },
+  { name: 'BigBasket', where: 'IN', rx: /big ?basket/i, url: 'https://www.bigbasket.com/ps/?q={q}' },
+  { name: 'Instacart', where: 'US', rx: /instacart/i, url: 'https://www.instacart.com/store/s?k={q}' },
+  { name: 'Walmart', where: 'US', rx: /walmart/i, url: 'https://www.walmart.com/search?q={q}' },
+  { name: 'Amazon', where: 'US', rx: /amazon|whole foods/i, url: 'https://www.amazon.com/s?k={q}' },
+  { name: 'Target', where: 'US', rx: /target/i, url: 'https://www.target.com/s?searchTerm={q}' },
+  { name: 'Weee!', where: 'US', rx: /weee/i, url: 'https://www.sayweee.com/en/search?keyword={q}' },
+];
+function shopsFor(profile, country, currency) {
+  const mine = ((profile && profile.stores) || []).map((n) => SHOPS.find((s) => s.rx.test(n))).filter(Boolean);
+  const c = String(country || '').toUpperCase(), where = c === 'IN' ? 'IN' : c === 'US' || c === 'CA' ? 'US' : c ? '' : currency === 'INR' ? 'IN' : 'US';
+  const local = SHOPS.filter((s) => s.where === where && s.name !== 'Target' && s.name !== 'Weee!');
+  return [...new Set(mine.concat(local))].slice(0, 5).map((s) => ({ name: s.name, url: s.url }));
+}
+
 // ---------- learning a household's own pace ----------
 // Every purchase is one observation of how long that amount lasted: until they said it ran out, or else until they bought it again.
 // The typical (median) of the last eight is used, so one odd week does not move the estimate, and a bigger purchase is expected to last longer, up to twice as long.
@@ -1811,7 +1975,8 @@ function paceFrom(history, qty, unit) {
 const everyDays = (n) => (n <= 1 ? 'day' : n === 7 ? 'week' : n === 14 ? 'two weeks' : n + ' days');
 // "We are out of milk" closes the current purchase: that is exactly how long it lasted. Putting the amount back reopens it.
 const noteOut = (env, key, today) => env.DB.prepare('UPDATE purchases SET ran_out = ? WHERE name_key = ? AND ran_out IS NULL AND bought < ? AND bought = (SELECT MAX(bought) FROM purchases WHERE name_key = ?)').bind(today, key, today, key).run().catch(() => {});
-const noteBack = (env, key, today) => env.DB.prepare('UPDATE purchases SET ran_out = NULL WHERE name_key = ? AND ran_out = ?').bind(key, today).run().catch(() => {});
+const noteBack = async (env, key, today) => { await env.DB.prepare('DELETE FROM saves WHERE name_key = ? AND day = ?').bind(key, today).run().catch(() => {}); return noteBack0(env, key, today); };
+const noteBack0 = (env, key, today) => env.DB.prepare('UPDATE purchases SET ran_out = NULL WHERE name_key = ? AND ran_out = ?').bind(key, today).run().catch(() => {});
 const answered = (env, key) => env.DB.prepare('UPDATE reminders SET answered = 1, streak = 0 WHERE name_key = ?').bind(key).run().catch(() => {});
 
 // ---------- apply ----------
@@ -1827,6 +1992,9 @@ async function apply(env, body, today, source, who) {
   let ex = (await env.DB.prepare('SELECT id, text FROM extras ORDER BY added').all()).results;
   const lc = (t) => String(t || '').toLowerCase();
   const restock = new Set((Array.isArray(body.actions) ? body.actions : []).filter((a) => a && a.restock).map((a) => keyOf(String(a.name || ''))));
+  // an empty pack that was scanned: its brand and size stay with the thing, so the list says exactly what to buy again
+  const packs = new Map((Array.isArray(body.actions) ? body.actions : []).filter((a) => a && a.pack).map((a) => [keyOf(String(a.name || '')), word(scrub(a.pack), 40)]));
+  const priceNotes = [];
   for (const a of clean) {
     if (a.action === 'unlist') {
       const n = lc(a.name);
@@ -1855,7 +2023,7 @@ async function apply(env, body, today, source, who) {
       if (!r) r = await env.DB.prepare('SELECT * FROM items WHERE instr(name_key, ?) > 0 ORDER BY length(name_key) LIMIT 1').bind(k).first();
       if (r) {
         await env.DB.prepare('UPDATE items SET qty = ?, unsure = 0, low = 0, nolist = 0 WHERE id = ?').bind(a.quantity, r.id).run();
-        if (a.quantity <= 0 && r.qty > 0) await noteOut(env, r.name_key, today); else if (a.quantity > 0) await noteBack(env, r.name_key, today);
+        if (a.quantity <= 0 && r.qty > 0) { await noteOut(env, r.name_key, today); await noteSaved(env, r, today); } else if (a.quantity > 0) await noteBack(env, r.name_key, today);
         changes.push({ id: r.id, name: r.name, action: 'set', created: false, prevQty: r.qty, qty: a.quantity, unit: r.unit, category: r.category, area: r.area });
         setN++; did.set.push(r.name);
         continue;
@@ -1887,7 +2055,9 @@ async function apply(env, body, today, source, who) {
       }
       const qty = a.quantity > 0 ? Math.max(0, row.qty - a.quantity) : 0;
       await env.DB.prepare('UPDATE items SET qty = ? WHERE id = ?').bind(qty, row.id).run();
-      if (qty <= 0 && row.qty > 0) { await noteOut(env, row.name_key, today); await env.DB.prepare('UPDATE items SET nolist = 0 WHERE id = ?').bind(row.id).run(); }
+      if (qty <= 0 && row.qty > 0) { await noteOut(env, row.name_key, today); await noteSaved(env, row, today); await env.DB.prepare('UPDATE items SET nolist = 0 WHERE id = ?').bind(row.id).run(); }
+      const pack = packs.get(key) || packs.get(row.name_key);
+      if (pack && !row.note) await env.DB.prepare('UPDATE items SET note = ? WHERE id = ?').bind(pack, row.id).run();
       changes.push({ id: row.id, name: row.name, action: 'use', created: false, prevQty: row.qty, qty, unit: row.unit, category: row.category, area: row.area });
       used++; did.use.push(row.name);
       continue;
@@ -1950,6 +2120,7 @@ async function apply(env, body, today, source, who) {
     }
     if (!a.sure) { await env.DB.prepare('UPDATE items SET unsure = 1 WHERE id = ?').bind(itemId).run(); changes[changes.length - 1].unsure = true; }
     if (a.price > 0) await env.DB.prepare('INSERT INTO spend (item_id, day, area, amount, currency) VALUES (?, ?, ?, ?, ?)').bind(itemId, day || today, a.area, a.price, currency).run();
+    try { const pn = await notePrice(env, key, a, day, store, currency); if (pn) { changes[changes.length - 1].price = pn; priceNotes.push(priceLine(row ? row.name : a.name, pn)); } } catch (e) { console.error('price not noted', String((e && e.message) || e)); }
     if (learnt) changes[changes.length - 1].learnt = learnt;
     // buying something takes its own entry off the list, so one thing is never both at home and still to buy
     if (source !== 'shelf' && !a.wasSet) {
@@ -1971,7 +2142,9 @@ async function apply(env, body, today, source, who) {
   if (missed.length) parts.push("couldn't find " + missed.join(', '));
   const summary = (parts.length ? parts.join('; ') : 'nothing changed').slice(0, 300);
   if (added || used || low || setN || listed || unlisted) await env.DB.prepare('INSERT INTO log (at, source, summary, who) VALUES (?, ?, ?, ?)').bind(new Date().toISOString(), source, summary, who || null).run();
-  return { added, used, low, missed, notListed, unclear, summary, changes };
+  // the order they handed to a store has arrived and been scanned in: no need to ask about it again
+  if (added && (source === 'bill' || store)) await env.DB.prepare("DELETE FROM settings WHERE k = 'handoff'").run().catch(() => {});
+  return { added, used, low, missed, notListed, unclear, summary, changes, priceNote: priceNotes.slice(0, 2).join(' ') };
 }
 
 const SOURCES = ['bill', 'shelf', 'voice', 'text', 'barcode', 'hand', 'cook'];
@@ -2116,7 +2289,7 @@ async function mcp(request, env) {
 
 // ---------- storage that newer versions need ----------
 // Run once per start-up: adds what is missing and never touches what is there.
-const SCHEMA = 7;
+const SCHEMA = 8;
 let ready = null;
 function migrate(env) {
   if (!ready) ready = (async () => {
@@ -2137,6 +2310,9 @@ function migrate(env) {
     await env.DB.prepare('ALTER TABLE eval_trials ADD COLUMN cost REAL').run().catch(() => {});
     await env.DB.prepare('CREATE TABLE IF NOT EXISTS facts (name_key TEXT PRIMARY KEY, name TEXT NOT NULL, unit TEXT, area TEXT, category TEXT, shelf_days INTEGER, finish_days INTEGER, seen INTEGER NOT NULL DEFAULT 1, at TEXT NOT NULL)').run();
     await env.DB.prepare('CREATE TABLE IF NOT EXISTS memo (k TEXT PRIMARY KEY, actions TEXT NOT NULL, hits INTEGER NOT NULL DEFAULT 0, at TEXT NOT NULL, used TEXT, bad INTEGER NOT NULL DEFAULT 0)').run();
+    await env.DB.prepare('CREATE TABLE IF NOT EXISTS prices (id INTEGER PRIMARY KEY AUTOINCREMENT, name_key TEXT NOT NULL, day TEXT NOT NULL, unit_price REAL NOT NULL, unit TEXT NOT NULL, qty REAL, amount REAL NOT NULL, currency TEXT, store TEXT)').run();
+    await env.DB.prepare('CREATE INDEX IF NOT EXISTS prices_key ON prices(name_key, day)').run();
+    await env.DB.prepare('CREATE TABLE IF NOT EXISTS saves (id INTEGER PRIMARY KEY AUTOINCREMENT, name_key TEXT NOT NULL, name TEXT NOT NULL, day TEXT NOT NULL, left_days INTEGER, amount REAL, currency TEXT)').run();
     await env.DB.prepare("INSERT INTO settings (k, v) VALUES ('schema', ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v").bind(String(SCHEMA)).run();
   })().catch((e) => { ready = null; console.error('migrate failed', String((e && e.message) || e)); });
   return ready;
@@ -2712,12 +2888,39 @@ async function api(request, env, url) {
     const profile = await getProfile(env);
     for (const it of items) it.warn = liveWarn(it, profile) || null;
     for (const x of extras) x.warn = homeWarn(bareEntry(x.text), profile) || null;
-    return json({ items, log, extras, me, spend, waste: (binned && binned.n) || 0, profile, learnt, review: misses });
+    // the competitor round: freshness at a glance, food used in time, what things cost last time, and where the list can go
+    let shelf = { fresh: 0, soon: 0, past: 0 }, saved = { n: 0, amount: 0, currency: '', names: [] }, handoff = null;
+    for (const it of items) { if ((it.area || 'Kitchen') !== 'Kitchen' || !(it.qty > 0) || it.frozen || !isDate(it.expiry)) continue; const d = dayGap(today, it.expiry); shelf[d < 0 ? 'past' : d <= 3 ? 'soon' : 'fresh']++; }
+    try {
+      const sv = (await env.DB.prepare('SELECT name, amount, currency FROM saves WHERE day >= ? ORDER BY id DESC LIMIT 200').bind(today.slice(0, 8) + '01').all()).results;
+      const cur0 = (sv.find((x) => x.currency) || {}).currency || '';
+      saved = { n: sv.length, amount: r2(sv.filter((x) => x.amount && (x.currency || '') === cur0).reduce((t, x) => t + x.amount, 0)), currency: cur0, names: [...new Set(sv.map((x) => x.name))].slice(0, 6) };
+      const last = new Map();
+      for (const p of (await env.DB.prepare('SELECT name_key, unit_price, unit, qty, amount, currency, day, store FROM prices ORDER BY day DESC, id DESC LIMIT 1500').all()).results) if (!last.has(p.name_key)) last.set(p.name_key, { unit_price: r2(p.unit_price), unit: p.unit, qty: p.qty, amount: p.amount, currency: p.currency || '', day: p.day, store: p.store || '' });
+      for (const it of items) { const p = last.get(it.name_key); if (p) it.paid = p; }
+      for (const x of extras) { const it = items.find((i) => i.paid && boughtCovers(x.text, i.name)); if (it) x.paid = it.paid; }
+      const ho = await env.DB.prepare("SELECT v FROM settings WHERE k = 'handoff'").first();
+      if (ho) { const v = JSON.parse(ho.v); if (v && isDate(v.day) && dayGap(v.day, today) >= 0 && dayGap(v.day, today) <= 3) handoff = { store: String(v.store), day: v.day }; }
+    } catch (e) { console.error('extras not read', String((e && e.message) || e)); }
+    const shops = shopsFor(profile, request.headers.get('cf-ipcountry') || (request.cf && request.cf.country) || '', spend.currency || saved.currency);
+    return json({ items, log, extras, me, spend, waste: (binned && binned.n) || 0, profile, learnt, review: misses, shelf, saved, shops, handoff });
+  }
+  // The list was handed to a store (the person tapped a store's link). Only the store's name and the day are kept, so Today can ask
+  // for the order screen when it arrives. Nothing is sent anywhere by this.
+  if (path === '/api/handoff' && method === 'POST') {
+    const body = (await request.json().catch(() => ({}))) || {}, shop = SHOPS.find((s) => s.name === body.store);
+    if (!shop) return json({ error: 'unknown_store' }, 400);
+    await env.DB.prepare("INSERT INTO settings (k, v) VALUES ('handoff', ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v").bind(JSON.stringify({ store: shop.name, day: today })).run();
+    return json({ ok: true, store: shop.name });
+  }
+  if (path === '/api/handoff' && method === 'DELETE') {
+    await env.DB.prepare("DELETE FROM settings WHERE k = 'handoff'").run();
+    return json({ ok: true });
   }
   const m = path.match(/^\/api\/items\/([0-9a-f-]{36})$/);
   if (m && method === 'PATCH') {
     const body = await request.json().catch(() => ({}));
-    const cur = await env.DB.prepare('SELECT name, name_key, qty FROM items WHERE id = ?').bind(m[1]).first();
+    const cur = await env.DB.prepare('SELECT * FROM items WHERE id = ?').bind(m[1]).first();
     if (!cur) return json({ ok: true });
     const logIt = (summary) => env.DB.prepare('INSERT INTO log (at, source, summary, who) VALUES (?, ?, ?, ?)').bind(new Date().toISOString(), 'hand', summary, me || null).run();
     if (body.undo || body.takeBack) await logIt('took back the change to ' + cur.name); // an undone change shows in the activity log as undone
@@ -2726,13 +2929,14 @@ async function api(request, env, url) {
     if (body.qty !== undefined) {
       const q = Math.max(0, num(body.qty, 0));
       await env.DB.prepare('UPDATE items SET qty = ?, unsure = 0' + ((q <= 0 && cur.qty > 0) || q > cur.qty ? ', nolist = 0' : '') + ' WHERE id = ?').bind(q, m[1]).run();
-      if (q <= 0 && cur.qty > 0 && !body.binned) await noteOut(env, cur.name_key, today); else if (q > 0) await noteBack(env, cur.name_key, today);
+      if (q <= 0 && cur.qty > 0 && !body.binned) { await noteOut(env, cur.name_key, today); if (!body.undo) await noteSaved(env, cur, today); } else if (q > 0) await noteBack(env, cur.name_key, today);
     }
     if (body.low !== undefined) await env.DB.prepare('UPDATE items SET low = ?' + (body.low ? ', nolist = 0' : '') + ' WHERE id = ?').bind(body.low ? 1 : 0, m[1]).run();
     if (body.finishDays !== undefined) await env.DB.prepare('UPDATE items SET finish_days = ? WHERE id = ?').bind(clamp(Math.round(num(body.finishDays, 14)), 1, 365), m[1]).run();
     if (body.low || body.finishDays !== undefined) await answered(env, cur.name_key);
     if (body.undo) {
       await env.DB.prepare('DELETE FROM spend WHERE id = (SELECT MAX(id) FROM spend WHERE item_id = ?)').bind(m[1]).run();
+      await dropPrice(env, cur.name_key);
       await env.DB.prepare('DELETE FROM purchases WHERE name_key = ? AND bought = ?').bind(cur.name_key, today).run(); // an undone purchase must not teach a pace
       await env.DB.prepare('UPDATE items SET bought = COALESCE((SELECT MAX(bought) FROM purchases WHERE name_key = ?), bought) WHERE id = ?').bind(cur.name_key, m[1]).run();
     }
@@ -2761,6 +2965,7 @@ async function api(request, env, url) {
     if (url.searchParams.get('undo')) {
       if (gone) await env.DB.prepare('INSERT INTO log (at, source, summary, who) VALUES (?, ?, ?, ?)').bind(new Date().toISOString(), 'hand', 'took back adding ' + gone.name, me || null).run();
       await env.DB.prepare('DELETE FROM spend WHERE item_id = ?').bind(m[1]).run();
+      if (gone) await env.DB.prepare('DELETE FROM prices WHERE name_key = ? AND day = ?').bind(gone.name_key, today).run().catch(() => {});
       if (gone) await env.DB.prepare('DELETE FROM purchases WHERE name_key = ? AND bought = ?').bind(gone.name_key, today).run();
     }
     return json({ ok: true });
@@ -2991,7 +3196,16 @@ async function api(request, env, url) {
       const loadRows = async () => (await env.DB.prepare('SELECT name, qty, unit, expiry, expiry_est, frozen, low, nolist, area, category, bought, finish_days, learned FROM items ORDER BY name').all()).results;
       const profile = await getProfile(env);
       const history = (Array.isArray(body.history) ? body.history : []).slice(-4).map((h) => ({ role: h && h.role === 'assistant' ? 'assistant' : 'user', content: String((h && h.text) || '').slice(0, 400) })).filter((h) => h.content);
-      const go = async (withAi) => takeTurn(m.env, { text, history, rows: await loadRows(), profile, today, ai: withAi, learn: true, reload: loadRows,
+      const listNow = async () => (await env.DB.prepare('SELECT text FROM extras ORDER BY added LIMIT 60').all()).results.map((x) => x.text);
+      const applyNow = (out) => apply(env, { store: out.store, bought: out.bought, currency: out.currency, actions: out.actions }, today, heard ? 'voice' : 'text', me);
+      if (body.fast && !heard) {
+        // the certain parts of a long message, done by code at once; the app then sends `rest` the usual way
+        const f = await fastTurn(m.env, { text, rows: await loadRows(), profile, today, reload: loadRows, list: listNow, apply: applyNow });
+        if (f.reply) { await noteTurn(env, { said: f.said || text, route: f.route, intent: f.blocked ? '' : 'update', reply: f.reply, changes: f.changes, proposal: [], missed: f.missed, t0 }); await bump(env, 'turn_free'); await bump(env, 'turn_fast'); }
+        return json({ heard: '', fast: true, reply: f.reply, changes: f.changes, missed: f.missed, proposal: [], rest: f.rest, spent: f.spent || { gone: 0, uses: 0 }, route: f.route, blocked: f.blocked, offline: !ai, via: f.via });
+      }
+      const spent = body.spent && typeof body.spent === 'object' ? { gone: num(body.spent.gone, 0), uses: num(body.spent.uses, 0) } : null;
+      const go = async (withAi) => takeTurn(m.env, { text, history, rows: await loadRows(), profile, today, ai: withAi, learn: true, reload: loadRows, spent,
         list: async () => (await env.DB.prepare('SELECT text FROM extras ORDER BY added LIMIT 60').all()).results.map((x) => x.text),
         apply: (out) => apply(env, { store: out.store, bought: out.bought, currency: out.currency, actions: out.actions }, today, heard ? 'voice' : 'text', me) });
       let t;
@@ -3089,6 +3303,19 @@ async function api(request, env, url) {
         product = await lookupBarcode(code);
         if (!product) return json({ error: 'unknown_product', code }, 404);
         text = 'Bought one of: ' + product.text;
+        // The pack is empty: it is not a purchase. Something tracked is used up (so it is on the list by itself); anything else
+        // goes on the list by name. Either way the brand and size ride along, so the list says exactly what to buy again.
+        if (url.searchParams.get('empty')) {
+          const rows = (await env.DB.prepare('SELECT name, qty, unit FROM items ORDER BY name').all()).results;
+          const pack = [product.brand, product.size].filter(Boolean).join(' ').slice(0, 40); // no comma: a list note keeps letters, numbers and spaces
+          const shown = (/[a-z]/.test(product.name) ? product.name : titleCase(String(product.name).toLowerCase())).slice(0, 60);
+          const f = stapleFor(product.name);
+          let r = findRow(product.name, rows) || (f ? findRow(f.name, rows) : null);
+          if (!r) { const k = ' ' + normKey(product.name) + ' ', hits = rows.filter((x) => normKey(x.name) && k.includes(' ' + normKey(x.name) + ' ')).sort((a, b) => normKey(b.name).length - normKey(a.name).length); r = hits.length > 1 && normKey(hits[0].name).length === normKey(hits[1].name).length ? 'many' : hits[0] || null; }
+          const base = { note: '', inferred: false, sure: true, area: 'Kitchen', category: 'Other', warn: '', expiry: '', shelfLifeDays: 0, price: 0, finishDays: 14 };
+          const actions = r && r !== 'many' ? [{ ...base, action: 'use', name: r.name, quantity: 0, unit: r.unit, pack }] : [{ ...base, action: 'list', name: shown, note: pack, quantity: 1, unit: 'pcs' }];
+          return json({ kind, empty: true, heard: '', label: null, read: '', intent: 'update', store: '', bought: '', currency: '', actions, pack, tracked: !!(r && r !== 'many') });
+        }
       } else return json({ error: 'not_found' }, 404);
 
       const profile = await getProfile(env);
@@ -3096,8 +3323,17 @@ async function api(request, env, url) {
       // a barcode names the product: when code already knows that kind of thing, no model call is needed
       if (product) { const f = await factFor(env, product.name || product.text); if (f || !ai) out = mkActions([{ action: 'add', name: (/[a-z]/.test(product.name) ? product.name : titleCase(String(product.name || product.text).toLowerCase())).slice(0, 60), quantity: 1, unit: f ? f.unit : 'pcs', sure: true, fact: f }], profile); }
       if (!out && !ai && kind === 'text') { const rows = (await env.DB.prepare('SELECT name, qty, unit FROM items').all()).results; out = quickReceipt(text, rows, profile); out.offline = true; }
-      if (!out) { out = sanitize(await structure(env, kind, text, today, known, profile), kind); out.actions.forEach((a) => enrich(a, profile, kind === 'bill' || kind === 'shelf' ? text : '')); await learnFacts(env, out.actions); }
+      if (!out) {
+        try { out = sanitize(await structure(env, kind, text, today, known, profile), kind); out.actions.forEach((a) => enrich(a, profile, kind === 'bill' || kind === 'shelf' ? text : '')); await learnFacts(env, out.actions); }
+        catch (e) {
+          // the allowance ran out while reading a pasted receipt or order: code reads the lines it knows, the same as with no credits
+          if (kind !== 'text' || !isQuota(e)) throw e;
+          await markQuota(env);
+          const rows = (await env.DB.prepare('SELECT name, qty, unit FROM items').all()).results; out = quickReceipt(text, rows, profile); out.offline = true;
+        }
+      }
       if (!restricted(profile)) out.actions.forEach((a) => { a.warn = ''; });
+      if (kind === 'bill' || kind === 'text') { if (!out.store) out.store = storeOf(text); if (!out.currency) out.currency = currencyOf(text); }
       // a barcode gives real label data, which beats a guess from the product name
       const label = product ? labelCheck(product, profile) : null;
       if (label) out.actions.forEach((a) => { if (a.action === 'add') a.warn = label.warn; });

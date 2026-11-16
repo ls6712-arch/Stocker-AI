@@ -170,3 +170,24 @@ CREATE TABLE IF NOT EXISTS memo (
   used TEXT,
   bad INTEGER NOT NULL DEFAULT 0
 );
+CREATE TABLE IF NOT EXISTS prices (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name_key TEXT NOT NULL,
+  day TEXT NOT NULL,
+  unit_price REAL NOT NULL,
+  unit TEXT NOT NULL,
+  qty REAL,
+  amount REAL NOT NULL,
+  currency TEXT,
+  store TEXT
+);
+CREATE INDEX IF NOT EXISTS prices_key ON prices(name_key, day);
+CREATE TABLE IF NOT EXISTS saves (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name_key TEXT NOT NULL,
+  name TEXT NOT NULL,
+  day TEXT NOT NULL,
+  left_days INTEGER,
+  amount REAL,
+  currency TEXT
+);
