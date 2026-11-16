@@ -230,10 +230,20 @@ async function finish(e, cap = 50) { let r; for (let i = 0; i < cap; i++) { r = 
   ok('glossary: every line has six fields', bad.length === 0, bad.slice(0, 3));
 }
 
+// ---- grader checks added 16 Nov ----
+{
+  const run2 = 'You have several items that are best before Wednesday, including Cilantro, Iceberg Lettuce, and Mango. I would suggest using up the Cilantro first, as it is likely to go off soon.';
+  const names = ['cilantro|lettuce|mango|strawberr|corn|tomato|squash', 3];
+  ok('grader: naming the same item twice is not two items', T.gradeCheck({ replyMaxNames: names }, { reply: run2 }, [], [])[0]);
+  ok('grader: four different items is more than three', !T.gradeCheck({ replyMaxNames: names }, { reply: 'Cilantro, mango, corn and squash are all going off.' }, [], [])[0]);
+  const r = { actions: [{ action: 'add', name: 'Chicken Breast', quantity: 1, unit: 'lb' }] };
+  ok('grader: the amount on a receipt line is checked', !T.gradeCheck({ has: { name: 'chicken', unit: 'lb', amount: [2.1, 2.1] } }, r, [], [])[0] && T.gradeCheck({ has: { name: 'chicken', amount: [0.5, 1] } }, r, [], [])[0]);
+}
+
 // ---- the real cases file is well formed ----
 {
   const data = JSON.parse(fs.readFileSync(path.join(ROOT, 'public/evals/cases.json'), 'utf8'));
-  const known = ['appliedCount', 'confirm', 'noteHas', 'has', 'hasNot', 'count', 'maxQuantity', 'sure', 'unsure', 'warned', 'notWarned', 'useBetween', 'blocked', 'replyHas', 'replyNot', 'replyMax', 'stateQty', 'onList', 'notOnList'];
+  const known = ['appliedCount', 'confirm', 'noteHas', 'has', 'hasNot', 'count', 'maxQuantity', 'sure', 'unsure', 'warned', 'notWarned', 'useBetween', 'blocked', 'replyHas', 'replyNot', 'replyMax', 'stateQty', 'onList', 'notOnList', 'replyMaxNames'];
   const ids = new Set();
   for (const c of data.cases) {
     ok('cases: every id is unique', !ids.has(c.id), c.id); ids.add(c.id);

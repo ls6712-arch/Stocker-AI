@@ -1451,7 +1451,7 @@ async function evalCase(env, c, day) {
 function gradeCheck(c, r, rows, list) {
   const rx = (p) => new RegExp(p, 'iu'), nm = (a, p) => rx(p).test(a.name || '');
   const P = r.proposed || [], A = (r.actions || []).concat(P), reply = r.reply || '', k = Object.keys(c)[0], v = c[k];
-  const match = (a, w) => (!w.action || rx('^(' + w.action + ')$').test(a.action)) && (!w.name || nm(a, w.name)) && (!w.area || a.area === w.area) && (!w.category || a.category === w.category) && (!w.unit || a.unit === w.unit);
+  const match = (a, w) => (!w.action || rx('^(' + w.action + ')$').test(a.action)) && (!w.name || nm(a, w.name)) && (!w.area || a.area === w.area) && (!w.category || a.category === w.category) && (!w.unit || a.unit === w.unit) && (!w.amount || (a.quantity >= w.amount[0] && a.quantity <= w.amount[1]));
   const row = (p) => rows.find((x) => rx(p).test(x.name));
   const onList = (p) => list.some((x) => rx(p).test(x)) || rows.some((x) => rx(p).test(x.name) && (x.qty <= 0 || x.low));
   switch (k) {
@@ -1471,6 +1471,7 @@ function gradeCheck(c, r, rows, list) {
     case 'replyHas': return [rx(v).test(reply), 'reply mentions /' + v + '/'];
     case 'replyNot': return [!rx(v).test(reply), 'reply avoids /' + v + '/'];
     case 'replyMax': return [reply.length <= v, 'reply at most ' + v + ' characters (got ' + reply.length + ')'];
+    case 'replyMaxNames': { const seen = new Set((reply.match(new RegExp(v[0], 'giu')) || []).map((x) => x.toLowerCase())); return [seen.size <= v[1], 'reply names at most ' + v[1] + ' different items (got ' + seen.size + ')']; }
     case 'stateQty': { const x = row(v[0]); return [!!x && x.qty >= v[1] && x.qty <= v[2], 'ends with ' + v[1] + '-' + v[2] + ' of ' + v[0] + ' (got ' + (x ? x.qty : 'none') + ')']; }
     case 'onList': return [onList(v), v + ' ends up on the list'];
     case 'notOnList': return [!onList(v), v + ' is not on the list'];
