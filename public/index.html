@@ -131,6 +131,17 @@ html.big{zoom:1.16}
 .msg .chg{display:flex;justify-content:space-between;gap:10px;align-items:center;font-size:13.5px;border-top:1px solid var(--line);padding-top:6px;margin-top:6px}
 .msg .chg s{color:var(--muted)}.msg .chg button{min-height:36px;padding:4px 12px;flex:none;white-space:nowrap}.msg .chg span{min-width:0}
 .chatbar{display:flex;gap:8px;align-items:center}.chatbar input{flex:1;min-width:0}
+.chatbar.listening>:not(.recbar){display:none!important}
+.recbar{flex:1;display:flex;align-items:center;gap:10px;min-height:56px;border-radius:28px;background:var(--surface2);border:2px solid var(--accent);padding:4px 6px 4px 6px}
+.recbar .round{flex:none;width:44px;height:44px;border-radius:50%;border:0;display:grid;place-items:center;background:var(--surface);color:var(--fg)}
+.recbar .round.go{background:var(--accent);color:var(--accent-fg)}
+.recbar .mid{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.recbar .wave{display:flex;align-items:center;gap:3px;height:22px}
+.recbar .wave i{flex:1;max-width:4px;height:100%;border-radius:2px;background:var(--accent);transform:scaleY(.12);transition:transform .09s linear}
+.recbar .hint{font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.recbar .clock{flex:none;font-variant-numeric:tabular-nums;font-size:13px;color:var(--muted);min-width:34px;text-align:right}
+.msg.me.live{opacity:.8;font-style:italic}
+#chatDlg.listening .tiles,#chatDlg.listening #chatTips{display:none}
 .chatbar .micb{flex:none;width:48px;height:48px;border-radius:50%;border:1px solid var(--line);background:var(--surface2);display:grid;place-items:center;color:var(--accent)}
 .latest{border:0;background:none;text-align:left;padding:10px 4px;min-height:40px;font-size:13px;color:var(--muted)}
 .sechead button,.ipanel button{min-height:40px}.sechead button{padding:8px 6px}
@@ -334,6 +345,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
       <button type="button" class="micb" id="chatMic" aria-label="Speak instead of typing"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
       <input type="text" id="chatText" maxlength="300" placeholder="Tell me what you used, bought or need" aria-label="Message" autocomplete="off">
       <button type="submit" class="btn primary" id="chatGo">Send</button>
+      <div class="recbar" id="recBar" hidden role="status" aria-live="polite"><button type="button" class="round" id="recX" aria-label="Cancel, do not send"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button><span class="mid"><span class="wave" id="recWave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><span class="hint" id="recHint">Listening. I send when you pause.</span></span><span class="clock" id="recClock">0:00</span><button type="button" class="round go" id="recGo" aria-label="Send now"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6"/></svg></button></div>
     </form>
     <div class="tiles" style="grid-template-columns:repeat(3,minmax(0,1fr))">
       <button type="button" class="tile" id="chatSnap" style="min-height:92px;align-items:center;text-align:center"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.5"/></svg><b>Snap</b><span>Receipt or fridge</span></button>
@@ -341,18 +353,6 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
       <button type="button" class="tile" id="chatCode" style="min-height:92px;align-items:center;text-align:center"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5v14M7 5v14M11 5v14M14 5v14M17 5v14M20 5v14"/></svg><b>Barcode</b><span>Checks the label</span></button>
     </div>
     <button type="button" class="btn block" data-close>Done</button>
-  </div>
-</dialog>
-
-<dialog class="sheet" id="recDlg" aria-labelledby="recH">
-  <div class="pad">
-    <div class="grab"></div>
-    <h2 id="recH">Listening</h2>
-    <p class="sub">Say what you bought, what you cooked, or what is running low. For example: "I made chicken curry with rice tonight, and we are almost out of dish soap."</p>
-    <div class="mic"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></div>
-    <div class="timer" id="recTime" aria-live="off">0:00</div>
-    <button type="button" class="btn primary block" id="recStop">Stop and send</button>
-    <button type="button" class="btn block" id="recCancel">Cancel</button>
   </div>
 </dialog>
 
@@ -1188,9 +1188,9 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
   document.querySelectorAll('dialog.sheet').forEach(function(d){d.addEventListener('click',function(ev){if(ev.target===d)d.close()})});
   $('tellOpen').onclick=function(){if(!busy)openChat()};
   $('tellSnap').onclick=function(){if(!busy)$('capDlg').showModal()};
-  $('tellMic').onclick=function(){if(busy)return;openChat();recMode='chat';startRec()};
+  $('tellMic').onclick=function(){if(busy)return;openChat(true);startRec()};
   $('chatSnap').onclick=function(){$('chatDlg').close();$('capDlg').showModal()};
-  $('chatTalk').onclick=function(){recMode='chat';startRec()};
+  $('chatTalk').onclick=function(){startRec()};
   $('chatCode').onclick=function(){$('chatDlg').close();$('capCode').click()};
   var draft=null,mem=null,memAt=-1,ui={more:{},adding:''};
   function redraw(){drawProfile();if(mem)drawMember()}
@@ -1305,29 +1305,50 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     scan(async function(){return api('/api/scan/'+kind,{method:'POST',body:JSON.stringify({image:await shrink(f)})})},kind==='shelf'?'Looking at the shelf':'Reading the bill')})}
   photo($('billFile'),'bill');photo($('shelfFile'),'shelf');
 
-  /* voice */
-  var rec=null,chunks=[],recTimer=null,recStart=0,recSend=false,recMode='scan';
-  $('capVoice').onclick=function(){recMode='scan';startRec()};
+  /* voice: talk to Tote right in the conversation. The phone's own speech-to-text when it has one (free, the words appear as you
+     speak); otherwise a short recording that Tote transcribes. Either way it sends by itself when you pause, and the cross cancels. */
+  var SR=window.SpeechRecognition||window.webkitSpeechRecognition,vo=null,srBroken=false;
+  $('capVoice').onclick=function(){$('capDlg').close();startRec()};
+  function waveTo(levels){var bars=$('recWave').children;for(var i=0;i<bars.length;i++)bars[i].style.transform='scaleY('+Math.max(.12,Math.min(1,levels(i))).toFixed(2)+')'}
+  function voiceUI(on){$('chatForm').classList.toggle('listening',on);$('chatDlg').classList.toggle('listening',on);$('recBar').hidden=!on;if(!on)waveTo(function(){return .12});
+    $('recHint').textContent='Listening. I send when you pause.';$('recClock').textContent='0:00';if(window.Tote)Tote.mood(on?'think':'happy')}
+  function voiceTick(){if(!vo)return;var s=Math.floor((Date.now()-vo.t0)/1000);$('recClock').textContent=Math.floor(s/60)+':'+pad(s%60);
+    if(vo.level)vo.level();else{var hot=Date.now()-vo.heard<350;waveTo(function(i){return hot?.25+.75*Math.abs(Math.sin(Date.now()/120+i*.9))*Math.random():.12})}
+    if(s>=60){finishVoice(true);return}vo.raf=requestAnimationFrame(voiceTick)}
+  function finishVoice(send){if(!vo)return;var v=vo;v.send=send;cancelAnimationFrame(v.raf);if(v.sr){try{send?v.sr.stop():v.sr.abort()}catch(e){}}if(v.rec&&v.rec.state!=='inactive')v.rec.stop()}
+  function voiceDone(v){if(vo!==v)return;vo=null;voiceUI(false);if(v.ctx)try{v.ctx.close()}catch(e){}if(v.stream)v.stream.getTracks().forEach(function(t){t.stop()})}
   async function startRec(){
-    if($('capDlg').open)$('capDlg').close();
-    if(!navigator.mediaDevices||!window.MediaRecorder){toast('This browser cannot record audio. Type it instead.');return}
+    if(vo||chatBusy)return;if(!$('chatDlg').open)openChat(true);$('chatText').blur();
+    if(SR&&!srBroken)return startSpeech();
+    if(!navigator.mediaDevices||!window.MediaRecorder){toast('This browser cannot listen. Type it instead.');return}
     var stream;try{stream=await navigator.mediaDevices.getUserMedia({audio:true})}catch(e){toast('Microphone access was blocked. Allow it in your browser settings.');return}
-    chunks=[];recSend=false;rec=new MediaRecorder(stream);recStart=Date.now();$('recTime').textContent='0:00';
-    rec.ondataavailable=function(e){if(e.data&&e.data.size)chunks.push(e.data)};
-    rec.onstop=function(){clearInterval(recTimer);stream.getTracks().forEach(function(t){t.stop()});
-      var blob=new Blob(chunks,{type:rec.mimeType||'audio/webm'});rec=null;if($('recDlg').open)$('recDlg').close();
-      if(!recSend)return;
-      if(blob.size<800){toast('That was too short. Try again and speak for a few seconds.');return}
-      if(recMode==='chat'){var fr0=new FileReader();fr0.onload=function(){chatSend({audio:String(fr0.result).split(',')[1]},'Voice note')};fr0.onerror=function(){toast('Could not read that recording. Try again.')};fr0.readAsDataURL(blob);return}
-      scan(function(){return new Promise(function(res,rej){var fr=new FileReader();
-        fr.onload=function(){api('/api/scan/voice',{method:'POST',body:JSON.stringify({audio:String(fr.result).split(',')[1]})}).then(res,rej)};
-        fr.onerror=function(){rej({code:'server'})};fr.readAsDataURL(blob)})},'Listening back')};
-    rec.start();$('recDlg').showModal();
-    recTimer=setInterval(function(){var s=Math.round((Date.now()-recStart)/1000);$('recTime').textContent=Math.floor(s/60)+':'+pad(s%60);if(s>=60&&rec){recSend=true;rec.stop()}},400);
-  };
-  $('recStop').onclick=function(){if(rec){recSend=true;rec.stop()}};
-  $('recCancel').onclick=function(){if(rec){recSend=false;rec.stop()}else $('recDlg').close()};
-  $('recDlg').addEventListener('close',function(){if(rec){recSend=false;rec.stop()}});
+    var v={t0:Date.now(),heard:0,spoke:false,stream:stream,chunks:[],send:false};vo=v;voiceUI(true);
+    try{var AC=window.AudioContext||window.webkitAudioContext;v.ctx=new AC();var an=v.ctx.createAnalyser();an.fftSize=512;v.ctx.createMediaStreamSource(stream).connect(an);var buf=new Uint8Array(an.fftSize),hist=[];
+      v.level=function(){an.getByteTimeDomainData(buf);var sum=0;for(var i=0;i<buf.length;i++){var x=(buf[i]-128)/128;sum+=x*x}var rms=Math.sqrt(sum/buf.length);
+        hist.push(rms);if(hist.length>24)hist.shift();waveTo(function(i){var h=hist[hist.length-24+i];return h==null?.12:h*9});
+        if(rms>.04){v.heard=Date.now();v.spoke=true}else if(v.spoke&&Date.now()-v.heard>1600)finishVoice(true)}}catch(e){v.level=null}
+    var rec=v.rec=new MediaRecorder(stream);rec.ondataavailable=function(e){if(e.data&&e.data.size)v.chunks.push(e.data)};
+    rec.onstop=function(){var blob=new Blob(v.chunks,{type:rec.mimeType||'audio/webm'});voiceDone(v);if(!v.send)return;
+      if(blob.size<800||!v.spoke&&v.level){toast("I didn't catch anything. Try again a little closer to the phone.");return}
+      var fr=new FileReader();fr.onload=function(){chatSend({audio:String(fr.result).split(',')[1]},'Voice note')};fr.onerror=function(){toast('Could not read that recording. Try again.')};fr.readAsDataURL(blob)};
+    rec.start();v.raf=requestAnimationFrame(voiceTick)}
+  function startSpeech(){
+    var r=new SR(),v={t0:Date.now(),heard:0,sr:r,send:true,said:'',final:''},live=null;vo=v;voiceUI(true);
+    r.lang=navigator.language||'en-US';r.interimResults=true;r.continuous=false;r.maxAlternatives=1;
+    r.onresult=function(e){var t='',f='';for(var i=0;i<e.results.length;i++){t+=e.results[i][0].transcript;if(e.results[i].isFinal)f+=e.results[i][0].transcript}
+      v.said=t.trim();v.final=f.trim();v.heard=Date.now();if(!live)live=bubble('me live','');live.textContent=v.said;$('recHint').textContent=v.said||'Listening. I send when you pause.'};
+    r.onspeechstart=function(){v.heard=Date.now()};r.onsoundstart=function(){v.heard=Date.now()};
+    r.onerror=function(e){v.err=e.error};
+    r.onend=function(){if(live)live.remove();voiceDone(v);var t=v.final||v.said;
+      if(v.err==='not-allowed'||v.err==='service-not-allowed'||v.err==='network'||v.err==='audio-capture'||v.err==='language-not-supported'){
+        if(v.err==='not-allowed'){toast('Microphone access was blocked. Allow it in your browser settings.');return}
+        srBroken=true;if(v.send)startRec();return}
+      if(!v.send)return;if(t)chatSend({text:t},t);else toast("I didn't catch anything. Try again a little closer to the phone.")};
+    try{r.start()}catch(e){voiceDone(v);srBroken=true;startRec();return}
+    v.raf=requestAnimationFrame(voiceTick)}
+  $('recX').onclick=function(){finishVoice(false)};
+  $('recGo').onclick=function(){finishVoice(true)};
+  $('chatDlg').addEventListener('close',function(){finishVoice(false)});
 
   /* barcode */
   var qr=null;
@@ -1440,9 +1461,9 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     pool=pool.filter(function(x){return !sent[key(x.t)]&&!(sent.__cooked&&/^(i'?m cooking|what can i cook tonight|dinner ideas|what can i make in 20)/i.test(x.t))});
     pool.sort(by).slice(0,3).forEach(function(x){tipSeen[x.t]=(tipSeen[x.t]||0)+1;var b=el('button','mini',x.t);b.type='button';b.onclick=function(){chatSend({text:x.t},x.t)};box.append(b)})}
   function buddy(){return profile&&profile.buddy||'Tote'}
-  function openChat(){if($('chatDlg').open)return;if(!$('chatLog').firstChild){sent={};lastTurn=null;pending=null;cookUsed=[];wanted=null}$('chatH').textContent='What changed?';
+  function openChat(quiet){if($('chatDlg').open)return;if(!$('chatLog').firstChild){sent={};lastTurn=null;pending=null;cookUsed=[];wanted=null}$('chatH').textContent='What changed?';
     if(!$('chatLog').firstChild)bubble('bot','Hi'+(me?' '+me:'')+", I'm "+buddy()+'. I keep an eye on the house. Tell me what you cooked, used or bought and I will keep everything up to date, or ask me what you have.');
-    chatTips();$('chatDlg').showModal();if(window.Tote&&Tote.mount($('toteChat'),84,buddy())){Tote.onTap=null;Tote.mood('happy');Tote.wave()}$('chatText').focus()}
+    chatTips();$('chatDlg').showModal();if(window.Tote&&Tote.mount($('toteChat'),84,buddy())){Tote.onTap=null;Tote.mood('happy');Tote.wave()}if(!quiet)$('chatText').focus()}
   $('chatDlg').addEventListener('close',function(){if(window.Tote)Tote.talk(false);render()});
   window.addEventListener('tote-ready',function(){if(!$('app').hidden)render()});
   async function chatSend(payload,label){
@@ -1476,7 +1497,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     }catch(e){if(window.Tote)Tote.mood('oops');wait.textContent=e.code==='ai_quota'?COPY.ai_quota:e.code==='slow_down'?COPY.slow_down:e.code==='silent'?"I couldn't hear anything in that. Try again a little closer to the phone.":e.code==='offline'?'You seem to be offline. Nothing was changed.':e.code==='locked'?'':'I could not work that out just now. Nothing was changed. Try again in a moment.'}
     if(window.Tote)Tote.talk(false);chatBusy=false;$('chatGo').disabled=false;chatTips();$('chatLog').scrollTop=$('chatLog').scrollHeight}
   $('chatForm').addEventListener('submit',function(ev){ev.preventDefault();var t=$('chatText').value.trim();if(!t)return;$('chatText').value='';chatSend({text:t},t)});
-  $('chatMic').onclick=function(){recMode='chat';startRec()};
+  $('chatMic').onclick=function(){startRec()};
   /* dinner ideas: suggestions come from what is at home; "I cooked this" deducts the ingredients */
   async function cookIdeas(){
     if(busy)return;setBusy('Thinking about dinner');var d;
