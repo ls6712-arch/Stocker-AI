@@ -36,6 +36,8 @@ entry.suites.measuring = count(sh(['evals/measure.mjs']).stdout, /(\d+) of (\d+)
 try { entry.suites.lean = JSON.parse(sh(['evals/lean.mjs', '--json']).stdout); } catch (e) {}
 try { const q = JSON.parse(sh(['evals/quickpath.mjs', '--json']).stdout); entry.suites.quick = { ...q.held, both: q.both }; } catch (e) {}
 try { entry.suites.delegate = JSON.parse(sh(['evals/delegate.mjs', '--json']).stdout); } catch (e) {}
+// the defects from the 16 Nov 2026 acceptance test, pinned against the real code and SQL
+try { entry.suites.acceptance = JSON.parse(sh(['evals/acceptance.mjs', '--json']).stdout.trim().split('\n').pop()); } catch (e) {}
 const p = await paceRun(await loadPace(), 2, 1000);
 entry.suites.pace = { reminderOnTime: p.reminderOnTime, reminderLate: p.reminderLate, reminderEarly: p.reminderEarly, errorDays: p.errorDays, within2: p.within2, livingAlone: p.byHome['works alone'].onTime, student: p.byHome['student alone'].onTime };
 

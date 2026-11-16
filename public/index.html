@@ -173,6 +173,7 @@ details.fold .in{display:flex;flex-direction:column;gap:14px;padding-top:8px}
 .chips::-webkit-scrollbar{display:none}
 .chip{flex:none;max-width:100%;overflow-wrap:anywhere;text-align:left;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:8px 14px;font-weight:600;font-size:14px;min-height:40px}
 .chip[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.rowbtn{background:none;border:0;padding:0;margin:0;text-align:left;color:inherit;font:inherit;min-height:44px;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;gap:2px;cursor:pointer}
 .check{flex:none;width:44px;height:44px;border-radius:50%;border:2px solid var(--line);background:var(--surface2);display:grid;place-items:center;color:var(--accent)}
 .empty{background:var(--surface);border-radius:20px;padding:26px 20px;display:flex;flex-direction:column;gap:12px;align-items:flex-start;box-shadow:var(--shadow)}
 .empty .ico{width:56px;height:56px;border-radius:18px}
@@ -413,18 +414,34 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
       <button type="button" id="menuShare"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.300 2.700-6 6-6s6 2.700 6 6M16 5.200a3.200 3.200 0 0 1 0 5.600M17.500 14.300c2 .900 3.500 3 3.500 5.700"/></svg><span><b>Share with your household</b><small>Everyone sees the same list</small></span></button>
       <button type="button" id="bigText" aria-pressed="false"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 18 9 6l5 12M5.800 14h6.400M15 18l3-7.500 3 7.500M16 16h4"/></svg><span><b>Larger text</b><small id="bigSub">Off</small></span></button>
       <button type="button" id="menuRemind"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4zM10 20a2 2 0 0 0 4 0"/></svg><span><b>Reminders and what I learned</b><small id="menuRemSub"></small></span></button>
-      <button type="button" id="menuScore"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span><b>How Tote is doing</b><small>Test scores, week by week</small></span></button>
+      <button type="button" id="menuScore"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span><b id="menuScoreT">How Tote is doing</b><small>Test scores, week by week</small></span></button>
       <button type="button" id="lockBtn"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg><span><b>Lock Stocker</b><small>Ask for the passcode again</small></span></button>
     </div>
     <button type="button" class="btn block" data-close>Close</button>
   </div>
 </dialog>
 
+<dialog class="sheet" id="rowDlg" aria-labelledby="rowH">
+  <form class="pad" id="rowForm">
+    <div class="grab"></div>
+    <h2 id="rowH">Change this</h2>
+    <p class="sub" id="rowSub"></p>
+    <div id="rowEdit">
+      <label for="rowText" class="field">What is it<input type="text" id="rowText" maxlength="76" required></label>
+      <div class="row" style="justify-content:space-between"><span>How many</span><span class="qty"><button type="button" id="rowLess" aria-label="One fewer">&minus;</button><span id="rowN">1</span><button type="button" id="rowMore" aria-label="One more">+</button></span></div>
+    </div>
+    <button type="submit" class="btn primary block" id="rowSave">Save</button>
+    <button type="button" class="btn block" id="rowHome">Show it at home</button>
+    <button type="button" class="btn block" id="rowOff">Take it off my list</button>
+    <button type="button" class="btn block" data-close>Close</button>
+  </form>
+</dialog>
+
 <dialog class="sheet" id="addDlg" aria-labelledby="addH">
   <form class="pad" id="addForm">
     <div class="grab"></div>
     <h2 id="addH">Add something</h2>
-    <p class="sub">For a whole shop, scan the receipt with the plus button. This is for one thing at a time.</p>
+    <p class="sub">For a whole shop, scan the receipt with the camera button. This is for one thing at a time, and I will put it in the right room unless you pick one.</p>
     <label for="addName" class="sub">What is it?</label>
     <input type="text" id="addName" maxlength="60" required placeholder="Toothpaste">
     <div class="meta">
@@ -609,7 +626,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
   var DIETS=['Vegetarian','Vegan','Pescatarian','Eggetarian','Halal','Kosher','Gluten-free','Dairy-free','High protein','Keto','Low carb','Paleo','Mediterranean','Jain','No onion or garlic','No beef','No pork','Low FODMAP'],ALLERGENS=['Peanuts','Tree nuts','Milk','Eggs','Wheat','Soy','Fish','Shellfish','Sesame','Mustard','Celery','Corn','Sulphites'];
   var RULES=['Celiac','Lactose intolerant','Low salt','Low sugar','Diabetic'],AVOID=['Mushrooms','Onions','Cilantro','Spicy food','Seafood','Olives','Eggplant'],GOALS=[['waste','Waste less'],['spend','Spend less'],['healthy','Eat healthier'],['time','Save time'],['stock','Never run out']],
     KINDS=[['adult','Adult'],['teen','Teenager'],['child','Child'],['toddler','Toddler'],['baby','Baby'],['older','Older adult'],['visitor','Visits often']];
-  var PLANT=/peanut butter|almond butter|oat milk|almond milk|soy milk|coconut milk/i,DAIRY=/milk|yogurt|cheese|butter|cream|whey|parmesan|mozzarella|cheddar|paneer|ghee|custard/i,MEAT=/chicken|beef|pork|turkey|salmon|tuna|fish|meat|hot dog|bacon|ham\b/i,WHEAT=/bread|pasta|noodle|cereal|flour|tortilla|pizza|cracker/i;
+  var PLANT=/peanut butter|almond butter|oat milk|almond milk|soy milk|coconut milk/i,DAIRY=/milk|yogurt|cheese|butter|cream|whey|parmesan|mozzarella|cheddar|paneer|ghee|custard|pizza|lasagn|chocolate|frozen meals/i,MEAT=/chicken|beef|pork|turkey|salmon|tuna|fish|meat|hot dog|bacon|ham\b/i,WHEAT=/bread|pasta|noodle|cereal|flour|tortilla|pizza|cracker/i;
   var CLASH={Peanuts:/peanut/i,'Tree nuts':/almond|walnut|cashew|pecan|hazelnut|pistachio/i,Eggs:/\begg/i,Soy:/tofu|soy|edamame|tempeh/i,Fish:/salmon|tuna|fish/i,Shellfish:/shrimp|prawn|crab|lobster/i,Sesame:/sesame|tahini|hummus/i};
   var FISHY=/salmon|tuna|fish|shrimp|prawn|crab|lobster/i,PORK=/pork|bacon|ham\b|hot dog/i;
   function everyone(key){var out=profile[key].slice();(profile.members||[]).forEach(function(m){m[key].forEach(function(x){if(out.indexOf(x)<0)out.push(x)})});return out}
@@ -658,6 +675,8 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
 
   var items=[],log=[],extras=[],waste=0,spend=null,profile=null,me='',tab='today',cat='All',query='',open={},busy=false,pending=null,toastTimer=null;
 
+  /* why something failed, said truthfully: offline only when the phone really is offline */
+  function why(e,what){var c=e&&e.code;return c==='offline'?what+' You seem to be offline, so nothing was changed.':c&&c!=='server'&&COPY[c]?COPY[c]:what+' Something went wrong on my side, and nothing was changed. Try again.'}
   function toast(msg,label,fn){clearTimeout(toastTimer);$('toastMsg').textContent=msg;var b=$('toastBtn');b.hidden=!label;if(label){b.textContent=label;b.onclick=function(){$('toast').hidden=true;fn()}}
     $('toast').hidden=false;toastTimer=setTimeout(function(){$('toast').hidden=true},label?12000:5000)}
   var WAIT={'Reading':['Reading your receipt','Squinting at the small print','Sorting things into rooms','Working out how long things keep','Nearly there'],
@@ -670,9 +689,10 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     waitTimer=setInterval(function(){i=Math.min(lines.length-1,i+1);$('busyMsg').textContent=lines[i]},3800);
     var live=window.Tote&&Tote.mount($('toteBusy'),128,buddy()+' is working');$('toteBusy').hidden=!live;$('busyDoc').hidden=!!live;if(live){Tote.onTap=null;Tote.mood('think')}}
   /* adding to the list: if it is already there, say so, with one tap to add another (no sheet in the way) */
-  async function addToList(text,quiet){var r=await api('/api/extras',{method:'POST',body:JSON.stringify({text:text})});
+  async function addToList(text,quiet){var r=await api('/api/extras',{method:'POST',body:JSON.stringify({text:text,whole:!!quiet})});
+    if(r.many){if(!quiet)toast(r.added.length+' added to your shopping list.'+(r.kept.length?' '+r.kept.join(', ')+(r.kept.length===1?' was':' were')+' already there.':''));return 'many'}
     if(!r.already)return 'added';if(quiet)return 'kept';
-    toast(r.text+' is already on your list.','Add another',async function(){try{await api('/api/extras',{method:'POST',body:JSON.stringify({text:text,again:true})});await refresh();toast(r.text+LISTMSG.again)}catch(e){if(e.code!=='locked')toast('Could not add that. Check your connection.')}});
+    toast(r.text+' is already on your list.','Add another',async function(){try{await api('/api/extras',{method:'POST',body:JSON.stringify({text:text,again:true})});await refresh();toast(r.text+LISTMSG.again)}catch(e){if(e.code!=='locked')toast(why(e,'Could not add that.'))}});
     return 'asked'}
   var LISTMSG={added:' is on your shopping list.',again:': one more on your shopping list.',kept:' is already on your list. Left as it is.'};
   function listSaid(n,how){if(how!=='asked')toast(n+LISTMSG[how])}
@@ -715,25 +735,32 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
   function onceOff(id){try{return localStorage.getItem('stocker.once.'+id)==='1'}catch(e){return false}}
   /* nudges: one list of what needs a person, each with a single tap to deal with it */
   function offToday(){try{var o=JSON.parse(localStorage.getItem('stocker.nudgeOff')||'{}');return o.day===iso(today())?o.ids||[]:[]}catch(e){return []}}
-  function nudges(){var out=[],lc=function(x){return x.toLowerCase()},patch=function(it,body,msg){return async function(){await api('/api/items/'+it.id,{method:'PATCH',body:JSON.stringify(body)});await refresh();toast(msg)}};
-    items.forEach(function(it){var e=expiry(it);if(!e||it.qty<=0)return;
-      if(e.d<0)out.push({id:'gone:'+it.id,text:it.name+' is past its date',sub:'Best before '+fmt(it.expiry),label:'Threw it away',fn:patch(it,{binned:true},'Noted. It will not be put on your list.')});
-      else if(e.d===0)out.push({id:'today:'+it.id,text:'The '+lc(it.name)+' wants using today',sub:'Or put it in the freezer',label:'Used it up',fn:patch(it,{qty:0,out:true},'Marked as used up.')})});
-    items.filter(function(i){return i.essential&&i.qty<=0}).forEach(function(it){out.push({id:'out:'+it.id,text:"You're out of "+lc(it.name),sub:'An essential. It is on your list.',label:'Open list',fn:function(){go('list')}})});
-    items.filter(function(i){return i.unsure&&i.qty>0}).slice(0,3).forEach(function(it){out.push({id:'many:'+it.id,text:'How many '+lc(it.name)+' are there?',sub:'I could not count them in your photo',label:'Answer',fn:function(){go('today')}})});
-    items.filter(function(i){return i.warn&&i.qty>0}).slice(0,3).forEach(function(it){out.push({id:'warn:'+it.id+':'+it.warn,text:'Check the label on '+lc(it.name),sub:it.warn.charAt(0).toUpperCase()+it.warn.slice(1),label:'Show me',fn:function(){query=it.name;$('search').value=it.name;go('pantry')}})});
-    items.filter(maybeLow).slice(0,2).forEach(function(it){out.push({id:'low:'+it.id,text:it.name+' might be running low',sub:it.learned?'You usually buy it about every '+every(it.finish_days):'My guess from how long it usually lasts',label:'Add to list',fn:function(){return remindAnswer([it],'add')}})});
-    if(profile&&profile.shopDay===DAYS[today().getDay()]&&items.filter(needsBuy).length+extras.length)out.push({id:'shop:'+iso(today()),text:"It's your shopping day",sub:(items.filter(needsBuy).length+extras.length)+' on the list',label:'Open list',fn:function(){go('list')}});
-    if(!pushOn&&!onceOff('push')&&(pushCan||(isIOS&&!homeScreen))&&items.some(function(i){return i.learned||i.essential}))out.push({id:'push',once:true,text:'Let me remind you on this phone',sub:pushCan?'When something you buy regularly is due. Once a day at most.':'Add Stocker to your Home Screen first: Share, then Add to Home Screen',label:'Turn on',fn:pushEnable});
-    if(reviewN)out.push({id:'review:'+reviewN,text:'I got '+reviewN+(reviewN===1?' thing':' things')+' wrong lately',sub:'Tell me what should have happened, and I am tested on it from then on',label:'Show me',fn:function(){location.href='/evals.html#real'}});
-    if(!profile&&items.length)out.push({id:'profile',text:'Tell me about your home',sub:'Allergies, who lives here, how you eat',label:'Set up',fn:openProfile});
-    var off=offToday();return out.filter(function(n){return off.indexOf(n.id)<0})}
-  function drawBell(){var n=nudges().length,dot=$('bellDot');dot.hidden=!n;dot.textContent=n>9?'9+':String(n);$('bell').setAttribute('aria-label',n?n+(n===1?' thing needs you':' things need you'):'Nothing needs you right now');
+  /* Everything that needs a person, worked out once. Today shows the first three as cards, the bell counts them,
+     and the sheet lists every one, so the number is the same wherever it is shown. */
+  function needs(){var use=items.filter(needsUse).sort(function(a,b){return expiry(a).d-expiry(b).d}),buy=items.filter(needsBuy).sort(function(a,b){return plan(a).days-plan(b).days}),off=offToday();
+    return needCards(use,buy).filter(function(c){return off.indexOf(c.id)<0})}
+  function needCount(){return needs().filter(function(c){return c.k!=='list'}).length}
+  /* leaving a sheet: wait for it to close before going anywhere, or the browser cancels the move */
+  function afterClose(d,fn){if(!d||!d.open){fn();return}var done=false,run=function(){if(done)return;done=true;window.removeEventListener('popstate',run);setTimeout(fn,0)};window.addEventListener('popstate',run);d.close();setTimeout(run,350)}
+  function leaveSheet(fn){return function(){afterClose($('nudgeDlg'),fn)}}
+  /* jumping to one item always shows it: any room, kind or filter left over from before is cleared first */
+  function showItem(it){cat='All';sub='All';stat='all';query=it.name;$('search').value=it.name;open[it.id]=true;go('pantry')}
+  /* the same thing as a short row, for the bell's sheet */
+  function nudgeOf(c){var it=c.it,lc=function(x){return x.toLowerCase()};
+    if(c.k==='use'){var e=expiry(it);
+      if(e.d<0)return {text:it.name+' is past its date',sub:'Best before '+fmt(it.expiry),label:'Threw it away',fn:function(){return binIt(it)}};
+      return {text:e.d===0?'The '+lc(it.name)+' wants using today':it.name+': '+lc(e.text),sub:areaOf(it)==='Kitchen'?'Use it soon, or put it in the freezer':'Best before '+fmt(it.expiry),label:'Used it up',fn:function(){return useUp(it)}}}
+    if(c.k==='out')return {text:"You're out of "+lc(it.name),sub:'An essential. It is on your list.',label:'Open list',nav:1,fn:function(){go('list')}};
+    if(c.k==='many')return {text:'How many '+lc(it.name)+' are there?',sub:'I could not count them in your photo',label:'Answer',nav:1,fn:function(){go('today')}};
+    if(c.k==='warn')return {text:'Check the label on '+lc(it.name),sub:cap(it.warn),label:'Show me',nav:1,fn:function(){showItem(it)}};
+    if(c.k==='low')return {text:it.name+' might be running low',sub:it.learned?'You usually buy it about every '+every(it.finish_days):'My guess from how long it usually lasts',label:'Add to list',fn:function(){return remindAnswer([it],'add')}};
+    return {text:c.text,sub:c.sub,label:c.label,nav:c.nav,fn:c.fn}}
+  function drawBell(){var n=needCount(),dot=$('bellDot');dot.hidden=!n;dot.textContent=n>9?'9+':String(n);$('bell').setAttribute('aria-label',n?n+(n===1?' thing needs you':' things need you'):'Nothing needs you right now');
     try{if(navigator.setAppBadge){if(n)navigator.setAppBadge(n);else navigator.clearAppBadge()}}catch(e){}}
-  function drawNudges(){var list=nudges(),box=$('nudgeList');box.textContent='';$('nudgeSub').textContent=list.length?'One tap deals with each. Later hides it until tomorrow.':'Nothing needs you right now. I will keep watching.';
-    list.forEach(function(n){var row=el('div','nudge'),g=el('div'),bt=el('div','btns'),a=el('button','mini',n.label),l=el('button','mini','Later');a.type=l.type='button';g.append(el('div','name',n.text),el('div','sub',n.sub));
-      a.onclick=async function(){a.disabled=true;try{var nav=/^(Open list|Answer|Show me|Set up)$/.test(n.label);if(nav)$('nudgeDlg').close();await n.fn();if(!nav)drawNudges()}catch(er){a.disabled=false;if(er.code!=='locked')toast(COPY[er.code]||'Could not save that. Check your connection.')}};
-      l.setAttribute('aria-label','Hide until tomorrow: '+n.text);l.onclick=function(){try{var off=offToday();off.push(n.id);localStorage.setItem('stocker.nudgeOff',JSON.stringify({day:iso(today()),ids:off}));if(n.once)localStorage.setItem('stocker.once.'+n.id,'1')}catch(e){}drawNudges();drawBell()};
+  function drawNudges(){var list=needs().filter(function(c){return c.k!=='list'}),box=$('nudgeList');box.textContent='';$('nudgeSub').textContent=list.length?'One tap deals with each. Later hides it until tomorrow.':'Nothing needs you right now. I will keep watching.';
+    list.forEach(function(c){var n=nudgeOf(c),row=el('div','nudge'),g=el('div'),bt=el('div','btns'),a=el('button','mini',n.label),l=el('button','mini','Later');a.type=l.type='button';g.append(el('div','name',n.text),el('div','sub',n.sub));
+      a.onclick=async function(){a.disabled=true;try{if(n.nav)afterClose($('nudgeDlg'),n.fn);else{await n.fn();drawNudges()}}catch(er){a.disabled=false;if(er.code!=='locked')toast(why(er,'Could not save that.'))}};
+      l.setAttribute('aria-label','Hide until tomorrow: '+n.text);l.onclick=function(){try{var off=offToday();off.push(c.id);localStorage.setItem('stocker.nudgeOff',JSON.stringify({day:iso(today()),ids:off}));if(c.once)localStorage.setItem('stocker.once.'+c.id,'1')}catch(e){}drawNudges();drawBell();if(!$('app').hidden)renderToday()};
       bt.append(a,l);row.append(g,bt);box.append(row)})}
   $('bell').onclick=function(){drawNudges();$('nudgeDlg').showModal()};
   /* moments: a short line from the helper when something worth noticing happens */
@@ -791,7 +818,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     return {cls:'',text:'',d:d};
   }
   function needsUse(it){var e=expiry(it);return !!e&&e.d<=3}
-  function needsBuy(it){return it.qty<=0||!!it.low||(!!it.essential&&guess(it))}
+  function needsBuy(it){return !it.nolist&&(it.qty<=0||!!it.low||(!!it.essential&&guess(it)))}
   function fresh(it){var s=parse(it.bought||it.added),e=parse(it.expiry);if(!s||!e||e<=s||it.qty<=0)return null;return Math.max(0,Math.min(1,(today()-s)/(e-s)))}
 
   /* ---- views ---- */
@@ -813,38 +840,54 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
         hb.onclick=function(){try{localStorage.setItem('stocker.starterHide','1')}catch(e){}render()};
         sh.append(el('h3','',pers().length===1?PERSONA[pers()[0]][0]+' staples':'Staples for your home'),hb);sc.append(sh,el('p','sub','A starter list picked for your kind of home. Tap what you want on your shopping list.'));
         var wc=el('div','wrapchips');picks.forEach(function(n){var b=el('button','mini','+ '+n);b.type='button';
-          b.onclick=async function(){b.disabled=true;try{var how=await addToList(n);await refresh();listSaid(n,how)}catch(er){b.disabled=false;if(er.code!=='locked')toast('Could not add that. Check your connection.')}};wc.append(b)});
+          b.onclick=async function(){b.disabled=true;try{var how=await addToList(n);await refresh();listSaid(n,how)}catch(er){b.disabled=false;if(er.code!=='locked')toast(why(er,'Could not add that.'))}};wc.append(b)});
         var all=el('button','btn primary block','Put these '+picks.length+' on my list');all.type='button';
-        all.onclick=async function(){all.disabled=true;try{var kept=0;for(var i=0;i<picks.length;i++)if((await addToList(picks[i],true))==='kept')kept++;await refresh();toast((picks.length-kept)+' added to your shopping list.')}catch(er){all.disabled=false;if(er.code!=='locked')toast('Could not add those. Check your connection.')}};
+        all.onclick=async function(){all.disabled=true;try{var kept=0;for(var i=0;i<picks.length;i++)if((await addToList(picks[i],true))==='kept')kept++;await refresh();toast((picks.length-kept)+' added to your shopping list.')}catch(er){all.disabled=false;if(er.code!=='locked')toast(why(er,'Could not add those.'))}};
         sc.append(wc,all);v.append(sc)}}
   }
   /* Today: Tote first, then at most three things that want a person, each with one big button */
   var doneInfo=null;
   function cap(t){return t.charAt(0).toUpperCase()+t.slice(1)}
-  function patchItem(it,body,msg){return async function(){try{await api('/api/items/'+it.id,{method:'PATCH',body:JSON.stringify(body)});await refresh();toast(msg)}catch(er){if(er.code!=='locked')toast('Could not save that. Check your connection.')}}}
+  function patchItem(it,body,msg){return async function(){try{await api('/api/items/'+it.id,{method:'PATCH',body:JSON.stringify(body)});await refresh();toast(msg)}catch(er){if(er.code!=='locked')toast(why(er,'Could not save that.'))}}}
   function btn(cls,label,fn){var b=el('button',cls,label);b.type='button';b.onclick=async function(){b.disabled=true;try{await fn()}finally{b.disabled=false}};return b}
   function needCards(use,buy){var out=[];
-    use.forEach(function(it){var e=expiry(it);out.push({p:e.d<0?0:e.d===0?1:4,it:it,k:'use'})});
-    buy.filter(function(i){return i.essential&&i.qty<=0}).forEach(function(it){out.push({p:2,it:it,k:'out'})});
-    items.filter(function(i){return i.unsure&&i.qty>0}).forEach(function(it){out.push({p:3,it:it,k:'many'})});
-    items.filter(function(i){return i.warn&&i.qty>0}).forEach(function(it){out.push({p:3.5,it:it,k:'warn'})});
-    items.filter(maybeLow).forEach(function(it){out.push({p:5,it:it,k:'low'})});
-    var rest=buy.filter(function(i){return !(i.essential&&i.qty<=0)}).length+extras.length;if(rest)out.push({p:6,k:'list',n:rest});
+    use.forEach(function(it){var e=expiry(it);out.push({p:e.d<0?0:e.d===0?1:4,it:it,k:'use',id:(e.d<0?'gone:':e.d===0?'today:':'soon:')+it.id})});
+    buy.filter(function(i){return i.essential&&i.qty<=0}).forEach(function(it){out.push({p:2,it:it,k:'out',id:'out:'+it.id})});
+    items.filter(function(i){return i.unsure&&i.qty>0}).forEach(function(it){out.push({p:3,it:it,k:'many',id:'many:'+it.id})});
+    items.filter(function(i){return i.warn&&i.qty>0}).forEach(function(it){out.push({p:3.5,it:it,k:'warn',id:'warn:'+it.id+':'+it.warn})});
+    items.filter(maybeLow).forEach(function(it){out.push({p:5,it:it,k:'low',id:'low:'+it.id})});
+    if(reviewN)out.push({p:4.5,k:'note',id:'review:'+reviewN,text:'I got '+reviewN+(reviewN===1?' thing':' things')+' wrong lately',sub:'Tell me what should have happened, and I am tested on it from then on',label:'Show me',nav:1,fn:function(){location.href='/evals.html#real'}});
+    if(!pushOn&&!onceOff('push')&&(pushCan||(isIOS&&!homeScreen))&&items.some(function(i){return i.learned||i.essential}))out.push({p:5.5,k:'note',id:'push',once:true,text:'Let me remind you on this phone',sub:pushCan?'When something you buy regularly is due. Once a day at most.':'Add Stocker to your Home Screen first: Share, then Add to Home Screen',label:'Turn on',fn:pushEnable});
+    if(!profile&&items.length)out.push({p:7,k:'note',id:'profile',text:'Tell me about your home',sub:'Allergies, who lives here, how you eat',label:'Set up',nav:1,fn:openProfile});
+    var rest=buy.filter(function(i){return !(i.essential&&i.qty<=0)}).length+extras.length;if(rest)out.push({p:6,k:'list',id:'list',n:rest});
     return out.sort(function(a,b){return a.p-b.p})}
-  function needCard(c){var card=el('div','need'),it=c.it;
+  /* Used up, thrown away, removed: done at once, and always with a way back */
+  function restoreItem(copy,binned){return async function(){try{await api('/api/items/restore',{method:'POST',body:JSON.stringify({item:copy,binned:!!binned})});await refresh();toast(copy.name+' is back as it was.')}catch(er){if(er.code!=='locked')toast(why(er,'Could not undo that.'))}}}
+  async function useUp(it,quiet){var prev=it.qty,low=!!it.low;await api('/api/items/'+it.id,{method:'PATCH',body:JSON.stringify({qty:0,out:true})});await refresh();
+    var undo=async function(){try{await api('/api/items/'+it.id,{method:'PATCH',body:JSON.stringify({qty:prev,low:low,takeBack:true})});held=null;await refresh();toast(it.name+' is back at '+amount(prev,it.unit)+'.')}catch(er){if(er.code!=='locked')toast(why(er,'Could not undo that.'))}};
+    if(!quiet)toast('Marked all of the '+it.name.toLowerCase()+' as used up. It is on your list.','Undo',undo);return undo}
+  async function binIt(it,quiet){var copy=Object.assign({},it);await api('/api/items/'+it.id,{method:'PATCH',body:JSON.stringify({binned:true})});await refresh();var undo=restoreItem(copy,true);
+    if(!quiet)toast('Noted. It will not be put on your list.','Undo',undo);return undo}
+  /* on Today the card that was just dealt with stays where it was for a moment, so the next one never slides under the finger */
+  var held=null,heldTimer=null;
+  function hold(i,msg,undo){held={i:i,msg:msg,undo:undo};clearTimeout(heldTimer);heldTimer=setTimeout(function(){held=null;if(!$('app').hidden)renderToday()},7000);renderToday()}
+  function needCard(c,i){var card=el('div','need'),it=c.it;
+    var used=function(){return async function(){try{var u=await useUp(it,true);hold(i,'Marked all of the '+it.name.toLowerCase()+' as used up. It is on your list.',u)}catch(er){if(er.code!=='locked')toast(why(er,'Could not save that.'))}}};
+    var binned=function(){return async function(){try{var u=await binIt(it,true);hold(i,'Noted. The '+it.name.toLowerCase()+' will not be put on your list.',u)}catch(er){if(er.code!=='locked')toast(why(er,'Could not save that.'))}}};
     function head(pillCls,pillText,line){var x=itemRow(it);if(pillText){var nm=x.grow.firstChild,w=el('div','row');w.style.gap='8px';w.style.flexWrap='wrap';nm.remove();w.append(nm,el('span','pill '+pillCls,pillText));x.grow.append(w)}if(line)x.grow.append(el('div','sub',line));card.append(x.row)}
     var acts=el('div','acts');
     if(c.k==='use'){var e=expiry(it),kit=areaOf(it)==='Kitchen';
       head(e.cls||'warn',e.d<0?'Past its date':e.text,e.d<0?'Went past its date. Worth a look.':kit?'Use it soon, or freeze it.':'Best before '+fmt(it.expiry)+'.');
-      if(e.d<0){acts.append(btn('btn primary','Threw it away',patchItem(it,{binned:true},'Noted. It will not be put on your list.')),btn('btn','Used it',patchItem(it,{qty:0,out:true},'Marked as used up.')))}
-      else if(kit&&items.filter(function(i){return areaOf(i)==='Kitchen'&&i.qty>0}).length>=2){acts.append(btn('btn primary','Show me a dish with it',cookIdeas),btn('btn','Used it',patchItem(it,{qty:0,out:true},'Marked as used up.')))}
-      else acts.append(btn('btn primary','I used it up',patchItem(it,{qty:0,out:true},'Marked as used up.')))}
+      if(e.d<0){acts.append(btn('btn primary','Threw it away',binned()),btn('btn','Used it all',used()))}
+      else if(kit&&items.filter(function(x){return areaOf(x)==='Kitchen'&&x.qty>0}).length>=2){acts.append(btn('btn primary','Show me a dish with it',cookIdeas),btn('btn','Used it all',used()))}
+      else acts.append(btn('btn primary','I used it all',used()))}
     else if(c.k==='out'){head('bad','Out','An essential. It is on your list.');acts.append(btn('btn primary','Open my list',function(){go('list')}))}
     else if(c.k==='many'){head('warn','How many?','I could not count these in your photo. Skip and I will count one.');card.append(howMany(it.id,it.name,function(){refresh().catch(function(){})}));return card}
-    else if(c.k==='warn'){head('bad','Check the label',cap(it.warn)+'. Read the pack before anyone eats it.');acts.append(btn('btn primary','Show me',function(){query=it.name;$('search').value=it.name;open[it.id]=true;go('pantry')}))}
+    else if(c.k==='warn'){head('bad','Check the label',cap(it.warn)+'. Read the pack before anyone eats it.');acts.append(btn('btn primary','Show me',function(){showItem(it)}))}
     else if(c.k==='low'){head('warn','My guess','It may be running low.'+(it.learned?' You buy it about every '+every(it.finish_days)+'.':''));
       acts.append(btn('btn primary','Add to my list',function(){return remindAnswer([it],'add')}),btn('btn','Still have it',function(){return remindAnswer([it],'still')}))}
-    else if(c.k==='list'){var r=el('div','row'),g=el('div','grow');r.append(catIcon('Pantry'),g);g.append(el('div','name','Your list'),el('div','sub',c.n+(c.n===1?' thing to buy':' things to buy')));card.append(r);acts.append(btn('btn primary','Open my list',function(){go('list')}))}
+    else if(c.k==='list'){var r=el('div','row'),g=el('div','grow');r.append(catIcon('Pantry'),g);g.append(el('div','name',profile&&profile.shopDay===DAYS[today().getDay()]?"It's your shopping day":'Your list'),el('div','sub',c.n+(c.n===1?' thing to buy':' things to buy')));card.append(r);acts.append(btn('btn primary','Open my list',function(){go('list')}))}
+    else if(c.k==='note'){var nr=el('div','row'),ng=el('div','grow');nr.append(catIcon('Other'),ng);ng.append(el('div','name',c.text),el('div','sub',c.sub));card.append(nr);acts.append(btn('btn primary',c.label,function(){return c.fn()}))}
     card.append(acts);return card}
   function doneCard(v){if(!doneInfo||!done.length)return;
     var c=el('div','need'),hd=el('div','row'),g=el('div','grow');hd.append(g);g.append(el('h3','',doneInfo.title),el('div','sub',doneInfo.sub));c.append(hd);
@@ -864,7 +907,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
   function renderToday(){
     var v=$('v-today');v.textContent='';
     var use=items.filter(needsUse).sort(function(a,b){return expiry(a).d-expiry(b).d}),buy=items.filter(needsBuy).sort(function(a,b){return plan(a).days-plan(b).days});
-    var cards=needCards(use,buy),n=cards.filter(function(c){return c.k!=='list'}).length,hero=el('div','hero'),top=el('div');
+    var cards=needs(),n=cards.filter(function(c){return c.k!=='list'}).length,hero=el('div','hero'),top=el('div');
     var part=profile?(profile.members||[]).filter(function(m){return m.when}):[];
     top.append(el('span','hpill',!items.length?'Hello':buddy()+' is keeping watch'));top.lastChild.style.minHeight='0';top.lastChild.style.padding='4px 12px';top.lastChild.style.fontSize='12.5px';top.lastChild.style.display='inline-block';
     var words=['','One thing','Two things','Three things'];
@@ -878,12 +921,14 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     if(part.length){var wh=el('div','card'),wc=el('div','wrapchips');wh.append(el('h3','',"Who's home this week?"),el('p','sub','Tap anyone who is away. I stretch how long things last and plan dinners for who is here.'));
       part.forEach(function(m){var b=el('button','chip',m.name+(m.away?', away':', home'));b.type='button';b.setAttribute('aria-pressed',m.away?'false':'true');b.setAttribute('aria-label',m.name+(m.away?', away this week':', home this week'));
         b.onclick=async function(){m.away=!m.away;render();try{var r=await api('/api/profile',{method:'POST',body:JSON.stringify(profile)});profile=r.profile;render();toast(m.away?m.name+' is away this week.':m.name+' is home this week.')}
-          catch(e){m.away=!m.away;render();if(e.code!=='locked')toast('Could not save that. Check your connection.')}};wc.append(b)});
+          catch(e){m.away=!m.away;render();if(e.code!=='locked')toast(why(e,'Could not save that.'))}};wc.append(b)});
       wh.append(wc);v.append(wh)}
-    var shown=cards.slice(0,3);shown.forEach(function(c){v.append(needCard(c))});
+    var shown=cards.slice(0,3),slots=shown.map(function(c,i){return needCard(c,i)});
+    if(held){var hc=el('div','need'),hr2=el('div','row'),hg=el('div','grow');hg.append(el('div','name','Done'),el('div','sub',held.msg));hr2.append(catIcon('Other'),hg);var ha=el('div','acts');ha.append(btn('btn','Undo',held.undo));hc.append(hr2,ha);slots.splice(Math.min(held.i||0,slots.length),0,hc)}
+    slots.forEach(function(x){v.append(x)});
     if(shown.length<3&&items.filter(function(i){return areaOf(i)==='Kitchen'&&i.qty>0}).length>=2){var dc=el('div','need'),r=el('div','row'),g=el('div','grow');r.append(catIcon('Pantry'),g);
       g.append(el('div','kicker','Dinner idea'),el('div','name','What can I cook tonight?'),el('div','sub','Ideas that use up what goes off first'));dc.append(r);var da=el('div','acts');da.append(btn('btn primary','See ideas',cookIdeas));dc.append(da);v.append(dc)}
-    if(cards.length>3){var more=btn('link','See everything that needs you ('+cards.length+')',function(){openNudges()});more.style.minHeight='44px';more.style.alignSelf='flex-start';v.append(more)}
+    if(n>shown.filter(function(c){return c.k!=='list'}).length){var more=btn('link','See all '+n+' that need you',function(){openNudges()});more.style.minHeight='44px';more.style.alignSelf='flex-start';v.append(more)}
   }
 
   var stat='all';
@@ -894,7 +939,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
   function howMany(id,name,after){var w=el('div','wrapchips');w.setAttribute('role','group');w.setAttribute('aria-label','How many '+name);
     [1,2,3,4,6].forEach(function(n){var b=el('button','mini',String(n));b.type='button';b.setAttribute('aria-label',n+' of '+name);
       b.onclick=async function(){w.querySelectorAll('button').forEach(function(x){x.disabled=true});try{await api('/api/items/'+id,{method:'PATCH',body:JSON.stringify({qty:n})});after(n)}
-        catch(er){w.querySelectorAll('button').forEach(function(x){x.disabled=false});if(er.code!=='locked')toast('Could not save that. Check your connection.')}};w.append(b)});
+        catch(er){w.querySelectorAll('button').forEach(function(x){x.disabled=false});if(er.code!=='locked')toast(why(er,'Could not save that.'))}};w.append(b)});
     var ok=el('button','mini','Skip');ok.type='button';ok.onclick=async function(){try{var cur=items.filter(function(i){return i.id===id})[0];await api('/api/items/'+id,{method:'PATCH',body:JSON.stringify({qty:cur?cur.qty:1})});after(cur?cur.qty:1)}catch(er){}};w.append(ok);return w}
   function itemBlock(it){
     var wrap=el('div','it'),e=expiry(it),p=plan(it),isOpen=!!open[it.id];
@@ -920,17 +965,17 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     q2.append(minus,el('span','',it.qty<=0?'0':amount(it.qty,it.unit)),plus);panel.append(q2);
     var acts=el('div','acts'),outB=el('button','mini','Ran out'),essB=el('button','mini',it.essential?'Essential':'Make essential');
     outB.type=essB.type='button';outB.disabled=it.qty<=0;essB.setAttribute('aria-pressed',it.essential?'true':'false');
-    outB.onclick=async function(){it.qty=0;render();try{await api('/api/items/'+it.id,{method:'PATCH',body:JSON.stringify({qty:0,out:true})});await refresh();toast(it.name+' is on your shopping list.')}catch(er){if(er.code!=='locked')toast('Could not save that. Check your connection.')}};
+    outB.onclick=async function(){try{var u=await useUp(it,true);toast(it.name+' is on your shopping list.','Undo',u)}catch(er){if(er.code!=='locked')toast(why(er,'Could not save that.'))}};
     essB.onclick=async function(){it.essential=it.essential?0:1;render();try{await api('/api/items/'+it.id,{method:'PATCH',body:JSON.stringify({essential:!!it.essential})});
-      toast(it.essential?it.name+' is an essential. I will warn you earlier.':it.name+' is no longer an essential.')}catch(er){if(er.code!=='locked')toast('Could not save that. Check your connection.')}};
+      toast(it.essential?it.name+' is an essential. I will warn you earlier.':it.name+' is no longer an essential.')}catch(er){if(er.code!=='locked')toast(why(er,'Could not save that.'))}};
     var frB=el('button','mini',it.frozen?'In the freezer':'Put in freezer'),binB=el('button','mini','Threw it away');frB.type=binB.type='button';frB.setAttribute('aria-pressed',it.frozen?'true':'false');
-    frB.onclick=async function(){it.frozen=it.frozen?0:1;render();try{await api('/api/items/'+it.id,{method:'PATCH',body:JSON.stringify({frozen:!!it.frozen})});toast(it.frozen?it.name+' is frozen. I will stop counting down its date.':it.name+' is out of the freezer.')}catch(er){if(er.code!=='locked')toast('Could not save that. Check your connection.')}};
-    binB.onclick=async function(){try{await api('/api/items/'+it.id,{method:'PATCH',body:JSON.stringify({binned:true})});await refresh();say('It happens. I have noted the '+it.name.toLowerCase()+' and will not nag you to rebuy it.')}catch(er){if(er.code!=='locked')toast('Could not save that. Check your connection.')}};
+    frB.onclick=async function(){it.frozen=it.frozen?0:1;render();try{await api('/api/items/'+it.id,{method:'PATCH',body:JSON.stringify({frozen:!!it.frozen})});toast(it.frozen?it.name+' is frozen. I will stop counting down its date.':it.name+' is out of the freezer.')}catch(er){if(er.code!=='locked')toast(why(er,'Could not save that.'))}};
+    binB.onclick=async function(){try{var u=await binIt(it,true);toast('It happens. I have noted the '+it.name.toLowerCase()+' and will not nag you to rebuy it.','Undo',u)}catch(er){if(er.code!=='locked')toast(why(er,'Could not save that.'))}};
     var quiet=learnt.muted.indexOf(it.name_key)>-1,remB=el('button','mini',quiet?'Reminders off':'Reminders on');remB.type='button';remB.setAttribute('aria-pressed',quiet?'true':'false');remB.setAttribute('aria-label',(quiet?'Turn reminders back on for ':'Stop reminders for ')+it.name);
-    remB.onclick=async function(){remB.disabled=true;try{await remindAnswer([it],quiet?'start':'stop')}catch(er){remB.disabled=false;if(er.code!=='locked')toast('Could not save that. Check your connection.')}};
-    acts.append(outB,essB);if(areaOf(it)==='Kitchen')acts.append(frB);acts.append(binB,remB);panel.append(acts);
+    remB.onclick=async function(){remB.disabled=true;try{await remindAnswer([it],quiet?'start':'stop')}catch(er){remB.disabled=false;if(er.code!=='locked')toast(why(er,'Could not save that.'))}};
+    acts.append(outB,essB);if(areaOf(it)==='Kitchen'&&(it.frozen||['Pantry','Drinks','Snacks'].indexOf(kindOf(it))<0))acts.append(frB);acts.append(binB,remB);panel.append(acts);
     var det=el('div','meta'),nl=el('label','','Size or brand'),ni=el('input');ni.type='text';ni.maxLength=40;ni.value=it.note||'';ni.placeholder='Optional';nl.append(ni);det.append(nl);
-    var saveDet=async function(body){try{await api('/api/items/'+it.id,{method:'PATCH',body:JSON.stringify(body)});await refresh();toast('Saved.')}catch(er){if(er.code!=='locked')toast('Could not save that. Check your connection.')}};
+    var saveDet=async function(body){try{await api('/api/items/'+it.id,{method:'PATCH',body:JSON.stringify(body)});await refresh();toast('Saved.')}catch(er){if(er.code!=='locked')toast(why(er,'Could not save that.'))}};
     ni.onchange=function(){saveDet({note:ni.value.trim()})};
     if(owners().length>1||it.owner){var ol=el('label','','Whose is it'),os=el('select');ownerFill(os,it.owner||'');ol.append(os);det.append(ol);os.onchange=function(){saveDet({owner:os.value})}}
     var ll=el('label','','Lasts you about'),ls=el('select'),opts=[[4,'A few days'],[7,'A week'],[14,'Two weeks'],[30,'A month'],[60,'Two months'],[90,'Three months'],[180,'Six months']];
@@ -945,7 +990,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
       (it.expiry?(it.expiry_est&&daysFrom(it.expiry)>=150?'':'Best before '+fmt(it.expiry)+(it.expiry_est?' (my estimate). ':'. ')):'')+
       (needsBuy(it)?'On your shopping list.':it.frozen?'In the freezer, so the date is on hold.':needsUse(it)?'Use it up before then.':p.days<0?'By my guess this should be nearly gone.':'My guess: you will run out around '+fmt(p.date)+', '+p.why+'.');
     var rm=el('button','danger','Remove');rm.type='button';rm.setAttribute('aria-label','Remove '+it.name);
-    rm.onclick=async function(){try{await api('/api/items/'+it.id,{method:'DELETE'});items=items.filter(function(i){return i!==it});render();toast('Removed '+it.name+'.')}catch(er){if(er.code!=='locked')toast('Could not remove it. Try again.')}};
+    rm.onclick=async function(){var copy=Object.assign({},it);try{await api('/api/items/'+it.id,{method:'DELETE'});items=items.filter(function(i){return i!==it});render();toast('Removed '+it.name+'.','Undo',restoreItem(copy,false))}catch(er){if(er.code!=='locked')toast(why(er,'Could not remove it.'))}};
     m.append(txt,rm);panel.append(m);wrap.append(panel);return wrap;
   }
   /* At home: pick a room, then a kind of thing within it */
@@ -959,20 +1004,23 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
   function kindLabel(k){return k==='Pantry'?'Cupboard staples':k==='Meat'?'Meat and fish':k}
   function fillKinds(room,kind){var k=$('addKind');k.textContent='';ROOM_CATS[room].concat(['Other']).forEach(function(c){k.append(new Option(kindLabel(c),c))});
     k.value=ROOM_CATS[room].indexOf(kind)>-1?kind:(room==='Kitchen'?'Pantry':'Other')}
+  var addPicked=false;
   function openAdd(room,kind){
     var r=$('addRoom'),u=$('addUnit');if(!r.options.length){Object.keys(AREA).forEach(function(a){r.append(new Option(roomLabel(a),a))});UNITS.forEach(function(x){u.append(new Option(x,x))});
-      r.onchange=function(){fillKinds(r.value,'')}}
+      r.onchange=function(){addPicked=true;fillKinds(r.value,'')}}
     r.value=AREA[room]?room:'Kitchen';fillKinds(r.value,kind);ownerFill($('addOwner'),'');$('addOwnerL').hidden=owners().length<2;$('addNote').value='';$('addName').value='';$('addQty').value='1';$('addEss').checked=false;
-    $('addH').textContent='Add to '+ROOM_IN[r.value];$('addDlg').showModal();$('addName').focus();
+    addPicked=cat!=='All';$('addKind').onchange=function(){addPicked=true};
+    $('addH').textContent=addPicked?'Add to '+ROOM_IN[r.value]:'Add something';$('addDlg').showModal();$('addName').focus();
   }
   $('addForm').addEventListener('submit',async function(ev){ev.preventDefault();
     var name=$('addName').value.trim(),room=$('addRoom').value;if(!name)return;$('addGo').disabled=true;
-    try{var res=await api('/api/apply',{method:'POST',body:JSON.stringify({source:'hand',bought:iso(today()),actions:[{action:'add',name:name,quantity:Number($('addQty').value)||1,unit:$('addUnit').value,
+    try{var res=await api('/api/apply',{method:'POST',body:JSON.stringify({source:'hand',auto:!addPicked,bought:iso(today()),actions:[{action:'add',name:name,quantity:Number($('addQty').value)||1,unit:$('addUnit').value,
         area:room,category:$('addKind').value,expiry:'',shelfLifeDays:0,finishDays:room==='Kitchen'?10:45}]})});
       var extra={},nt=$('addNote').value.trim(),ow=$('addOwner').value;if($('addEss').checked)extra.essential=true;if(nt)extra.note=nt;if(ow)extra.owner=ow;
       if(Object.keys(extra).length&&res.changes&&res.changes[0])await api('/api/items/'+res.changes[0].id,{method:'PATCH',body:JSON.stringify(extra)});
-      await refresh();toast('Added '+name+' to '+ROOM_IN[room]+'. Add another, or tap Done.');$('addName').value='';$('addNote').value='';$('addEss').checked=false;$('addName').focus()}
-    catch(e){if(e.code!=='locked')toast('Could not add that. Check your connection.')}finally{$('addGo').disabled=false}});
+      var went=res.changes&&res.changes[0]&&AREA[res.changes[0].area]?res.changes[0].area:room;
+      await refresh();toast('Added '+name+' to '+ROOM_IN[went]+'. Add another, or tap Done.');$('addName').value='';$('addNote').value='';$('addEss').checked=false;$('addName').focus()}
+    catch(e){if(e.code!=='locked')toast(why(e,'Could not add that.'))}finally{$('addGo').disabled=false}});
   function renderPantry(){
     var rooms=$('rooms');rooms.textContent='';
     [['All','Whole home',[160,'M4 11l8-7 8 7v9h-5v-6H9v6H4z']]].concat(Object.keys(AREA).map(function(a){return [a,roomLabel(a),AREA[a]]})).forEach(function(r){
@@ -1020,7 +1068,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     inp.type='text';inp.id='extraText';inp.maxLength=80;inp.style.flex='1';inp.placeholder='Add anything, like birthday candles';inp.setAttribute('aria-label','Add something to the list');
     add.type='submit';f.append(inp,add);
     f.addEventListener('submit',async function(ev){ev.preventDefault();var t=inp.value.trim();if(!t)return;
-      try{var how=await addToList(t);await refresh();if(how!=='added')listSaid(t,how);var n=$('extraText');if(n)n.focus()}
+      try{var how=await addToList(t);await refresh();if(how!=='added'&&how!=='many')listSaid(t,how);var n=$('extraText');if(n)n.focus()}
       catch(er){if(er.code!=='locked')toast(er.code==='full'?'The list is full. Tick a few things off first.':'Could not add that. Check your connection.')}});
     v.append(f);
     if(!count)v.append(emptyCard('Pantry','Nothing to buy','Things land here when you run out, say they are low, or add them yourself.'));
@@ -1038,23 +1086,46 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     buy.forEach(function(it){var p=plan(it),ai=aisle(it);
       if(ai!==last){last=ai;var sec=el('div','sec');c=el('div','card tight');sec.append(el('p','grp',ai),c);v.append(sec)}
       var why=it.qty<=0?(it.learned?'You ran out. You buy it about every '+every(it.finish_days):"You're out"):it.low?'Running low':p.days<=0?'My guess: about to run out':'My guess: out by '+fmt(p.date);
-      var r=el('div','row'),g=el('div','grow');r.style.minHeight='64px';g.append(el('div','name',fullName(it)),el('div','sub',(it.owner?it.owner+"'s. ":'')+why+(it.store?', last bought at '+it.store:'')));
+      var r=el('div','row'),g=el('button','grow rowbtn');g.type='button';g.setAttribute('aria-label','Change or remove '+it.name);r.style.minHeight='64px';g.append(el('div','name',fullName(it)),el('div','sub',(it.owner?it.owner+"'s. ":'')+why+(it.store?', last bought at '+it.store:'')));
+      if(it.warn)g.append(el('span','pill bad','Check label: '+it.warn));g.onclick=function(){openRow(null,it)};
       r.append(iconFor(it),g,tick('Mark '+it.name+' as bought',function(){restock(it)}));c.append(r)});
     if(extras.length){var se=el('div','sec'),ce=el('div','card tight');se.append(el('p','grp','Added by you'),ce);
-      extras.forEach(function(x){var r=el('div','row'),g=el('div','grow');r.style.minHeight='64px';g.append(el('div','name',x.text),el('div','sub',x.who?'Added by '+x.who:'Added by hand'));
-        r.append(catIcon('Other'),g,tick('Mark '+x.text+' as bought',async function(){try{await api('/api/extras/'+x.id,{method:'DELETE'});await refresh()}catch(er){if(er.code!=='locked')toast('Could not save that. Check your connection.')}}));ce.append(r)});
+      extras.forEach(function(x){var r=el('div','row'),g=el('button','grow rowbtn');g.type='button';g.setAttribute('aria-label','Change or remove '+x.text);r.style.minHeight='64px';g.append(el('div','name',x.text),el('div','sub',x.who?'Added by '+x.who:'Added by hand'));
+        if(x.warn)g.append(el('span','pill bad','Check label: '+x.warn));g.onclick=function(){openRow(x,null)};
+        r.append(catIcon('Other'),g,tick('Mark '+x.text+' as bought',async function(){try{await api('/api/extras/'+x.id,{method:'DELETE'});await refresh();toast('Ticked off '+x.text+'.','Undo',putBack(x.text))}catch(er){if(er.code!=='locked')toast(why(er,'Could not save that.'))}}));ce.append(r)});
       v.append(se)}
-    if(count)v.append(el('p','sub','Tick something when you buy it. Tracked items are restocked at home.'));
+    if(count)v.append(el('p','sub','Tick something when you buy it. Tap its name to change or remove it. Tracked items are restocked at home.'));
     var sug=items.filter(maybeLow).sort(function(a,b){return plan(a).days-plan(b).days});
     if(sug.length){var ss=el('div','sec'),cs=el('div','card');ss.append(el('h2','','Might be running low'),el('p','sub','Going by your own pace where I know it, and a typical one where I do not. None of these are on your list unless you add them.'),cs);
       sug.forEach(function(it){var wrap=el('div','sec'),r=el('div','row'),g=el('div','grow'),acts=el('div','acts'),ad=el('button','mini','Add to list'),no=el('button','mini','Still have it');
         g.append(el('div','name',it.name),el('div','sub','Bought '+fmt(it.bought||it.added)+(it.learned?'. You usually buy it about every '+every(it.finish_days):', usually lasts about '+it.finish_days+' days')));r.append(iconFor(it),g);
         ad.type=no.type='button';
-        ad.onclick=async function(){ad.disabled=no.disabled=true;try{await remindAnswer([it],'add')}catch(er){ad.disabled=no.disabled=false;if(er.code!=='locked')toast('Could not save that. Check your connection.')}};
-        no.onclick=async function(){ad.disabled=no.disabled=true;try{await remindAnswer([it],'still')}catch(er){ad.disabled=no.disabled=false;if(er.code!=='locked')toast('Could not save that. Check your connection.')}};
+        ad.onclick=async function(){ad.disabled=no.disabled=true;try{await remindAnswer([it],'add')}catch(er){ad.disabled=no.disabled=false;if(er.code!=='locked')toast(why(er,'Could not save that.'))}};
+        no.onclick=async function(){ad.disabled=no.disabled=true;try{await remindAnswer([it],'still')}catch(er){ad.disabled=no.disabled=false;if(er.code!=='locked')toast(why(er,'Could not save that.'))}};
         acts.append(ad,no);wrap.style.gap='8px';wrap.append(r,acts);cs.append(wrap)});
       v.append(ss)}
   }
+  /* one row of the list: rename it, change how many, or take it off. Every change can be undone. */
+  function putBack(text){return async function(){try{await api('/api/extras',{method:'POST',body:JSON.stringify({text:text.replace(/ \u00d7\d+$/,''),whole:true})});var n=Number((text.match(/ \u00d7(\d+)$/)||[])[1]||1);
+    if(n>1){var d=await api('/api/items'),row=(d.extras||[]).filter(function(e){return e.text===text.replace(/ \u00d7\d+$/,'')})[0];if(row)await api('/api/extras/'+row.id,{method:'PATCH',body:JSON.stringify({count:n})})}
+    await refresh();toast(text+' is back on your list.')}catch(er){if(er.code!=='locked')toast(why(er,'Could not undo that.'))}}}
+  var rowAt=null;
+  function openRow(x,it){rowAt={x:x,it:it,n:x?Number((x.text.match(/ \u00d7(\d+)$/)||[])[1]||1):1};var mine=!!x;
+    $('rowH').textContent=mine?'Change this':it.name;$('rowEdit').hidden=!mine;$('rowSave').hidden=!mine;$('rowHome').hidden=mine;
+    $('rowSub').textContent=mine?'Rename it, change how many, or take it off your list.':(it.qty<=0?'On your list because you are out.':it.low?'On your list because it is running low.':'On your list because it is an essential that is about to run out.')+' Taking it off the list changes nothing at home.';
+    if(mine){$('rowText').value=x.text.replace(/ \u00d7\d+$/,'');$('rowN').textContent=String(rowAt.n)}
+    $('rowDlg').showModal()}
+  $('rowLess').onclick=function(){rowAt.n=Math.max(1,rowAt.n-1);$('rowN').textContent=String(rowAt.n)};
+  $('rowMore').onclick=function(){rowAt.n=Math.min(99,rowAt.n+1);$('rowN').textContent=String(rowAt.n)};
+  $('rowForm').addEventListener('submit',async function(ev){ev.preventDefault();if(!rowAt||!rowAt.x)return;var t=$('rowText').value.trim();if(!t)return;
+    try{await api('/api/extras/'+rowAt.x.id,{method:'PATCH',body:JSON.stringify({text:t,count:rowAt.n})});$('rowDlg').close();await refresh();toast('Saved.')}
+    catch(er){if(er.code!=='locked')toast(er.code==='already'?'That is already on your list.':why(er,'Could not save that.'))}});
+  $('rowOff').onclick=async function(){if(!rowAt)return;var x=rowAt.x,it=rowAt.it;
+    try{if(x){await api('/api/extras/'+x.id,{method:'DELETE'});$('rowDlg').close();await refresh();toast('Took '+x.text+' off your list.','Undo',putBack(x.text))}
+      else{var low=!!it.low;await api('/api/items/'+it.id,{method:'PATCH',body:JSON.stringify({offList:true})});$('rowDlg').close();await refresh();
+        toast('Took '+it.name+' off your list. It will come back the next time you run out.','Undo',async function(){try{await api('/api/items/'+it.id,{method:'PATCH',body:JSON.stringify({offList:false,low:low})});await refresh()}catch(er){if(er.code!=='locked')toast(why(er,'Could not undo that.'))}})}}
+    catch(er){if(er.code!=='locked')toast(why(er,'Could not save that.'))}};
+  $('rowHome').onclick=function(){var it=rowAt&&rowAt.it;if(!it)return;afterClose($('rowDlg'),function(){showItem(it)})};
   var STORES={Amazon:'https://www.amazon.com/s?k=',Instacart:'https://www.instacart.com/store/s?k=',Walmart:'https://www.walmart.com/search?q='},store='Amazon';
   function openShop(names){
     try{store=localStorage.getItem('stocker.store')||store}catch(e){}if(!STORES[store])store='Amazon';
@@ -1070,9 +1141,10 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     var s=parse(it.bought||it.added),e=parse(it.expiry),shelf=s&&e&&e>s?Math.round((e-s)/DAY):0;
     var q=it.unit==='g'||it.unit==='ml'?500:it.unit==='oz'?16:1;
     try{var res=await api('/api/apply',{method:'POST',body:JSON.stringify({source:'hand',store:it.store||'',bought:iso(today()),
-      actions:[{action:'add',name:it.name,quantity:q,unit:it.unit,category:it.category,area:areaOf(it),expiry:'',shelfLifeDays:shelf,finishDays:it.finish_days}]})});
-      await refresh();var ll=learntLine(res.changes);if(ll)say(ll.trim());else toast('Restocked '+it.name+' with '+q+' '+it.unit+'. Adjust the amount under At home if needed.')}
-    catch(er){if(er.code!=='locked')toast('Could not save that. Check your connection.')}
+      actions:[{action:'add',name:it.name,quantity:q,unit:it.unit,category:it.category,area:areaOf(it),expiry:'',shelfLifeDays:shelf,finishDays:it.finish_days,restock:true}]})});
+      await refresh();var ch=(res.changes||[])[0],ll=learntLine(res.changes);if(ll)say(ll.trim());
+      toast('Restocked '+it.name+(ch?' with '+amount(ch.added,ch.unit):'')+'.','Undo',async function(){try{if(ch)await takeBack(ch);await refresh();toast(it.name+' is back on your list.')}catch(er){if(er.code!=='locked')toast(why(er,'Could not undo that.'))}})}
+    catch(er){if(er.code!=='locked')toast(why(er,'Could not save that.'))}
   }
 
   var POT='M5 10h14v6a4 4 0 0 1-4 4H9a4 4 0 0 1-4-4zM3 10h18M9 6c0-1 1-1 1-2M14 6c0-1 1-1 1-2';
@@ -1108,15 +1180,16 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
   function openKit(k){
     function draw(){
       var list=kitItems(k),need=list.filter(function(n){return kitState(n)==='need'}),ul=$('kitList');ul.textContent='';
-      $('kitH').textContent=k.t;$('kitSub').textContent=k.s+'. '+(need.length?'You have '+(list.length-need.length)+' of '+list.length+'.':'You have everything.');
+      var atHome=list.filter(function(n){return kitState(n)==='home'}).length,listed=list.length-need.length-atHome;
+      $('kitH').textContent=k.t;$('kitSub').textContent=k.s+'. '+(atHome===list.length?'You have everything.':'You have '+atHome+' of '+list.length+' at home'+(listed?', and '+listed+(listed===1?' is':' are')+' on your list.':'.'));
       list.forEach(function(n){var st=kitState(n),li=el('li','row'),g=el('span','grow');g.append(el('span','name',n));li.append(g);
         if(st==='home')li.append(el('span','pill ok','At home'));else if(st==='list')li.append(el('span','pill warn','On your list'));
         else{var b=el('button','mini','+ Add');b.type='button';b.setAttribute('aria-label','Add '+n+' to the shopping list');b.onclick=async function(){b.disabled=true;
-          try{var how=await addToList(n);await refresh();draw();if(how!=='added')listSaid(n,how)}catch(e){b.disabled=false;if(e.code!=='locked')toast('Could not add that. Check your connection.')}};li.append(b)}
+          try{var how=await addToList(n);await refresh();draw();if(how!=='added')listSaid(n,how)}catch(e){b.disabled=false;if(e.code!=='locked')toast(why(e,'Could not add that.'))}};li.append(b)}
         ul.append(li)});
       var all=$('kitAll');all.hidden=!need.length;all.textContent='Add all '+need.length+' missing to my list';
       all.onclick=async function(){all.disabled=true;try{var kept=0;for(var i=0;i<need.length;i++)if((await addToList(need[i],true))==='kept')kept++;await refresh();draw();toast((need.length-kept)+' added to your shopping list.'+(kept?' '+kept+(kept===1?' was':' were')+' already there.':''))}
-        catch(e){if(e.code!=='locked')toast('Could not add everything. Check your connection.')}finally{all.disabled=false}};
+        catch(e){if(e.code!=='locked')toast(why(e,'Could not add everything.'))}finally{all.disabled=false}};
     }
     draw();$('kitDlg').showModal();
   }
@@ -1125,24 +1198,24 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     var ps=pers().map(function(k){return ALIAS[k]||k}),mine=function(k){return k.p.some(function(x){return ps.indexOf(x)>-1})},kits=KITS.filter(function(k){return kitItems(k).length>=3&&(!k.p.length||!ps.length||mine(k)||ps.indexOf('other')>-1)})
       .sort(function(a,b){return mine(b)-mine(a)});
     var kn=items.filter(function(i){return i.learned}).sort(function(a,b){return a.finish_days-b.finish_days}),sl=el('div','sec'),cl=el('div','card');
-    sl.append(el('h2','','What I have learned'),el('p','sub','Only from what you do: what you buy, what runs out, and how you answer me. Tap Fix if I have it wrong.'));
+    sl.append(el('h2','','What I have learned'),el('p','sub','Only from what you do: what you buy, what runs out, and how you answer me. Tap Fix on a habit if I have it wrong.'));
     if(!kn.length&&!learnt.dishes.length)cl.append(el('p','sub','Nothing yet. Once you have bought the same thing twice I will know your pace, and remind you when it is due.'));
     kn.slice(0,8).forEach(function(i){var r=el('div','row'),g=el('div','grow'),fx=el('button','mini','Fix');fx.type='button';fx.setAttribute('aria-label','Fix what I learned about '+i.name);
-      fx.onclick=function(){query=i.name;$('search').value=i.name;open[i.id]=true;go('pantry')};
+      fx.onclick=function(){showItem(i)};
       g.append(el('div','name','You buy '+i.name.toLowerCase()+' about every '+every(i.finish_days)),el('div','sub',learnt.muted.indexOf(i.name_key)>-1?'Reminders off':'From your own shops'));r.append(iconFor(i),g,fx);cl.append(r)});
     if(kn.length>8)cl.append(el('p','sub','And '+(kn.length-8)+' more.'));
     if(learnt.dishes.length)cl.append(el('p','sub','Your dishes: '+learnt.dishes.slice(0,8).join(', ')+(learnt.dishes.length>8?' and '+(learnt.dishes.length-8)+' more':'')+'.'));
     var rr=el('div','row'),rg=el('div','grow'),rb=el('button','mini',pushOn?'Turn off':'Turn on');rb.type='button';rb.id='pushBtn';rb.setAttribute('aria-label',(pushOn?'Turn off':'Turn on')+' reminders on this phone');
     rg.append(el('div','name','Reminders on this phone'),el('div','sub',pushOn?'On. Around '+hourText(learnt.hour)+(learnt.hourLearned?', when you usually answer me':'')+', once a day at most, and only when something is due.':pushWhy()||'Off. I can tell you when something you buy regularly is due.'));
-    rb.onclick=async function(){rb.disabled=true;try{if(pushOn)await pushDisable();else await pushEnable()}catch(er){if(er.code!=='locked')toast('Could not change reminders. Check your connection and try again.')}rb.disabled=false};
+    rb.onclick=async function(){rb.disabled=true;try{if(pushOn)await pushDisable();else await pushEnable()}catch(er){if(er.code!=='locked')toast(why(er,'Could not change reminders.'))}rb.disabled=false};
     rr.append(rg);if(pushOn||pushCan)rr.append(rb);cl.append(rr);var sc=el('div','row'),sg=el('div','grow'),sb=el('button','mini','Open');sb.type='button';sb.setAttribute('aria-label','Open how I am tested');sg.append(el('div','name','How I am doing'),el('div','sub','How I score on my tests, week by week, and where I still go wrong.'));sb.onclick=function(){location.href='/scorecard.html'};sc.append(sg,sb);cl.append(sc);sl.append(cl);v.append(sl);
     var sk=el('div','sec'),hd=el('div','sechead');hd.append(el('h2','',profile?(ps.length===1&&ps[0]!=='other'?'Curated for a '+PERSONA[ps[0]][0].toLowerCase():'Curated for your home'):'Curated kits'));
     if(!profile){var mk=el('button','link','Make it yours');mk.type='button';mk.onclick=openProfile;hd.append(mk)}
     sk.append(hd,el('p','sub','Checklists for real situations, checked against what you already have.'));
-    var grid=el('div','tiles');kits.forEach(function(k){var list=kitItems(k),have=list.filter(function(n){return kitState(n)!=='need'}).length,b=el('button','tile');b.type='button';b.style.minHeight='0';
+    var grid=el('div','tiles');kits.forEach(function(k){var list=kitItems(k),have=list.filter(function(n){return kitState(n)==='home'}).length,onl=list.filter(function(n){return kitState(n)==='list'}).length,b=el('button','tile');b.type='button';b.style.minHeight='0';
       if(mine(k))b.append(el('span','pill ok','For you'));
       b.append(el('b','',k.t),el('span','',k.s));var bar=el('div','bar'),fill=el('i');bar.style.width='100%';fill.style.width=Math.round(have/list.length*100)+'%';bar.append(fill);
-      b.append(bar,el('span','',have===list.length?'All set':'Have '+have+' of '+list.length));b.onclick=function(){openKit(k)};grid.append(b)});
+      b.append(bar,el('span','',have===list.length?'All set':'Have '+have+' of '+list.length+(onl?', '+onl+' on your list':'')));b.onclick=function(){openKit(k)};grid.append(b)});
     sk.append(grid);v.append(sk);
     starterCard(v);spendCard(v);
     if(waste){var wc2=el('div','card');wc2.append(el('div','sub','Thrown away this month'),el('div','name',waste+(waste===1?' thing':' things')),el('p','sub','Tap Threw it away on anything you bin. I use it to suggest buying less of what gets wasted.'));v.append(wc2)}
@@ -1158,11 +1231,14 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
   var TITLES={today:'Today',pantry:'At home',list:'Your list',log:'Tote'};
   function render(){renderToday();renderPantry();renderList();renderLog();
     $('barDate').textContent=today().toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric'});$('barTitle').textContent=tab==='log'?buddy():TITLES[tab];
-    $('menuBtn').textContent=initial();$('tellText').textContent='Tell '+buddy()+' what changed';$('toteTab').textContent=buddy()}
+    $('menuBtn').textContent=initial();$('tellText').textContent='Tell '+buddy()+' what changed';$('toteTab').textContent=buddy();
+    /* the helper's own name everywhere it is mentioned */
+    $('tellMic').setAttribute('aria-label','Talk to '+buddy());$('menuScoreT').textContent='How '+buddy()+' is doing';if(tab==='log')document.title=buddy()+' \u00b7 Stocker AI';
+    if($('nudgeDlg').open)drawNudges()}
   var TABS=['today','pantry','list','log'],TITLE={today:'Today',pantry:'At home',list:'Your list',log:'Tote'},scrollAt={},skipPop=0,byPop=false;
   function go(t,how){if(TABS.indexOf(t)<0)t='today';var same=t===tab;if(!same)scrollAt[tab]=window.scrollY;tab=t;TABS.forEach(function(k){$('v-'+k).hidden=k!==t});
     document.querySelectorAll('.tab').forEach(function(b){if(b.dataset.tab===t)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current')});
-    document.title=TITLE[t]+' \u00b7 Stocker AI';
+    document.title=(t==='log'?buddy():TITLE[t])+' \u00b7 Stocker AI';
     try{if(how==='start'||same)history.replaceState({tab:t},'','#'+t);else if(how!=='pop')history.pushState({tab:t},'','#'+t)}catch(e){}
     render();window.scrollTo(0,how==='pop'||how==='start'?(scrollAt[t]||0):same?0:(scrollAt[t]||0))}
   /* the back button closes a sheet first, then steps back through tabs, and only then leaves */
@@ -1179,7 +1255,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
   $('search').addEventListener('input',function(){query=$('search').value.trim();renderPantry()});
   var qtyTimer={};
   function setQty(it,q){it.qty=q;render();clearTimeout(qtyTimer[it.id]);
-    qtyTimer[it.id]=setTimeout(function(){api('/api/items/'+it.id,{method:'PATCH',body:JSON.stringify({qty:q})}).catch(function(e){if(e.code!=='locked')toast('Could not save that change. Check your connection.')})},500)}
+    qtyTimer[it.id]=setTimeout(function(){api('/api/items/'+it.id,{method:'PATCH',body:JSON.stringify({qty:q})}).catch(function(e){if(e.code!=='locked')toast(why(e,'Could not save that change.'))})},500)}
   async function refresh(){var before=items.filter(needsBuy).length+extras.length;var d=await api('/api/items');items=d.items||[];log=d.log||[];extras=d.extras||[];waste=d.waste||0;spend=d.spend||null;profile=d.profile||null;me=d.me||'';learnt=d.learnt||learnt;reviewN=d.review||0;render();
     if(before>0&&items.filter(needsBuy).length+extras.length===0)say('List done. Nicely shopped.','party')}
 
@@ -1211,14 +1287,16 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
   function drawProfile(){
     [['profHome','home'],['profStyle','style']].forEach(function(g){var pp=$(g[0]);pp.textContent='';Object.keys(PERSONA).filter(function(k){return PERSONA[k][5]===g[1]}).forEach(function(k){var P=PERSONA[k],b=el('button','tile'),on=draft.personas.indexOf(k)>-1;b.type='button';
       b.setAttribute('aria-pressed',on?'true':'false');b.append(el('b','',P[0]),el('span','',P[1]));
-      b.onclick=function(){if(on)draft.personas=draft.personas.filter(function(x){return x!==k});
+      b.onclick=function(){if(on){draft.personas=draft.personas.filter(function(x){return x!==k});
+          /* a way of eating that came with this pick goes when the pick goes, unless another pick brings it too */
+          P[4].forEach(function(d){if(!draft.personas.some(function(x){return PERSONA[x][4].indexOf(d)>-1}))draft.diet=draft.diet.filter(function(y){return y!==d})})}
         else{if(draft.personas.length>=3){$('profPick').textContent='Three picked. Tap one to swap it.';$('profPick').style.color='var(--accent)';return}
-          draft.personas.push(k);if(P[2]){draft.adults=P[2];draft.kids=P[3]}P[4].forEach(function(d){if(draft.diet.indexOf(d)<0)draft.diet.push(d)})}
+          draft.personas.push(k);if(P[2]&&!draft.counted){draft.adults=P[2];draft.kids=P[3]}P[4].forEach(function(d){if(draft.diet.indexOf(d)<0)draft.diet.push(d)})}
         drawProfile()};pp.append(b)})});
     $('profPick').textContent=draft.personas.length?draft.personas.length+' of 3 picked':'Pick up to three';$('profPick').style.color='';
     var pe=$('profPeople');pe.textContent='';[['adults','Adults',1],['kids','Children',0]].forEach(function(f){var l=el('label','',f[1]),q=el('span','qty'),m=el('button','','\u2212'),pl=el('button','','+');
       m.type=pl.type='button';m.setAttribute('aria-label','Fewer '+f[1].toLowerCase());pl.setAttribute('aria-label','More '+f[1].toLowerCase());
-      m.onclick=function(){draft[f[0]]=Math.max(f[2],draft[f[0]]-1);drawProfile()};pl.onclick=function(){draft[f[0]]=Math.min(10,draft[f[0]]+1);drawProfile()};
+      m.onclick=function(){draft.counted=true;draft[f[0]]=Math.max(f[2],draft[f[0]]-1);drawProfile()};pl.onclick=function(){draft.counted=true;draft[f[0]]=Math.min(10,draft[f[0]]+1);drawProfile()};
       q.append(m,el('span','',String(draft[f[0]])),pl);l.append(q);pe.append(l)});
     var pm=$('profMembers');pm.textContent='';draft.members.forEach(function(m,i){var b=el('button','person'),g=el('span');b.type='button';g.style.display='flex';g.style.flexDirection='column';
       g.append(el('b','',m.name),el('span','',memLine(m)));b.append(g,el('span','','Edit'));b.onclick=function(){openMember(i)};pm.append(b)});
@@ -1252,17 +1330,20 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     mem.name=n;mem.when=$('memWhen').value.replace(/\s+/g,' ').trim();if(memAt>-1)draft.members[memAt]=mem;else draft.members.push(mem);$('memDlg').close()};
   $('memDel').onclick=function(){if(memAt>-1)draft.members.splice(memAt,1);$('memDlg').close()};
   function openProfile(){document.querySelectorAll('dialog[open]').forEach(function(d){d.close()});var p=profile,cp=function(a){return (a||[]).slice()};ui={more:{},adding:''};
-    draft=p?{had:true,personas:cp(p.personas||[p.persona]),adults:p.adults,kids:p.kids,members:(p.members||[]).map(function(m){return {name:m.name,kind:m.kind,when:m.when,away:!!m.away,diet:cp(m.diet),allergies:cp(m.allergies),rules:cp(m.rules),avoid:cp(m.avoid)}}),
+    draft=p?{had:true,counted:true,personas:cp(p.personas||[p.persona]),adults:p.adults,kids:p.kids,members:(p.members||[]).map(function(m){return {name:m.name,kind:m.kind,when:m.when,away:!!m.away,diet:cp(m.diet),allergies:cp(m.allergies),rules:cp(m.rules),avoid:cp(m.avoid)}}),
         pets:cp(p.pets),diet:cp(p.diet),allergies:cp(p.allergies),rules:cp(p.rules),avoid:cp(p.avoid),cuisines:cp(p.cuisines),goal:p.goal||'',eatOut:p.eatOut||0,cook:p.cook||'any',shopDay:p.shopDay||'',stores:cp(p.stores)}:
       {personas:[],adults:2,kids:0,members:[],pets:[],diet:[],allergies:[],rules:[],avoid:[],cuisines:[],goal:'',eatOut:0,cook:'any',shopDay:'',stores:[]};
     $('profBuddy').value=p&&p.buddy||'';$('profBudget').value=p&&p.budget?p.budget:'';$('profAbout').value=p&&p.about||'';
     $('profMore').open=!!(p&&(p.avoid&&p.avoid.length||p.goal||p.eatOut||p.buddy||p.cuisines&&p.cuisines.length||p.cook!=='any'||p.shopDay||p.stores&&p.stores.length||p.budget||p.about));
     drawProfile();$('profDlg').showModal();$('profH').tabIndex=-1;$('profH').focus();$('profDlg').scrollTop=0}
   $('profSkip').onclick=function(){try{localStorage.setItem('stocker.profSkip','1')}catch(e){}$('profDlg').close()};
-  $('profSave').onclick=async function(){if(!draft.personas.length)return;$('profSave').disabled=true;
+  $('profBudget').oninput=function(){$('profBudget').setCustomValidity('')};
+  $('profSave').onclick=async function(){if(!draft.personas.length)return;
+    var bud=$('profBudget').value.trim();if(bud&&!(Number(bud)>=0)){$('profMore').open=true;$('profBudget').setCustomValidity('A budget cannot be below zero. Leave it empty for no budget.');$('profBudget').reportValidity();return}
+    $('profSave').disabled=true;
     draft.budget=Number($('profBudget').value)||0;draft.about=$('profAbout').value;draft.buddy=$('profBuddy').value;
     try{var r=await api('/api/profile',{method:'POST',body:JSON.stringify(draft)});profile=r.profile;try{localStorage.removeItem('stocker.starterHide')}catch(e){}var firstTime=!draft.had;$('profDlg').close();render();if(firstTime)say('Nice to meet you'+(me?', '+me:'')+'. I will keep an eye on things from here.','party');toast('Saved. Stocker is set up for '+(pers().length===1&&pers()[0]!=='other'?'a '+PERSONA[pers()[0]][0].toLowerCase():'your home')+'.')}
-    catch(e){if(e.code!=='locked')toast('Could not save that. Check your connection.')}finally{$('profSave').disabled=false}};
+    catch(e){if(e.code!=='locked')toast(why(e,'Could not save that.'))}finally{$('profSave').disabled=false}};
   $('shareProf').onclick=openProfile;
   function setBig(on){document.documentElement.classList.toggle('big',on);$('bigText').setAttribute('aria-pressed',on?'true':'false');$('bigSub').textContent=on?'On':'Off'}
   try{setBig(localStorage.getItem('stocker.big')==='1')}catch(e){}
@@ -1379,19 +1460,25 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
   }
   async function takeBack(c){
     if(c.action==='list'){if(c.created)await api('/api/extras/'+c.id,{method:'DELETE'});return}
-    if(c.action==='unlist'){for(var i=0;i<(c.removed||[]).length;i++)await api('/api/extras',{method:'POST',body:JSON.stringify({text:c.removed[i]})});return}
+    if(c.action==='unlist'&&c.item){await api('/api/items/'+c.id,{method:'PATCH',body:JSON.stringify({offList:false,low:!!c.prevLow})});return}
+    if(c.action==='unlist'){for(var i=0;i<(c.removed||[]).length;i++)await putBack(c.removed[i])();return}
     if(c.created)await api('/api/items/'+c.id+'?undo=1',{method:'DELETE'});
-    else if(c.action==='low')await api('/api/items/'+c.id,{method:'PATCH',body:JSON.stringify({low:!!c.prevLow})});
-    else await api('/api/items/'+c.id,{method:'PATCH',body:JSON.stringify(c.action==='add'?{qty:c.prevQty,undo:true}:{qty:c.prevQty})});
+    else if(c.action==='low')await api('/api/items/'+c.id,{method:'PATCH',body:JSON.stringify({low:!!c.prevLow,takeBack:true})});
+    else await api('/api/items/'+c.id,{method:'PATCH',body:JSON.stringify(c.action==='add'?{qty:c.prevQty,undo:true}:{qty:c.prevQty,takeBack:true})});
+    /* a purchase that cleared a list entry puts the entry back when it is undone */
+    for(var j=0;j<(c.cleared||[]).length;j++)await api('/api/extras',{method:'POST',body:JSON.stringify({text:c.cleared[j].text.replace(/ \u00d7\d+$/,''),whole:true})});
   }
   /* conversation: say what happened in plain words; changes are applied straight away and each can be undone */
   var chatHist=[],chatBusy=false;
   function bubble(cls,text){var m=el('div','msg '+cls,text);$('chatLog').append(m);$('chatLog').scrollTop=$('chatLog').scrollHeight;return m}
+  function chatKeep(){try{var rows=[].slice.call($('chatLog').children).slice(-40).map(function(m){var t=m.firstChild&&m.firstChild.nodeType===3?m.firstChild.textContent:'';return {c:m.classList.contains('me')?'me':'bot',t:t}}).filter(function(r){return r.t});
+    sessionStorage.setItem('stocker.chat',JSON.stringify({day:iso(today()),rows:rows,hist:chatHist.slice(-4)}))}catch(e){}}
+  function chatBack(){try{var k=JSON.parse(sessionStorage.getItem('stocker.chat')||'null');if(!k||k.day!==iso(today())||!k.rows||!k.rows.length)return false;k.rows.forEach(function(r){bubble(r.c==='me'?'me':'bot',r.t)});chatHist=k.hist||[];return true}catch(e){return false}}
   function chatChanges(host,changes){changes.forEach(function(c){var row=el('div','chg'),t=el('span','',c.action==='unlist'?'Off your list: '+c.name:c.action==='set'?c.name+': now '+(c.qty<=0?'none':amount(c.qty,c.unit))+' (was '+amount(c.prevQty,c.unit)+')':c.action==='list'?'On your list: '+c.name+(c.note?' ('+c.note+')':''):c.name+': '+(c.action==='low'?'running low':amount(c.prevQty,c.unit)+' \u2192 '+(c.qty<=0?'none':amount(c.qty,c.unit)))),u=el('button','mini','Undo');u.type='button';
       u.setAttribute('aria-label','Undo the change to '+c.name);if(c.action==='list'&&!c.created){t.textContent='Already on your list: '+c.name;var more=el('button','mini','Add another');more.type='button';more.setAttribute('aria-label','Add another '+c.name+' to the list');
-        more.onclick=async function(){more.disabled=true;try{var r2=await api('/api/extras',{method:'POST',body:JSON.stringify({text:c.name,again:true})});t.textContent='On your list: '+(r2.text||c.name);more.remove();await refresh()}catch(er){more.disabled=false;if(er.code!=='locked')toast('Could not add that. Check your connection.')}};
+        more.onclick=async function(){more.disabled=true;try{var r2=await api('/api/extras',{method:'POST',body:JSON.stringify({text:c.name,again:true})});t.textContent='On your list: '+(r2.text||c.name);more.remove();await refresh()}catch(er){more.disabled=false;if(er.code!=='locked')toast(why(er,'Could not add that.'))}};
         row.append(t,more);host.append(row);return}
-      u.onclick=async function(){u.disabled=true;try{await takeBack(c);tell('undo',{said:(lastTurn&&lastTurn.text)||'',reply:t.textContent,route:'update'});cookUsed=cookUsed.filter(function(a){return a.name!==c.name});await refresh();var st=el('s','',t.textContent);t.textContent='';t.append(st);u.textContent='Undone'}catch(er){u.disabled=false;if(er.code!=='locked')toast('Could not undo that. Check your connection.')}};
+      u.onclick=async function(){u.disabled=true;try{await takeBack(c);tell('undo',{said:(lastTurn&&lastTurn.text)||'',reply:t.textContent,route:'update'});cookUsed=cookUsed.filter(function(a){return a.name!==c.name});await refresh();var st=el('s','',t.textContent);t.textContent='';t.append(st);u.textContent='Undone'}catch(er){u.disabled=false;if(er.code!=='locked')toast(why(er,'Could not undo that.'))}};
       row.append(t,u);host.append(row)})}
   /* suggestions: built from what is at home, the time of day and the last reply, never the same few lines twice */
   var tipSeen={},lastTurn=null,sent={},pending=null,cookUsed=[],wanted=null;
@@ -1431,12 +1518,12 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
       if(ch.some(function(c){return c.action==='use'&&c.qty<=0}))add(sent.__cooked?"What's on my list now?":'What can I cook tonight?',0);
       if(ch.some(function(c){return c.action==='list'}))add("What's on my list now?",1);
       if(ch.some(function(c){return c.action==='add'}))add('What should I use up first?',2);
-      if(named&&named.qty>0&&areaOf(named)==='Kitchen'&&!ch.length)add('What can I make with the '+lc(named.name)+'?',0);
+      if(named&&named.qty>0&&areaOf(named)==='Kitchen'&&!named.warn&&!ch.length)add('What can I make with the '+lc(named.name)+'?',0);
       if(named&&!ch.length&&(named.qty<=0||named.low||maybeLow(named)))add('Add '+lc(named.name)+' to the list',1);
       if(/not tracked|isn'?t tracked|don'?t (see|have)/i.test(lastTurn.reply||'')){var w=(lastTurn.text||'').replace(/^.*\b(have|got)\s+(any\s+)?/i,'').replace(/[?.!]+$/,'').trim();if(w&&w.split(' ').length<=4)add('Add '+lc(w)+' to the list',0)}
     }
     // 2. what the home needs right now
-    if(soon[0])add('What can I make with the '+lc(soon[0].name)+'?',3);
+    var cookable=soon.filter(function(i){return !i.warn&&areaOf(i)==='Kitchen'})[0];if(cookable)add('What can I make with the '+lc(cookable.name)+'?',3);
     if(soon[1])add('I used the '+lc(soon[1].name),6);
     if(low[0])add('We ran out of '+lc(pick(low).name),5);
     if(low[0])add('Are we low on '+lc(pick(low).name)+'?',7);
@@ -1462,7 +1549,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     pool.sort(by).slice(0,3).forEach(function(x){tipSeen[x.t]=(tipSeen[x.t]||0)+1;var b=el('button','mini',x.t);b.type='button';b.onclick=function(){chatSend({text:x.t},x.t)};box.append(b)})}
   function buddy(){return profile&&profile.buddy||'Tote'}
   function openChat(quiet){if($('chatDlg').open)return;if(!$('chatLog').firstChild){sent={};lastTurn=null;pending=null;cookUsed=[];wanted=null}$('chatH').textContent='What changed?';
-    if(!$('chatLog').firstChild)bubble('bot','Hi'+(me?' '+me:'')+", I'm "+buddy()+'. I keep an eye on the house. Tell me what you cooked, used or bought and I will keep everything up to date, or ask me what you have.');
+    if(!$('chatLog').firstChild&&!chatBack())bubble('bot','Hi'+(me?' '+me:'')+", I'm "+buddy()+'. I keep an eye on the house. Tell me what you cooked, used or bought and I will keep everything up to date, or ask me what you have.');
     chatTips();$('chatDlg').showModal();if(window.Tote&&Tote.mount($('toteChat'),84,buddy())){Tote.onTap=null;Tote.mood('happy');Tote.wave()}if(!quiet)$('chatText').focus()}
   $('chatDlg').addEventListener('close',function(){if(window.Tote)Tote.talk(false);render()});
   window.addEventListener('tote-ready',function(){if(!$('app').hidden)render()});
@@ -1477,12 +1564,12 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
             x.onclick=function(){tell('rejected',{said:(lastTurn&&lastTurn.text)||'',reply:a.name,route:'update',detail:'not this item'});pr=pr.filter(function(k){return k!==a});drawP();chatTips()};row.append(t,x);box.append(row)});
           var bar=el('div','chg'),yes=el('button','mini',pr.length?'Yes, update':'None of these'),no=el('button','mini','No');yes.type=no.type='button';
           yes.onclick=async function(){yes.disabled=no.disabled=true;if(!pr.length){box.textContent='';pending=null;bubble('bot','No problem. What went into it? You can tap one below or tell me.');lastTurn={text:'cooked',reply:'',changes:[]};chatTips();return}
-            try{var res=await api('/api/apply',{method:'POST',body:JSON.stringify({source:'voice',actions:pr.map(function(a){return {action:'use',name:a.name,quantity:a.quantity,unit:a.unit}})})});
+            try{var res=await api('/api/apply',{method:'POST',body:JSON.stringify({source:'text',actions:pr.map(function(a){return {action:'use',name:a.name,quantity:a.quantity,unit:a.unit}})})});
               box.textContent='';pending=null;var out=(res.changes||[]).filter(function(c){return c.qty<=0}).map(function(c){return c.name});
               var done=bubble('bot','Done, I took those off.'+(out.length?' You are now out of '+out.join(' and ')+', so it is on your list.':'')+' Enjoy your meal.');chatChanges(done,res.changes||[]);if(window.Tote)Tote.hop();
               (res.changes||[]).forEach(function(c){if(c.action==='use')cookUsed.push({name:c.name,quantity:Math.max(0.01,c.prevQty-c.qty)})});teachDish();
               lastTurn={resolved:'yes',out:out,text:'',reply:'',changes:res.changes||[]};await refresh();chatTips()}
-            catch(er){yes.disabled=no.disabled=false;if(er.code!=='locked')toast('Could not save that. Check your connection.')}};
+            catch(er){yes.disabled=no.disabled=false;if(er.code!=='locked')toast(why(er,'Could not save that.'))}};
           no.onclick=function(){tell('rejected',{said:(lastTurn&&lastTurn.text)||'',reply:pr.map(function(a){return a.name}).join(', '),route:'update',detail:'said no to the guess'});box.textContent='';pending=null;bubble('bot','No problem, I have not changed anything. What went into it? You can tap one below or tell me.');lastTurn={text:'cooked',reply:'',changes:[]};chatTips();$('chatText').focus()};
           if(pr.length)bar.append(yes,no);else bar.append(yes);box.append(bar);pending={pr:pr,yes:function(){yes.click()},no:function(){no.click()}}};drawP()}
       chatHist.push({role:'user',text:r.heard||payload.text||''},{role:'assistant',text:r.reply});
@@ -1491,11 +1578,11 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
       if(wanted){tell('wanted',{said:wanted.said,reply:wanted.reply,route:wanted.route,detail:saidNow});wanted=null}
       if(sent.__cooked)(r.changes||[]).forEach(function(c){if(c.action==='use')cookUsed.push({name:c.name,quantity:Math.max(0.01,c.prevQty-c.qty)})});
       if(/^that'?s (everything|all|it)\b/i.test(saidNow))teachDish();
-      if(!(r.proposal&&r.proposal.length)){var fb=el('button','fb','Not right?');fb.type='button';fb.setAttribute('aria-label','Tell Tote this reply was not right');
+      if(!(r.proposal&&r.proposal.length)){var fb=el('button','fb','Not right?');fb.type='button';fb.setAttribute('aria-label','Tell '+buddy()+' this reply was not right');
         fb.onclick=function(){fb.remove();tell('down',{said:saidNow,reply:r.reply,route:r.route||''});wanted={said:saidNow,reply:r.reply,route:r.route||''};bubble('bot','Thanks for telling me. I have noted it so I can do better. What should I have done?');$('chatText').focus()};wait.append(fb)}
       if(r.changes&&r.changes.length){if(window.Tote)Tote.hop();await refresh()}
     }catch(e){if(window.Tote)Tote.mood('oops');wait.textContent=e.code==='ai_quota'?COPY.ai_quota:e.code==='slow_down'?COPY.slow_down:e.code==='silent'?"I couldn't hear anything in that. Try again a little closer to the phone.":e.code==='offline'?'You seem to be offline. Nothing was changed.':e.code==='locked'?'':'I could not work that out just now. Nothing was changed. Try again in a moment.'}
-    if(window.Tote)Tote.talk(false);chatBusy=false;$('chatGo').disabled=false;chatTips();$('chatLog').scrollTop=$('chatLog').scrollHeight}
+    if(window.Tote)Tote.talk(false);chatBusy=false;$('chatGo').disabled=false;chatTips();chatKeep();$('chatLog').scrollTop=$('chatLog').scrollHeight}
   $('chatForm').addEventListener('submit',function(ev){ev.preventDefault();var t=$('chatText').value.trim();if(!t)return;$('chatText').value='';chatSend({text:t},t)});
   $('chatMic').onclick=function(){startRec()};
   /* dinner ideas: suggestions come from what is at home; "I cooked this" deducts the ingredients */
@@ -1513,12 +1600,12 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
       if(m.missing.length){var need=el('p','sub','You would also need '+m.missing.join(', ')+'.');li.append(need);
         var ad=el('button','mini','Add those to my list');ad.type='button';ad.onclick=async function(){ad.disabled=true;
           try{var kept=0;for(var i=0;i<m.missing.length;i++)if((await addToList(m.missing[i],true))==='kept')kept++;await refresh();ad.textContent=kept===m.missing.length?'Already on your list':'Added to your list'}
-          catch(e){ad.disabled=false;if(e.code!=='locked')toast('Could not add those. Check your connection.')}};acts.append(ad)}
+          catch(e){ad.disabled=false;if(e.code!=='locked')toast(why(e,'Could not add those.'))}};acts.append(ad)}
       yes.type='button';yes.style.minHeight='40px';yes.style.padding='8px 16px';
       yes.onclick=async function(){yes.disabled=true;
         try{var r=await api('/api/apply',{method:'POST',body:JSON.stringify({source:'cook',actions:m.uses.map(function(x){return {action:'use',name:x.name,quantity:x.quantity,unit:x.unit}})})});
           await refresh();$('mealDlg').close();showResult({kind:'cook',heard:'',store:''},r)}
-        catch(e){yes.disabled=false;if(e.code!=='locked')toast('Could not save that. Check your connection.')}};
+        catch(e){yes.disabled=false;if(e.code!=='locked')toast(why(e,'Could not save that.'))}};
       acts.prepend(yes);li.append(acts);ul.append(li)});
     $('mealDlg').showModal();
   }
