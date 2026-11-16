@@ -60,6 +60,7 @@ const LABEL = /check the label/i;
   r = await h.say('What can I pack for lunchboxes tomorrow?');
   check('"what can I pack for lunchboxes": a sandwich with peanut in the name is not offered', !OFFERS.test(r.reply) && WHY.test(r.reply) && LABEL.test(r.reply), r.reply);
   check('  ...and no sentence is left hanging ("Both are easy to grab")', !/^Both\b|\. Both\b/.test(r.reply), r.reply);
+  check('  ...and the pears in the same sentence are still suggested', /Bartlett Pears/.test(r.reply), r.reply);
 
   h = await home(LEO, 'A peanut butter sandwich with a pear would be quick. You also have Beef Hot Dogs, best before Saturday.');
   r = await h.say('I am starving, what can I eat right now?');
@@ -74,6 +75,14 @@ const LABEL = /check the label/i;
   r = await h.say('What can I have for breakfast?');
   check('an allergy of the whole home (tree nuts): almond granola is not offered', !/try the almond/i.test(r.reply) && /no tree nuts/.test(r.reply) && LABEL.test(r.reply), r.reply);
 
+  h = await home(LEO, 'You could make hot dogs with the Beef Hot Dogs, or pad thai with crushed peanuts if you pick up noodles.');
+  r = await h.say('What can I cook tonight?');
+  check('"hot dogs, or pad thai with crushed peanuts": the peanut idea goes, the hot dogs stay', !/pad thai|crushed/i.test(r.reply) && /Beef Hot Dogs/.test(r.reply) && /no peanuts/.test(r.reply) && LABEL.test(r.reply), r.reply);
+  h = await home(LEO, 'You have 3 pack of Peanut Butter Pretzel Sandwich and 1 lb of Bartlett Pears.');
+  r = await h.say('what do we have for snacks?');
+  check('asked about snacks, a list of what is at home is kept, with the reason to skip the sandwich', /^You have 3 pack of Peanut Butter Pretzel Sandwich and 1 lb of Bartlett Pears\./.test(r.reply) && WHY.test(r.reply) && LABEL.test(r.reply), r.reply);
+  r = await h.say('how many pretzel sandwiches are left in the cupboard?');
+  check('opposite: asked only how many are left, the count is given with nothing added', /3 pack of peanut butter pretzel sandwich/i.test(r.reply) && !/marked no|left out/.test(r.reply), r.reply);
   // the opposite: nothing clashes, so the model's answer goes through word for word
   const fine = 'You could pack Bartlett Pears and Beef Hot Dogs. Both are close to their best before date.';
   h = await home(LEO, fine);
