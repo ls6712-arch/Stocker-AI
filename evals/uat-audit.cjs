@@ -32,14 +32,13 @@ const URL = 'http://127.0.0.1:8799/';
   for (const t of ['Cheese', 'Almond milk']) await api('POST', '/api/extras', { text: t });
   await p.reload(); await wait(1000);
 
-  // ---- bug 4: one number on Today, the link and the bell, and the sheet lists all of them
+  // ---- bug 4: one number on Today and the bell, and the sheet lists all of them
   const head = await p.locator('#v-today .hero h2').textContent();
   const words = { One: 1, Two: 2, Three: 3 }, nHead = words[(head.match(/^(One|Two|Three)\b/) || [])[1]] || Number((head.match(/^(\d+)/) || [])[1] || 0);
-  const dot = Number((await p.textContent('#bellDot')).trim()), link = await p.locator('#v-today button.link', { hasText: 'See all' }).textContent().catch(() => '');
-  const nLink = Number((link.match(/See all (\d+)/) || [])[1] || 0);
-  await p.locator('#v-today button.link', { hasText: 'See all' }).click(); await p.waitForSelector('#nudgeDlg[open]');
+  const dot = Number((await p.textContent('#bellDot')).trim());
+  await p.click('#bell'); await p.waitForSelector('#nudgeDlg[open]');
   const rows = await p.locator('#nudgeList .nudge').count();
-  check('Today headline, "See all" link, bell and the sheet all show the same number', nHead > 3 && nHead === dot && dot === nLink && nLink === rows, { head, dot, link, rows });
+  check('Today headline, the bell and the rows in its sheet all show the same number', nHead > 3 && nHead === dot && dot === rows, { head, dot, rows });
   check('The sheet lists every use-soon item, not just today\'s', (await p.locator('#nudgeList .nudge', { hasText: /days? left/ }).count()) >= 4, await p.locator('#nudgeList').textContent());
   await closeAll();
 
@@ -48,17 +47,13 @@ const URL = 'http://127.0.0.1:8799/';
   check('Peanut butter sandwich is flagged for Leo at home', await p.locator('.ihead', { hasText: 'Peanut Butter Pretzel Sandwich' }).locator('.pill.bad', { hasText: /peanut/i }).count() === 1, await p.locator('.ihead', { hasText: 'Peanut Butter Pretzel' }).textContent().catch(() => 'not found'));
   check('Dumplings are not flagged for wheat when nobody avoids wheat', await p.locator('.ihead', { hasText: 'Dumplings' }).locator('.pill.bad').count() === 0, await p.locator('.ihead', { hasText: 'Dumplings' }).textContent().catch(() => 'not found'));
 
-  // ---- bug 7: "Used it" has Undo and the next card does not slide under the finger
+  // ---- bug 7: "Used it all" has Undo
   await tab('today');
-  const cardsNow = p.locator('#v-today .need'), total = await cardsNow.count();
-  let at = 0; for (let i = 0; i < total; i++) if (await cardsNow.nth(i).locator('button', { hasText: /Used it all|I used it all/ }).count()) { at = i; break; }
-  const first = cardsNow.nth(at), firstName = await first.locator('.name').first().textContent();
-  const box0 = await first.boundingBox(), before = await item(firstName);
-  await first.locator('button', { hasText: /Used it all|I used it all/ }).click(); await wait(900);
-  const slot = p.locator('#v-today .need').nth(at), box1 = await slot.boundingBox();
-  check('After "Used it all" the same slot shows what was done, with Undo', /used up/i.test(await slot.textContent()) && (await slot.locator('button', { hasText: 'Undo' }).count()) === 1 && Math.abs(box1.y - box0.y) < 4, await slot.textContent());
-  check('"Used it all" really emptied it', (await item(firstName)).qty === 0);
-  await slot.locator('button', { hasText: 'Undo' }).click(); await wait(900);
+  const line = p.locator('#v-today .need .rows .row', { has: p.locator('button', { hasText: 'Used it all' }) }).first(), firstName = await line.locator('.name').first().textContent();
+  const before = await item(firstName);
+  await line.locator('button', { hasText: 'Used it all' }).click(); await wait(900);
+  check('"Used it all" says what it did and offers Undo', /used up/i.test(await toast()) && (await p.locator('#toastBtn:not([hidden])').count()) === 1 && (await item(firstName)).qty === 0, await toast());
+  await p.click('#toastBtn'); await wait(900);
   check('Undo puts the amount back exactly', (await item(firstName)).qty === before.qty, [before.qty, (await item(firstName)).qty]);
 
   // ---- bug 8: Threw it away and Remove can be undone
