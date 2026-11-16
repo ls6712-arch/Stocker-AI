@@ -204,6 +204,12 @@ details.fold .in{display:flex;flex-direction:column;gap:14px;padding-top:8px}
 .need{background:var(--surface);border-radius:20px;padding:14px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:12px}
 .need .acts .btn{min-height:46px}
 .need .acts .btn.primary{flex:1}
+.need .rows{display:flex;flex-direction:column}
+.need .rows>.row{min-height:60px;border-top:1px solid var(--line)}.need .rows>.row:first-child{border-top:0}
+.need .rows .ico.pic{width:44px;height:44px;border-radius:12px}
+.need .rows .when{font-size:12.5px;font-weight:700;padding:2px 8px;border-radius:999px;white-space:nowrap}
+.need h3{font-size:1.15rem}
+.tab:focus:not(:focus-visible){outline:0}.tab:focus-visible{outline:2px solid var(--accent);outline-offset:-6px;border-radius:14px}
 .need .kicker{font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
 .welcome{display:flex;flex-direction:column;gap:12px}
 .filebtn{position:relative;overflow:hidden}
@@ -749,7 +755,9 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     if(ess.length)return "We're out of "+ess[0].name.toLowerCase()+". I've put it on the list.";
     if(now.length)return 'The '+now[0].name.toLowerCase()+(now.length>1?' and '+(now.length-1)+' more want':' wants')+' using today.';
     if(gone.length)return gone.length===1?'The '+gone[0].name.toLowerCase()+' has gone past its date. Worth a look.':gone.length+' things have gone past their date. Worth a look.';
-    if(n)return 'I spotted '+n+(n===1?' thing that needs you.':' things that need you.');
+    var soon=use.filter(function(i){return expiry(i).d>0});
+    if(soon.length)return 'The '+soon[0].name.toLowerCase()+(soon.length>1?' and '+(soon.length===2?'the '+soon[1].name.toLowerCase():(soon.length-1)+' more'):'')+(soon.length>1?' want':' wants')+' using in the next few days.';
+    if(n)return n===1?'One thing to look at, then you are done.':'A few quick taps and you are done.';
     return "Everything's in order. I'll keep watching."}
   window.addEventListener('offline',function(){$('offline').hidden=false});window.addEventListener('online',function(){$('offline').hidden=true;if(!$('app').hidden)refresh().catch(function(){})});
   if(navigator.onLine===false)$('offline').hidden=false;
@@ -795,7 +803,6 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
   function fresh(it){var s=parse(it.bought||it.added),e=parse(it.expiry);if(!s||!e||e<=s||it.qty<=0)return null;return Math.max(0,Math.min(1,(today()-s)/(e-s)))}
 
   /* ---- views ---- */
-  function itemRow(it,right){var r=el('div','row'),g=el('div','grow');r.append(iconFor(it));g.append(el('div','name',it.name));r.append(g);if(right)r.append(right);return {row:r,grow:g}}
   function emptyCard(cat,title,text,btn,fn){var c=el('div','empty');c.append(catIcon(cat),el('h2','',title),el('p','sub',text));
     if(btn){var b=el('button','btn primary',btn);b.type='button';b.onclick=fn;c.append(b)}return c}
 
@@ -823,29 +830,33 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
   function cap(t){return t.charAt(0).toUpperCase()+t.slice(1)}
   function patchItem(it,body,msg){return async function(){try{await api('/api/items/'+it.id,{method:'PATCH',body:JSON.stringify(body)});await refresh();toast(msg)}catch(er){if(er.code!=='locked')toast('Could not save that. Check your connection.')}}}
   function btn(cls,label,fn){var b=el('button',cls,label);b.type='button';b.onclick=async function(){b.disabled=true;try{await fn()}finally{b.disabled=false}};return b}
-  function needCards(use,buy){var out=[];
-    use.forEach(function(it){var e=expiry(it);out.push({p:e.d<0?0:e.d===0?1:4,it:it,k:'use'})});
-    buy.filter(function(i){return i.essential&&i.qty<=0}).forEach(function(it){out.push({p:2,it:it,k:'out'})});
-    items.filter(function(i){return i.unsure&&i.qty>0}).forEach(function(it){out.push({p:3,it:it,k:'many'})});
-    items.filter(function(i){return i.warn&&i.qty>0}).forEach(function(it){out.push({p:3.5,it:it,k:'warn'})});
-    items.filter(maybeLow).forEach(function(it){out.push({p:5,it:it,k:'low'})});
-    var rest=buy.filter(function(i){return !(i.essential&&i.qty<=0)}).length+extras.length;if(rest)out.push({p:6,k:'list',n:rest});
-    return out.sort(function(a,b){return a.p-b.p})}
-  function needCard(c){var card=el('div','need'),it=c.it;
-    function head(pillCls,pillText,line){var x=itemRow(it);if(pillText){var nm=x.grow.firstChild,w=el('div','row');w.style.gap='8px';w.style.flexWrap='wrap';nm.remove();w.append(nm,el('span','pill '+pillCls,pillText));x.grow.append(w)}if(line)x.grow.append(el('div','sub',line));card.append(x.row)}
-    var acts=el('div','acts');
-    if(c.k==='use'){var e=expiry(it),kit=areaOf(it)==='Kitchen';
-      head(e.cls||'warn',e.d<0?'Past its date':e.text,e.d<0?'Went past its date. Worth a look.':kit?'Use it soon, or freeze it.':'Best before '+fmt(it.expiry)+'.');
-      if(e.d<0){acts.append(btn('btn primary','Threw it away',patchItem(it,{binned:true},'Noted. It will not be put on your list.')),btn('btn','Used it',patchItem(it,{qty:0,out:true},'Marked as used up.')))}
-      else if(kit&&items.filter(function(i){return areaOf(i)==='Kitchen'&&i.qty>0}).length>=2){acts.append(btn('btn primary','Show me a dish with it',cookIdeas),btn('btn','Used it',patchItem(it,{qty:0,out:true},'Marked as used up.')))}
-      else acts.append(btn('btn primary','I used it up',patchItem(it,{qty:0,out:true},'Marked as used up.')))}
-    else if(c.k==='out'){head('bad','Out','An essential. It is on your list.');acts.append(btn('btn primary','Open my list',function(){go('list')}))}
-    else if(c.k==='many'){head('warn','How many?','I could not count these in your photo. Skip and I will count one.');card.append(howMany(it.id,it.name,function(){refresh().catch(function(){})}));return card}
-    else if(c.k==='warn'){head('bad','Check the label',cap(it.warn)+'. Read the pack before anyone eats it.');acts.append(btn('btn primary','Show me',function(){query=it.name;$('search').value=it.name;open[it.id]=true;go('pantry')}))}
-    else if(c.k==='low'){head('warn','My guess','It may be running low.'+(it.learned?' You buy it about every '+every(it.finish_days)+'.':''));
-      acts.append(btn('btn primary','Add to my list',function(){return remindAnswer([it],'add')}),btn('btn','Still have it',function(){return remindAnswer([it],'still')}))}
-    else if(c.k==='list'){var r=el('div','row'),g=el('div','grow');r.append(catIcon('Pantry'),g);g.append(el('div','name','Your list'),el('div','sub',c.n+(c.n===1?' thing to buy':' things to buy')));card.append(r);acts.append(btn('btn primary','Open my list',function(){go('list')}))}
-    card.append(acts);return card}
+  /* Today groups what needs a person into at most three cards, one per job: use these first, running out, check these.
+     The headline counts exactly what the bell counts, so the numbers never disagree. */
+  function whenPill(it){var e=expiry(it);return e.d<0?['bad','Past date']:e.d===0?['warn','Today']:e.d===1?['warn','Tomorrow']:['plain',e.d+' days']}
+  function groupCard(kicker,title,sub,rows,primary){var card=el('div','need'),hd=el('div');hd.append(el('div','kicker',kicker),el('h3','',title));if(sub)hd.append(el('div','sub',sub));card.append(hd);
+    if(rows&&rows.length){var box=el('div','rows');rows.forEach(function(r){box.append(r)});card.append(box)}if(primary){var acts=el('div','acts');acts.append(primary);card.append(acts)}return card}
+  function itemLine(it,pill,line,action){var r=el('div','row'),g=el('div','grow'),top=el('div','row');top.style.gap='8px';top.style.flexWrap='wrap';
+    top.append(el('span','name',it.name));if(pill)top.append(el('span','when pill '+pill[0],pill[1]));g.append(top);if(line)g.append(el('div','sub',line));r.append(iconFor(it),g);if(action)r.append(action);return r}
+  function todayCards(use,buy){var cards=[],kit=items.filter(function(i){return areaOf(i)==='Kitchen'&&i.qty>0}).length>=2;
+    if(use.length){var urgent=use.filter(function(i){return expiry(i).d<=0}),kitUse=use.filter(function(i){return areaOf(i)==='Kitchen'&&expiry(i).d>=0});
+      var rows=use.slice(0,4).map(function(it){var e=expiry(it);return itemLine(it,whenPill(it),'',e.d<0?btn('mini','Threw it away',patchItem(it,{binned:true},'Noted. It will not be put on your list.')):btn('mini','Used it',patchItem(it,{qty:0,out:true},'Marked as used up.')))});
+      if(use.length>4){var mr=btn('link','And '+(use.length-4)+' more at home',function(){stat='use';go('pantry')});mr.style.minHeight='44px';rows.push(mr)}
+      cards.push(groupCard(urgent.length?'Use today':'Use first',use.length===1?'The '+use[0].name.toLowerCase()+' goes first':urgent.length?'These go first':'Use these in the next few days','',rows,
+        kitUse.length&&kit?btn('btn primary block','Show me a dish with '+(kitUse.length===1?'it':'them'),cookIdeas):null))}
+    var outE=buy.filter(function(i){return i.essential&&i.qty<=0}),low=items.filter(maybeLow).sort(function(a,b){return plan(a).days-plan(b).days}),listN=buy.length+extras.length;
+    if(outE.length||low.length){var rr=[];
+      outE.slice(0,3).forEach(function(it){rr.push(itemLine(it,['bad','Out'],'An essential. It is on your list.'))});
+      low.slice(0,3).forEach(function(it){rr.push(itemLine(it,['warn','My guess'],it.learned?'You buy it about every '+every(it.finish_days):'May be running low',btn('mini','Add',function(){return remindAnswer([it],'add')})))});
+      cards.push(groupCard('Running out',outE.length?"Don't run out":'These may be running low',listN?'Your list has '+listN+(listN===1?' thing.':' things.'):'',rr,listN?btn('btn primary block','Open my list',function(){go('list')}):null))}
+    var warn=items.filter(function(i){return i.warn&&i.qty>0}),many=items.filter(function(i){return i.unsure&&i.qty>0});
+    if(warn.length||many.length){var cr=[];
+      many.slice(0,2).forEach(function(it){var w=el('div');w.style.padding='8px 0';w.append(itemLine(it,['warn','How many?'],'I could not count these in your photo.'),howMany(it.id,it.name,function(){refresh().catch(function(){})}));cr.push(w)});
+      warn.slice(0,3).forEach(function(it){cr.push(itemLine(it,['bad','Check label'],cap(it.warn)+'.',btn('mini','Show',function(){query=it.name;$('search').value=it.name;open[it.id]=true;go('pantry')})))});
+      cards.push(groupCard('Check these',warn.length?'Read the label before anyone eats these':'Tell me how many','',cr,null))}
+    if(!use.length&&kit){var dr=el('div','row'),dg=el('div','grow');dr.append(catIcon('Pantry'),dg);dg.append(el('div','sub','Ideas from what you have, using what goes off first.'));
+      cards.push(groupCard('Dinner idea','What can I cook tonight?','',[dr],btn('btn primary block','See ideas',cookIdeas)))}
+    if(!cards.length&&listN)cards.push(groupCard('Your list',listN+(listN===1?' thing to buy':' things to buy'),'',[],btn('btn primary block','Open my list',function(){go('list')})));
+    return cards.slice(0,3)}
   function doneCard(v){if(!doneInfo||!done.length)return;
     var c=el('div','need'),hd=el('div','row'),g=el('div','grow');hd.append(g);g.append(el('h3','',doneInfo.title),el('div','sub',doneInfo.sub));c.append(hd);
     if(doneInfo.heard){var hp=el('p','heard',doneInfo.heard);c.append(hp)}
@@ -864,11 +875,11 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
   function renderToday(){
     var v=$('v-today');v.textContent='';
     var use=items.filter(needsUse).sort(function(a,b){return expiry(a).d-expiry(b).d}),buy=items.filter(needsBuy).sort(function(a,b){return plan(a).days-plan(b).days});
-    var cards=needCards(use,buy),n=cards.filter(function(c){return c.k!=='list'}).length,hero=el('div','hero'),top=el('div');
+    var n=nudges().length,hero=el('div','hero'),top=el('div');
     var part=profile?(profile.members||[]).filter(function(m){return m.when}):[];
     top.append(el('span','hpill',!items.length?'Hello':buddy()+' is keeping watch'));top.lastChild.style.minHeight='0';top.lastChild.style.padding='4px 12px';top.lastChild.style.fontSize='12.5px';top.lastChild.style.display='inline-block';
     var words=['','One thing','Two things','Three things'];
-    top.append(el('h2','',!items.length?'Hi'+(me?' '+me:'')+', I’m '+buddy()+'.':n?(words[n]||n+' things')+(n===1?' wants':' want')+' you today':"You're all set"));top.lastChild.style.marginTop='8px';
+    top.append(el('h2','',!items.length?'Hi'+(me?' '+me:'')+', I’m '+buddy()+'.':n?(words[n]||n+' things')+(n===1?' needs':' need')+' you':"Nothing urgent today"));top.lastChild.style.marginTop='8px';
     top.append(el('p','says',!items.length?'Let’s see what you have. One photo is enough to start.':toteLine(use,buy,n)));
     var hr=el('div','herorow'),th=el('div','totehost');th.id='toteHome';hr.append(top,th);hero.append(hr);
     if(window.Tote&&!$('chatDlg').open){Tote.onTap=openChat;Tote.mood(!items.length?'happy':use.some(function(i){return expiry(i).d<=0})||buy.some(function(i){return i.essential&&i.qty<=0})?'alert':'happy');Tote.mount(th,112,buddy()+', your helper. Tap to talk.')}
@@ -880,10 +891,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
         b.onclick=async function(){m.away=!m.away;render();try{var r=await api('/api/profile',{method:'POST',body:JSON.stringify(profile)});profile=r.profile;render();toast(m.away?m.name+' is away this week.':m.name+' is home this week.')}
           catch(e){m.away=!m.away;render();if(e.code!=='locked')toast('Could not save that. Check your connection.')}};wc.append(b)});
       wh.append(wc);v.append(wh)}
-    var shown=cards.slice(0,3);shown.forEach(function(c){v.append(needCard(c))});
-    if(shown.length<3&&items.filter(function(i){return areaOf(i)==='Kitchen'&&i.qty>0}).length>=2){var dc=el('div','need'),r=el('div','row'),g=el('div','grow');r.append(catIcon('Pantry'),g);
-      g.append(el('div','kicker','Dinner idea'),el('div','name','What can I cook tonight?'),el('div','sub','Ideas that use up what goes off first'));dc.append(r);var da=el('div','acts');da.append(btn('btn primary','See ideas',cookIdeas));dc.append(da);v.append(dc)}
-    if(cards.length>3){var more=btn('link','See everything that needs you ('+cards.length+')',function(){openNudges()});more.style.minHeight='44px';more.style.alignSelf='flex-start';v.append(more)}
+    todayCards(use,buy).forEach(function(c){v.append(c)});
   }
 
   var stat='all';
