@@ -170,3 +170,15 @@ CREATE TABLE IF NOT EXISTS memo (
   used TEXT,
   bad INTEGER NOT NULL DEFAULT 0
 );
+
+-- Friends' homes. Each has a personal code (only its hash is kept) and its own copy of every table above, named h_<id>_<table>.
+-- The owner's home uses the tables above as they are.
+CREATE TABLE IF NOT EXISTS homes (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  code_hash TEXT NOT NULL UNIQUE,
+  made TEXT NOT NULL,
+  seen TEXT,
+  off INTEGER NOT NULL DEFAULT 0,
+  phones INTEGER NOT NULL DEFAULT 0
+);
