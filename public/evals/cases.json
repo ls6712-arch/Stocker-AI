@@ -1126,12 +1126,16 @@
      "replyNot": "\\d{4}-\\d{2}-\\d{2}"
     },
     {
-     "replyNot": "(cilantro|lettuce|mango|strawberr|corn|tomato|squash)(.*)(cilantro|lettuce|mango|strawberr|corn|tomato|squash)(.*)(cilantro|lettuce|mango|strawberr|corn|tomato|squash)(.*)(cilantro|lettuce|mango|strawberr|corn|tomato|squash)"
+     "replyMax": 300
     },
     {
-     "replyMax": 300
+     "replyMaxNames": [
+      "cilantro|lettuce|mango|strawberr|corn|tomato|squash",
+      3
+     ]
     }
-   ]
+   ],
+   "fixed": "2026-11-16: the check counted \"Cilantro\" named twice as two items; it now counts different items (at most 3)"
   },
   {
    "id": "cook-guess-asks",
@@ -6265,6 +6269,130 @@
      "maxCalls": 1
     }
    ]
+  },
+  {
+   "id": "cap-receipt-amounts",
+   "group": "Reading receipts",
+   "suite": "capability",
+   "kind": "receipt",
+   "text": "WHOLE FOODS MARKET\nORG WHL MILK 1GAL 5.99\nBNLS CHKN BRST 2.1LB 12.58\nBANANAS 2.35LB 1.39\nGRND BEEF 85/15 1.5LB 9.74\nTROPICANA OJ 52 FL OZ 4.99\nTOTAL 34.69",
+   "checks": [
+    {
+     "has": {
+      "action": "add",
+      "name": "milk",
+      "unit": "L",
+      "amount": [
+       3.5,
+       4
+      ]
+     }
+    },
+    {
+     "has": {
+      "action": "add",
+      "name": "chicken",
+      "unit": "lb",
+      "amount": [
+       2.1,
+       2.1
+      ]
+     }
+    },
+    {
+     "has": {
+      "action": "add",
+      "name": "banana",
+      "unit": "lb",
+      "amount": [
+       2.35,
+       2.35
+      ]
+     }
+    },
+    {
+     "has": {
+      "action": "add",
+      "name": "beef",
+      "unit": "lb",
+      "amount": [
+       1.5,
+       1.5
+      ]
+     }
+    },
+    {
+     "has": {
+      "action": "add",
+      "name": "orange juice|oj",
+      "amount": [
+       1.4,
+       1.6
+      ]
+     }
+    },
+    {
+     "count": [
+      5,
+      5
+     ]
+    }
+   ],
+   "note": "run 2 logged 1GAL milk as 1 g and 2.1 LB chicken as 1 lb; no check was looking"
+  },
+  {
+   "id": "cap-receipt-amounts-india",
+   "group": "Reading receipts",
+   "suite": "capability",
+   "kind": "receipt",
+   "text": "Blinkit order\nAmul Taaza Toned Milk 500 ml x 4 ₹ 108\nFresh Tomato (Desi) 1 kg ₹ 32\nOnion 2 kg ₹ 70\nAashirvaad Atta 5 kg ₹ 285",
+   "checks": [
+    {
+     "has": {
+      "action": "add",
+      "name": "milk",
+      "amount": [
+       1.9,
+       2.1
+      ],
+      "unit": "L"
+     }
+    },
+    {
+     "has": {
+      "action": "add",
+      "name": "tomato",
+      "amount": [
+       1,
+       1
+      ],
+      "unit": "kg"
+     }
+    },
+    {
+     "has": {
+      "action": "add",
+      "name": "onion",
+      "amount": [
+       2,
+       2
+      ],
+      "unit": "kg"
+     }
+    },
+    {
+     "has": {
+      "action": "add",
+      "name": "atta",
+      "amount": [
+       5,
+       5
+      ],
+      "unit": "kg"
+     }
+    }
+   ],
+   "note": "metric amounts and 'x 4' packs"
   }
  ]
 }
