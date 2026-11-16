@@ -10,7 +10,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { fileURLToPath, pathToFileURL } from 'url';
 
 const ROOT = fileURLToPath(new URL('../', import.meta.url));
-const NAMES = ['migrate', 'queueRun', 'stepRun', 'autoRuns', 'summarize', 'scorecard', 'health', 'gradeCheck', 'simApply', 'simRows', 'evalCase', 'evalCases', 'apply', 'bump', 'weekOf', 'onVoice', 'noteTurn', 'route', 'converse', 'chatAnswer', 'noFalseClaims', 'verbBefore', 'dropOrders'];
+const NAMES = ['migrate', 'queueRun', 'stepRun', 'autoRuns', 'summarize', 'scorecard', 'health', 'gradeCheck', 'simApply', 'simRows', 'evalCase', 'evalCases', 'apply', 'bump', 'weekOf', 'onVoice', 'noteTurn', 'route', 'converse', 'chatAnswer', 'noFalseClaims', 'verbBefore', 'dropOrders', 'lineAmount', 'enrich'];
 const src = fs.readFileSync(path.join(ROOT, 'src/index.js'), 'utf8');
 const tmp = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'tote-measure-')), 'agent.mjs');
 fs.writeFileSync(tmp, src + '\nexport { ' + NAMES.join(', ') + ' };\n');
@@ -238,6 +238,16 @@ async function finish(e, cap = 50) { let r; for (let i = 0; i < cap; i++) { r = 
   ok('grader: four different items is more than three', !T.gradeCheck({ replyMaxNames: names }, { reply: 'Cilantro, mango, corn and squash are all going off.' }, [], [])[0]);
   const r = { actions: [{ action: 'add', name: 'Chicken Breast', quantity: 1, unit: 'lb' }] };
   ok('grader: the amount on a receipt line is checked', !T.gradeCheck({ has: { name: 'chicken', unit: 'lb', amount: [2.1, 2.1] } }, r, [], [])[0] && T.gradeCheck({ has: { name: 'chicken', amount: [0.5, 1] } }, r, [], [])[0]);
+}
+
+// ---- receipt amounts (16 Nov): the line wins over the model's reading ----
+{
+  const cases = [['BNLS CHKN BRST 2.1LB 12.58', 2.1, 'lb'], ['ORG WHL MILK 1GAL 5.99', 3.8, 'L'], ['HORIZON 2% MILK HALF GAL 4.29', 1.9, 'L'], ['TROPICANA OJ 52 FL OZ 4.99', 1.54, 'L'],
+    ['Amul Taaza Toned Milk 500 ml x 4 ₹ 108', 2, 'L'], ['Fresh Tomato (Desi) 1 kg ₹ 32', 1, 'kg'], ['Haldiram Aloo Bhujia 400 g ₹ 95', 400, 'g'], ['Aashirvaad Atta 5 kg ₹ 285', 5, 'kg'], ['Chaokoh Coconut Milk 13.5 fl oz × 4 $7.96', 1.6, 'L']];
+  for (const [line, q, u] of cases) { const a = T.lineAmount(line); ok('amounts: ' + line, !!a && a.unit === u && Math.abs(a.quantity - q) < 0.05, a); }
+  for (const line of ['LG EGGS DZ 4.49', 'TOTAL 34.69', 'GRND BEEF 85/15 9.74', 'NISSIN CUP NOODLES 12CT 6.99']) ok('amounts: no amount read from "' + line + '"', T.lineAmount(line) === null, T.lineAmount(line));
+  const a = T.enrich({ action: 'add', name: 'Chicken Breast', quantity: 1, unit: 'lb', area: 'Kitchen', category: 'Meat', warn: '' }, null, 'WHOLE FOODS\nBNLS CHKN BRST 2.1LB 12.58\nBANANAS 2.35LB 1.39');
+  ok('amounts: the right line is found for each item', a.quantity === 2.1 && a.unit === 'lb', a);
 }
 
 // ---- the real cases file is well formed ----

@@ -635,8 +635,32 @@ function itemClash(name, p, diet) {
 function lineFor(text, name) {
   const words = normItem(name).split(' ').filter((w) => w.length > 2);
   let best = '', score = 0;
-  for (const l of String(text || '').split('\n')) { const n = ' ' + normItem(l) + ' ', s = words.filter((w) => n.includes(' ' + w + ' ') || n.includes(w)).length; if (s > score) { score = s; best = l; } }
-  return best;
+  let tie = false;
+  for (const l of String(text || '').split('\n')) { const n = ' ' + normItem(l) + ' ', s = words.filter((w) => n.includes(' ' + w + ' ') || n.includes(w)).length; if (s > score) { score = s; best = l; tie = false; } else if (s && s === score) tie = true; }
+  // two lines match equally well ("Whole Milk", "Milk Powder" for "Milk"): too unsure to read an amount from either
+  return tie || score * 2 < words.length ? '' : best;
+}
+// The amount on one receipt line, in a unit Tote keeps. Only weights and volumes: a count ("12CT", "x 4" on its own) is left
+// to the model. Prices have no unit, so they are never read as amounts.
+function lineAmount(line) {
+  const l = ' ' + String(line).toLowerCase().replace(/(\d),(\d)/g, '$1.$2') + ' ';
+  const m = l.match(/(\d+(?:\.\d+)?)\s*(fl\.? ?oz|lbs?|kg|kgs|gm?s?|grams?|oz|ltrs?|litres?|liters?|l|ml|gal|gallons?)(?![a-z])/);
+  const half = /\bhalf gal|\b1\/2 gal/.test(l);
+  if (!m && !half) return null;
+  let q = half ? 0.5 : Number(m[1]), u = half ? 'gal' : m[2].replace(/\./g, '');
+  const times = l.match(/(?:\bx\s*|×\s*)(\d{1,2})\b|\b(\d{1,2})\s*(?:x|×)\s/);
+  const n = times ? Number(times[1] || times[2]) : 1;
+  if (!(q > 0) || n > 24) return null;
+  q *= n;
+  const r = (v, d = 2) => Math.round(v * 10 ** d) / 10 ** d;
+  if (/^lbs?$/.test(u)) return { quantity: r(q), unit: 'lb' };
+  if (/^kgs?$/.test(u)) return { quantity: r(q), unit: 'kg' };
+  if (/^(gm?s?|grams?)$/.test(u)) return q >= 1000 ? { quantity: r(q / 1000), unit: 'kg' } : { quantity: r(q), unit: 'g' };
+  if (u === 'oz') return { quantity: r(q), unit: 'oz' };
+  if (/^fl ?oz$/.test(u)) return { quantity: r(q * 0.0296), unit: 'L' };
+  if (/^(gal|gallons?)$/.test(u)) return { quantity: r(q * 3.785, 1), unit: 'L' };
+  if (u === 'ml') return q >= 1000 ? { quantity: r(q / 1000), unit: 'L' } : { quantity: r(q), unit: 'ml' };
+  return { quantity: r(q), unit: 'L' };
 }
 // After the model: right place, sensible keeping time, warnings as a rule, and units a person would recognise.
 function enrich(a, profile, text) {
@@ -651,6 +675,9 @@ function enrich(a, profile, text) {
     else if (/\d\s*gal\b|\bgal\b|gallon/.test(l) || (!floz && a.quantity <= 4)) { a.quantity = Math.round(a.quantity * 3.785 * 10) / 10; a.unit = 'L'; }
     else if (floz) { a.quantity = Math.round(Number(floz[1]) * 0.0296 * 100) / 100; a.unit = 'L'; }
   }
+  // the amount printed on the receipt line wins over the model's reading of it: "2.1LB", "1GAL", "500 ml x 4", "52 FL OZ"
+  const amt = line ? lineAmount(line) : null;
+  if (amt && a.action === 'add') { a.quantity = amt.quantity; a.unit = amt.unit; }
   if (/^[^a-z]*$/.test(a.name) && /[A-Z]{3}/.test(a.name)) a.name = a.name.toLowerCase().replace(/\b\p{L}/gu, (c) => c.toUpperCase());
   if (it && a.action !== 'list') {
     a.area = it.area; a.category = FROZEN.test(normItem(a.name + ' ' + line)) && it.area === 'Kitchen' ? 'Frozen' : it.category;
