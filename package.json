@@ -8,7 +8,7 @@
     "deploy": "wrangler deploy",
     "db:init": "wrangler d1 execute pantry-keeper --remote --file=schema.sql",
     "golive": "wrangler deploy && wrangler secret put APP_PIN",
-    "test": "node evals/households.mjs && node evals/conversations.mjs && node --no-warnings evals/learning.mjs && node --no-warnings evals/measure.mjs && node --no-warnings evals/quickpath.mjs && node --no-warnings evals/delegate.mjs && node --no-warnings evals/acceptance.mjs && node --no-warnings evals/compete.mjs && node --no-warnings evals/world.mjs --check",
+    "test": "node evals/households.mjs && node evals/conversations.mjs && node --no-warnings evals/learning.mjs && node --no-warnings evals/measure.mjs && node --no-warnings evals/quickpath.mjs && node --no-warnings evals/delegate.mjs && node --no-warnings evals/acceptance.mjs && node --no-warnings evals/compete.mjs && node --no-warnings evals/less.mjs && node --no-warnings evals/world.mjs --check",
     "test:heldout": "node evals/conversations.mjs --corpus=evals/heldout",
     "track": "node --no-warnings evals/track.mjs",
     "test:pace": "node evals/pace.mjs",
@@ -19,7 +19,10 @@
     "test:world": "node --no-warnings evals/world.mjs --set=heldout2",
     "test:compete": "node --no-warnings evals/compete.mjs",
     "test:compete:fresh": "node --no-warnings evals/compete.mjs --heldout",
-    "test:compete:browser": "node evals/compete-audit.cjs"
+    "test:compete:browser": "node evals/compete-audit.cjs",
+    "test:less": "node --no-warnings evals/less.mjs",
+    "test:less:browser": "node evals/less-audit.cjs",
+    "test:less:sim": "node evals/less-sim/run.mjs"
   },
   "devDependencies": {
     "wrangler": "^4.162.0"
