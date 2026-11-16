@@ -45,7 +45,7 @@ button{cursor:pointer}
   position:sticky;top:0;background:var(--bg);z-index:4}
 .iconbtn{width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:var(--surface);display:grid;place-items:center}
 svg.i{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-main{flex:1;display:flex;flex-direction:column;gap:22px;padding:6px 0 calc(120px + env(safe-area-inset-bottom,0px))}
+main{flex:1;display:flex;flex-direction:column;gap:22px;padding:6px 0 calc(190px + env(safe-area-inset-bottom,0px))}
 .view{display:flex;flex-direction:column;gap:22px}
 .sec{display:flex;flex-direction:column;gap:10px}
 .sechead{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
@@ -64,9 +64,9 @@ input[type=text],input[type=password],input[type=number],input[type=date],input[
 .pill.plain{background:var(--surface2);color:var(--muted);border:1px solid var(--line)}
 
 /* hero */
-.hero{background:linear-gradient(150deg,var(--hero-a),var(--hero-b));color:var(--hero-fg);border-radius:26px;padding:22px 20px;display:flex;flex-direction:column;gap:18px;box-shadow:var(--shadow)}
+.hero{background:var(--hero-a);color:var(--hero-fg);border-radius:26px;padding:22px 20px;display:flex;flex-direction:column;gap:18px;box-shadow:var(--shadow)}
 .hero .day{font-size:13px;color:var(--hero-soft);font-weight:500}
-.hero h2{font-size:1.7rem;color:var(--hero-fg)}
+.hero h2{font-size:1.5rem;color:var(--hero-fg)}
 .hero p{color:var(--hero-soft)}
 .trio{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 .trio button{border:0;background:rgba(255,255,255,.12);color:var(--hero-fg);border-radius:16px;padding:12px 10px;text-align:left;display:flex;flex-direction:column;gap:2px}
@@ -95,12 +95,12 @@ input[type=text],input[type=password],input[type=number],input[type=date],input[
 #pantryList{gap:20px}
 .rooms{display:flex;gap:10px;overflow-x:auto;padding:2px 0 6px;scrollbar-width:none}
 .rooms::-webkit-scrollbar{display:none}
-.room{flex:none;width:122px;border:1px solid var(--line);background:var(--surface);border-radius:18px;padding:12px;display:flex;flex-direction:column;gap:3px;align-items:flex-start;text-align:left;min-height:118px}
+.room{flex:none;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 14px;display:flex;flex-direction:row;gap:6px;align-items:center;text-align:left;min-height:44px;white-space:nowrap}
+.room .ico{display:none}
 .room b{font-weight:600}
-.room>span{font-size:12.5px;color:var(--muted)}
-.room .ico{width:40px;height:40px;border-radius:12px;margin-bottom:4px}
-.room>span.pill{color:var(--warn);font-size:11.5px;padding:2px 8px;margin-top:2px}
-.room[aria-pressed="true"]{border-color:var(--accent);box-shadow:inset 0 0 0 1.5px var(--accent)}
+.room>span{font-size:13px;color:var(--muted)}
+.room>span.pill{color:var(--warn);font-size:11.5px;padding:2px 8px}
+.room[aria-pressed="true"]{background:var(--fg);border-color:var(--fg);color:var(--bg)}.room[aria-pressed="true"]>span:not(.pill){color:var(--bg)}
 .card.tight{padding:2px 14px;gap:0}
 .it+.it{border-top:1px solid var(--line)}
 .ihead{display:flex;align-items:center;gap:12px;width:100%;border:0;background:none;text-align:left;padding:10px 0;min-height:64px}
@@ -169,10 +169,35 @@ details.fold .in{display:flex;flex-direction:column;gap:14px;padding-top:8px}
 .tl li{display:flex;gap:12px;align-items:flex-start}
 
 /* tab bar */
-.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--surface);border-top:1px solid var(--line);
-  padding:6px max(8px,env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(8px,env(safe-area-inset-left,0px))}
-.tabbar .in{max-width:560px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr 76px 1fr 1fr;align-items:end}
-.tab{border:0;background:none;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 2px;font-size:11.5px;font-weight:600;color:var(--muted);min-height:52px;position:relative}
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:6}
+.tellwrap{background:var(--bg);padding:8px max(12px,env(safe-area-inset-right,0px)) 8px max(12px,env(safe-area-inset-left,0px))}
+.tabs{background:var(--surface);border-top:1px solid var(--line);padding:4px max(8px,env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(8px,env(safe-area-inset-left,0px))}
+.tabbar .in{max-width:560px;margin:0 auto;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));align-items:end}
+.tab{border:0;background:none;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 2px;font-size:13px;font-weight:600;color:var(--muted);min-height:56px;position:relative}
+.tab svg.i{width:26px;height:26px}
+.tab[aria-current="page"]{font-weight:700}
+.tellbar{max-width:536px;margin:0 auto;display:flex;align-items:center;gap:6px;height:56px;border-radius:28px;background:var(--surface);border:1px solid var(--line);box-shadow:0 6px 18px rgba(17,33,29,.10);padding:0 6px 0 6px}
+.tellbar .tellgo{flex:1;min-width:0;display:flex;align-items:center;gap:10px;border:0;background:none;text-align:left;color:var(--muted);font-size:15px;min-height:44px;padding:0 4px}
+.tellbar .tellgo .face{flex:none;width:36px;height:36px;border-radius:50%;background:var(--ok-bg);color:var(--accent);display:grid;place-items:center}
+.tellbar .tellgo .face svg{width:20px;height:20px}
+.tellbar .round{flex:none;width:44px;height:44px;border-radius:50%;border:0;background:var(--surface2);color:var(--fg);display:grid;place-items:center}
+.tellbar .round.go{background:var(--accent);color:var(--accent-fg)}
+.avatar{width:44px;height:44px;border-radius:50%;border:0;background:var(--accent);color:var(--accent-fg);font-family:var(--display);font-weight:800;font-size:18px}
+.menu{display:flex;flex-direction:column}
+.menu>button{display:flex;align-items:center;gap:14px;border:0;border-top:1px solid var(--line);background:none;text-align:left;min-height:60px;padding:0 4px;color:var(--fg)}
+.menu>button:first-child{border-top:0}
+.menu>button span{flex:1;display:flex;flex-direction:column}
+.menu>button span small{font-size:13px;color:var(--muted)}
+.homecard{display:flex;align-items:center;gap:12px;background:var(--surface2);border-radius:20px;padding:14px}
+.homecard>span:nth-child(2){flex:1;min-width:0;display:flex;flex-direction:column}
+.need{background:var(--surface);border-radius:20px;padding:14px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:12px}
+.need .acts .btn{min-height:46px}
+.need .acts .btn.primary{flex:1}
+.need .kicker{font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.welcome{display:flex;flex-direction:column;gap:12px}
+.filebtn{position:relative;overflow:hidden}
+.filebtn input{position:absolute;inset:0;opacity:0;width:100%;cursor:pointer}
+.filebtn:focus-within{outline:2px solid var(--accent);outline-offset:2px}
 .tab[aria-current="page"]{color:var(--accent)}
 .badge{position:absolute;top:4px;left:calc(50% + 6px);min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:var(--bad);color:#fff;font-size:11px;line-height:18px;text-align:center}
 .fab{justify-self:center;width:64px;height:64px;border-radius:50%;border:0;background:var(--accent);color:var(--accent-fg);display:grid;place-items:center;
@@ -213,9 +238,9 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
 .busy .box{background:var(--surface);border-radius:24px;padding:26px 24px;display:flex;flex-direction:column;gap:14px;align-items:center;text-align:center;max-width:300px}
 .doc{width:72px;height:88px;border-radius:10px;border:2px solid var(--accent);position:relative;overflow:hidden}
 .scanline{position:absolute;left:0;right:0;top:6px;height:3px;background:var(--accent)}
-.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(104px + env(safe-area-inset-bottom,0px));z-index:15;background:var(--fg);color:var(--bg);
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(170px + env(safe-area-inset-bottom,0px));z-index:15;background:var(--fg);color:var(--bg);
   border-radius:14px;padding:12px 16px;width:max-content;max-width:min(92vw,520px);font-size:14.5px;display:flex;gap:12px;align-items:center;box-shadow:var(--shadow)}
-.toast button{border:0;background:none;color:var(--bg);font-weight:700;text-decoration:underline;padding:4px}
+.toast button{border:0;background:none;color:var(--bg);font-weight:700;text-decoration:underline;padding:4px 8px;min-height:40px}
 .gate{min-height:100%;max-width:380px;margin:0 auto;display:flex;flex-direction:column;justify-content:center;gap:16px;padding:24px}
 .logo{width:72px;height:72px;border-radius:22px;background:var(--accent);color:var(--accent-fg);display:grid;place-items:center}
 .logo svg{width:38px;height:38px}
@@ -239,8 +264,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
 <div class="shell" id="app" hidden>
   <header class="appbar">
     <div><p class="sub" id="barDate"></p><h1 id="barTitle">Today</h1></div>
-    <div style="display:flex;gap:8px"><button type="button" class="iconbtn" id="bell" aria-label="Things that need you"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4zM10 20a2 2 0 0 0 4 0"/></svg><span class="dot" id="bellDot" hidden></span></button><button type="button" class="iconbtn" id="shareBtn" aria-label="Share with your household"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.300 2.700-6 6-6s6 2.700 6 6M16 5.200a3.200 3.200 0 0 1 0 5.600M17.500 14.300c2 .900 3.500 3 3.500 5.700"/></svg></button>
-    <button type="button" class="iconbtn" id="lockBtn" aria-label="Lock Stocker"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></button></div>
+    <div style="display:flex;gap:8px"><button type="button" class="iconbtn" id="bell" aria-label="Things that need you"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4zM10 20a2 2 0 0 0 4 0"/></svg><span class="dot" id="bellDot" hidden></span></button><button type="button" class="avatar" id="menuBtn" aria-label="Your household menu">S</button></div>
   </header>
   <div class="offline" id="offline" hidden role="status">You are offline. I am showing what I last knew, and changes will not save until you are back.</div>
   <main>
@@ -260,19 +284,24 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
 </div>
 
 <nav class="tabbar" id="tabbar" aria-label="Sections" hidden>
-  <div class="in">
-    <button type="button" class="tab" data-tab="today" aria-current="page"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11l8-7 8 7v9h-5v-6H9v6H4z"/></svg>Today</button>
-    <button type="button" class="tab" data-tab="pantry"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14v16H5zM5 10h14M5 15h14"/></svg>At home</button>
-    <button type="button" class="fab" id="fab" aria-label="Add to your home"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
-    <button type="button" class="tab" data-tab="list"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h2l2 10h9l2-7H8M10 20h.01M17 20h.01"/></svg>List<span class="badge" id="listBadge" hidden></span></button>
-    <button type="button" class="tab" data-tab="log"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.6 5.6 6 .8-4.4 4.2 1.1 6-5.3-3-5.3 3 1.1-6L3.4 9.400l6-.8z"/></svg>For you</button>
-  </div>
+  <div class="tellwrap"><div class="tellbar">
+    <button type="button" class="tellgo" id="tellOpen"><span class="face"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 8h14l-1.2 12.1a1 1 0 0 1-1 .9H7.2a1 1 0 0 1-1-.9zM9 8V6a3 3 0 0 1 6 0v2"/></svg></span><span id="tellText">Tell Tote what changed</span></button>
+    <button type="button" class="round" id="tellSnap" aria-label="Snap a receipt, your fridge or a barcode"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.5"/></svg></button>
+    <button type="button" class="round go" id="tellMic" aria-label="Talk to Tote"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
+  </div></div>
+  <div class="tabs"><div class="in">
+    <button type="button" class="tab" data-tab="today" aria-current="page"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>Today</button>
+    <button type="button" class="tab" data-tab="pantry"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>At home</button>
+    <button type="button" class="tab" data-tab="list"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h2l2.4 11.2a1 1 0 0 0 1 .8h8.9a1 1 0 0 0 1-.8L20 8H6.2M9 20h.01M17 20h.01"/></svg>List<span class="badge" id="listBadge" hidden></span></button>
+    <button type="button" class="tab" data-tab="log"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 8h14l-1.2 12.1a1 1 0 0 1-1 .9H7.2a1 1 0 0 1-1-.9zM9 8V6a3 3 0 0 1 6 0v2"/></svg><span id="toteTab">Tote</span></button>
+  </div></div>
 </nav>
 
 <dialog class="sheet" id="capDlg" aria-labelledby="capH">
   <div class="pad">
     <div class="grab"></div>
-    <h2 id="capH">Add to your home</h2>
+    <h2 id="capH">Snap, scan or type</h2>
+    <p class="sub">I save it straight away. Undo anything I get wrong.</p>
     <div class="tiles">
       <label class="tile"><span class="ico" style="--h:165"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6"/></svg></span><b>Scan a receipt</b><span>Photo of a receipt</span><input type="file" id="billFile" accept="image/*" title="" aria-label="Photograph a receipt"></label>
       <label class="tile"><span class="ico" style="--h:205"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h3l2-3h6l2 3h3v13H4z"/><circle cx="12" cy="13" r="3.500"/></svg></span><b>Snap what you have</b><span>Fridge, shelf or shopping bag</span><input type="file" id="shelfFile" accept="image/*" title="" aria-label="Photograph your fridge, a shelf or a shopping bag"></label>
@@ -281,16 +310,6 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
       <button type="button" class="tile wide" id="capType"><span class="ico" style="--h:35"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16zM13 7l4 4"/></svg></span><span style="display:flex;flex-direction:column;color:inherit"><b>Type or paste</b><span>A note, or an emailed receipt</span></span></button>
     </div>
     <button type="button" class="btn block" data-close>Cancel</button>
-  </div>
-</dialog>
-
-<dialog class="sheet" id="askDlg" aria-labelledby="askH">
-  <div class="pad">
-    <div class="grab"></div>
-    <h2 id="askH">Already on your list</h2>
-    <p id="askText"></p>
-    <button type="button" class="btn primary block" id="askYes">Add another</button>
-    <button type="button" class="btn block" id="askNo">Leave it as it is</button>
   </div>
 </dialog>
 
@@ -308,7 +327,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
   <div class="pad">
     <div class="grab"></div>
     <div class="chathead"><div class="totehost" id="toteChat"></div><div><h2 id="chatH">Talk to Tote</h2>
-    <p class="sub">Tell me what you are cooking, used up or bought and I will update your home. Or ask what you have.</p></div></div>
+    <p class="sub">Say it, snap it or type it. I do the rest.</p></div></div>
     <div class="chat" id="chatLog" role="log" aria-live="polite" aria-label="Conversation"></div>
     <div class="wrapchips" id="chatTips"></div>
     <form class="chatbar" id="chatForm">
@@ -316,6 +335,11 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
       <input type="text" id="chatText" maxlength="300" placeholder="Tell me what you used, bought or need" aria-label="Message" autocomplete="off">
       <button type="submit" class="btn primary" id="chatGo">Send</button>
     </form>
+    <div class="tiles" style="grid-template-columns:repeat(3,minmax(0,1fr))">
+      <button type="button" class="tile" id="chatSnap" style="min-height:92px;align-items:center;text-align:center"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.5"/></svg><b>Snap</b><span>Receipt or fridge</span></button>
+      <button type="button" class="tile" id="chatTalk" style="min-height:92px;align-items:center;text-align:center"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg><b>Talk</b><span>Say what changed</span></button>
+      <button type="button" class="tile" id="chatCode" style="min-height:92px;align-items:center;text-align:center"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5v14M7 5v14M11 5v14M14 5v14M17 5v14M20 5v14"/></svg><b>Barcode</b><span>Checks the label</span></button>
+    </div>
     <button type="button" class="btn block" data-close>Done</button>
   </div>
 </dialog>
@@ -377,7 +401,21 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     <button type="button" class="btn primary block" id="shareCopy">Copy link</button>
     <p class="sub" id="shareMe"></p>
     <button type="button" class="btn block" id="shareProf">Change your home profile</button>
-    <button type="button" class="btn block" id="bigText" aria-pressed="false">Larger text</button>
+    <button type="button" class="btn block" data-close>Close</button>
+  </div>
+</dialog>
+
+<dialog class="sheet" id="menuDlg" aria-labelledby="menuH">
+  <div class="pad">
+    <div class="grab"></div>
+    <div class="homecard"><span class="avatar" aria-hidden="true" id="menuMe" style="display:grid;place-items:center;flex:none;width:52px;height:52px">S</span><span><b id="menuH" style="font-size:18px">Your home</b><span class="sub" id="menuSub"></span></span><button type="button" class="mini" id="menuEdit">Edit</button></div>
+    <div class="menu">
+      <button type="button" id="menuShare"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.300 2.700-6 6-6s6 2.700 6 6M16 5.200a3.200 3.200 0 0 1 0 5.600M17.500 14.300c2 .900 3.500 3 3.500 5.700"/></svg><span><b>Share with your household</b><small>Everyone sees the same list</small></span></button>
+      <button type="button" id="bigText" aria-pressed="false"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 18 9 6l5 12M5.800 14h6.400M15 18l3-7.500 3 7.500M16 16h4"/></svg><span><b>Larger text</b><small id="bigSub">Off</small></span></button>
+      <button type="button" id="menuRemind"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4zM10 20a2 2 0 0 0 4 0"/></svg><span><b>Reminders and what I learned</b><small id="menuRemSub"></small></span></button>
+      <button type="button" id="menuScore"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span><b>How Tote is doing</b><small>Test scores, week by week</small></span></button>
+      <button type="button" id="lockBtn"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg><span><b>Lock Stocker</b><small>Ask for the passcode again</small></span></button>
+    </div>
     <button type="button" class="btn block" data-close>Close</button>
   </div>
 </dialog>
@@ -512,18 +550,6 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
   </div>
 </dialog>
 
-<dialog class="sheet" id="doneDlg" aria-labelledby="doneTitle">
-  <div class="pad">
-    <div class="grab"></div>
-    <h2 id="doneTitle">Added</h2>
-    <p class="sub" id="doneSub"></p>
-    <p class="heard" id="doneHeard" hidden></p>
-    <ul class="list" id="doneList"></ul>
-    <button type="button" class="btn primary block" id="doneOk">Done</button>
-    <button type="button" class="btn block" id="doneUndo">Undo all</button>
-  </div>
-</dialog>
-
 <div class="busy" id="busy" hidden role="status" aria-live="polite"><div class="box"><div class="totehost" id="toteBusy"></div><div class="doc" id="busyDoc"><div class="scanline"></div></div><b id="busyMsg">Reading</b><span class="sub">This can take up to a minute.</span></div></div>
 <div class="toast" id="toast" hidden role="status" aria-live="polite"><span id="toastMsg"></span><button type="button" id="toastBtn" hidden></button></div>
 
@@ -643,14 +669,13 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     var lines=WAIT[msg]||WAIT[Object.keys(WAIT).filter(function(k){return msg.indexOf(k)===0})[0]]||[msg],i=0;$('busyMsg').textContent=lines[0];
     waitTimer=setInterval(function(){i=Math.min(lines.length-1,i+1);$('busyMsg').textContent=lines[i]},3800);
     var live=window.Tote&&Tote.mount($('toteBusy'),128,buddy()+' is working');$('toteBusy').hidden=!live;$('busyDoc').hidden=!!live;if(live){Tote.onTap=null;Tote.mood('think')}}
-  /* adding to the list: if it is already there, ask instead of guessing */
-  function ask(text){return new Promise(function(done){var d=$('askDlg'),ans=false;$('askText').textContent=text;
-    $('askYes').onclick=function(){ans=true;d.close()};$('askNo').onclick=function(){d.close()};d.addEventListener('close',function(){done(ans)},{once:true});d.showModal()})}
+  /* adding to the list: if it is already there, say so, with one tap to add another (no sheet in the way) */
   async function addToList(text,quiet){var r=await api('/api/extras',{method:'POST',body:JSON.stringify({text:text})});
     if(!r.already)return 'added';if(quiet)return 'kept';
-    if(!(await ask(r.text+' is already on your shopping list. Do you want another one?')))return 'kept';
-    await api('/api/extras',{method:'POST',body:JSON.stringify({text:text,again:true})});return 'again'}
+    toast(r.text+' is already on your list.','Add another',async function(){try{await api('/api/extras',{method:'POST',body:JSON.stringify({text:text,again:true})});await refresh();toast(r.text+LISTMSG.again)}catch(e){if(e.code!=='locked')toast('Could not add that. Check your connection.')}});
+    return 'asked'}
   var LISTMSG={added:' is on your shopping list.',again:': one more on your shopping list.',kept:' is already on your list. Left as it is.'};
+  function listSaid(n,how){if(how!=='asked')toast(n+LISTMSG[how])}
   /* ---- reminders on this phone, and what the helper has learned ---- */
   var learnt={hour:17,hourLearned:false,muted:[],dishes:[],phones:0},reviewN=0,pushOn=false,swReg=null;
   var pushCan='serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window;
@@ -788,63 +813,77 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
         hb.onclick=function(){try{localStorage.setItem('stocker.starterHide','1')}catch(e){}render()};
         sh.append(el('h3','',pers().length===1?PERSONA[pers()[0]][0]+' staples':'Staples for your home'),hb);sc.append(sh,el('p','sub','A starter list picked for your kind of home. Tap what you want on your shopping list.'));
         var wc=el('div','wrapchips');picks.forEach(function(n){var b=el('button','mini','+ '+n);b.type='button';
-          b.onclick=async function(){b.disabled=true;try{var how=await addToList(n);await refresh();toast(n+LISTMSG[how])}catch(er){b.disabled=false;if(er.code!=='locked')toast('Could not add that. Check your connection.')}};wc.append(b)});
-        sc.append(wc);v.append(sc)}}
+          b.onclick=async function(){b.disabled=true;try{var how=await addToList(n);await refresh();listSaid(n,how)}catch(er){b.disabled=false;if(er.code!=='locked')toast('Could not add that. Check your connection.')}};wc.append(b)});
+        var all=el('button','btn primary block','Put these '+picks.length+' on my list');all.type='button';
+        all.onclick=async function(){all.disabled=true;try{var kept=0;for(var i=0;i<picks.length;i++)if((await addToList(picks[i],true))==='kept')kept++;await refresh();toast((picks.length-kept)+' added to your shopping list.')}catch(er){all.disabled=false;if(er.code!=='locked')toast('Could not add those. Check your connection.')}};
+        sc.append(wc,all);v.append(sc)}}
   }
+  /* Today: Tote first, then at most three things that want a person, each with one big button */
+  var doneInfo=null;
+  function cap(t){return t.charAt(0).toUpperCase()+t.slice(1)}
+  function patchItem(it,body,msg){return async function(){try{await api('/api/items/'+it.id,{method:'PATCH',body:JSON.stringify(body)});await refresh();toast(msg)}catch(er){if(er.code!=='locked')toast('Could not save that. Check your connection.')}}}
+  function btn(cls,label,fn){var b=el('button',cls,label);b.type='button';b.onclick=async function(){b.disabled=true;try{await fn()}finally{b.disabled=false}};return b}
+  function needCards(use,buy){var out=[];
+    use.forEach(function(it){var e=expiry(it);out.push({p:e.d<0?0:e.d===0?1:4,it:it,k:'use'})});
+    buy.filter(function(i){return i.essential&&i.qty<=0}).forEach(function(it){out.push({p:2,it:it,k:'out'})});
+    items.filter(function(i){return i.unsure&&i.qty>0}).forEach(function(it){out.push({p:3,it:it,k:'many'})});
+    items.filter(function(i){return i.warn&&i.qty>0}).forEach(function(it){out.push({p:3.5,it:it,k:'warn'})});
+    items.filter(maybeLow).forEach(function(it){out.push({p:5,it:it,k:'low'})});
+    var rest=buy.filter(function(i){return !(i.essential&&i.qty<=0)}).length+extras.length;if(rest)out.push({p:6,k:'list',n:rest});
+    return out.sort(function(a,b){return a.p-b.p})}
+  function needCard(c){var card=el('div','need'),it=c.it;
+    function head(pillCls,pillText,line){var x=itemRow(it);if(pillText){var nm=x.grow.firstChild,w=el('div','row');w.style.gap='8px';w.style.flexWrap='wrap';nm.remove();w.append(nm,el('span','pill '+pillCls,pillText));x.grow.append(w)}if(line)x.grow.append(el('div','sub',line));card.append(x.row)}
+    var acts=el('div','acts');
+    if(c.k==='use'){var e=expiry(it),kit=areaOf(it)==='Kitchen';
+      head(e.cls||'warn',e.d<0?'Past its date':e.text,e.d<0?'Went past its date. Worth a look.':kit?'Use it soon, or freeze it.':'Best before '+fmt(it.expiry)+'.');
+      if(e.d<0){acts.append(btn('btn primary','Threw it away',patchItem(it,{binned:true},'Noted. It will not be put on your list.')),btn('btn','Used it',patchItem(it,{qty:0,out:true},'Marked as used up.')))}
+      else if(kit&&items.filter(function(i){return areaOf(i)==='Kitchen'&&i.qty>0}).length>=2){acts.append(btn('btn primary','Show me a dish with it',cookIdeas),btn('btn','Used it',patchItem(it,{qty:0,out:true},'Marked as used up.')))}
+      else acts.append(btn('btn primary','I used it up',patchItem(it,{qty:0,out:true},'Marked as used up.')))}
+    else if(c.k==='out'){head('bad','Out','An essential. It is on your list.');acts.append(btn('btn primary','Open my list',function(){go('list')}))}
+    else if(c.k==='many'){head('warn','How many?','I could not count these in your photo. Skip and I will count one.');card.append(howMany(it.id,it.name,function(){refresh().catch(function(){})}));return card}
+    else if(c.k==='warn'){head('bad','Check the label',cap(it.warn)+'. Read the pack before anyone eats it.');acts.append(btn('btn primary','Show me',function(){query=it.name;$('search').value=it.name;open[it.id]=true;go('pantry')}))}
+    else if(c.k==='low'){head('warn','My guess','It may be running low.'+(it.learned?' You buy it about every '+every(it.finish_days)+'.':''));
+      acts.append(btn('btn primary','Add to my list',function(){return remindAnswer([it],'add')}),btn('btn','Still have it',function(){return remindAnswer([it],'still')}))}
+    else if(c.k==='list'){var r=el('div','row'),g=el('div','grow');r.append(catIcon('Pantry'),g);g.append(el('div','name','Your list'),el('div','sub',c.n+(c.n===1?' thing to buy':' things to buy')));card.append(r);acts.append(btn('btn primary','Open my list',function(){go('list')}))}
+    card.append(acts);return card}
+  function doneCard(v){if(!doneInfo||!done.length)return;
+    var c=el('div','need'),hd=el('div','row'),g=el('div','grow');hd.append(g);g.append(el('h3','',doneInfo.title),el('div','sub',doneInfo.sub));c.append(hd);
+    if(doneInfo.heard){var hp=el('p','heard',doneInfo.heard);c.append(hp)}
+    var ul=el('ul','list');doneRows(ul);c.append(ul);
+    var acts=el('div','acts'),ok=btn('btn primary','Done',function(){doneInfo=null;done=[];renderToday()}),un=btn('btn','Undo all',undoAll);acts.append(ok,un);c.append(acts);v.append(c)}
+  function welcome(v){
+    var w=el('div','card welcome');
+    var sn=el('label','btn primary block filebtn'),fi=el('input');fi.type='file';fi.accept='image/*';fi.setAttribute('aria-label','Photograph your fridge or a shelf');sn.append(icon('M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1zM12 10a3.500 3.500 0 1 0 0 7 3.500 3.500 0 0 0 0-7'),document.createTextNode('Snap your fridge'),fi);
+    var terms=el('p','sub','I list what I can see; you fix anything I got wrong. Starting accepts the photo reader’s terms once, so I will not ask again.'),rt=el('button','link','Read the terms');rt.type='button';rt.style.minHeight='44px';rt.style.alignSelf='flex-start';rt.style.marginTop='-10px';rt.onclick=function(){lastScan=null;$('licDlg').showModal()};
+    var row=el('div','acts'),rc=el('label','btn filebtn','Scan a receipt'),ri=el('input');ri.type='file';ri.accept='image/*';ri.setAttribute('aria-label','Photograph a receipt');rc.append(ri);rc.style.flex='1';
+    var tm=btn('btn','Just tell me',function(){openChat()});tm.style.flex='1';row.append(rc,tm);
+    [[fi,'shelf'],[ri,'bill']].forEach(function(x){x[0].addEventListener('change',function(){var f=x[0].files&&x[0].files[0];x[0].value='';if(!f)return;
+      (async function(){try{await api('/api/agree',{method:'POST'})}catch(e){if(e.code==='locked')return}
+        scan(async function(){return api('/api/scan/'+x[1],{method:'POST',body:JSON.stringify({image:await shrink(f)})})},x[1]==='shelf'?'Looking at the shelf':'Reading the bill')})()})});
+    w.append(sn,terms,rt,row);v.append(w);starterCard(v)}
   function renderToday(){
     var v=$('v-today');v.textContent='';
     var use=items.filter(needsUse).sort(function(a,b){return expiry(a).d-expiry(b).d}),buy=items.filter(needsBuy).sort(function(a,b){return plan(a).days-plan(b).days});
-    var n=nudges().length,hero=el('div','hero'),top=el('div');
-    top.append(el('p','day',today().toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric'})));
+    var cards=needCards(use,buy),n=cards.filter(function(c){return c.k!=='list'}).length,hero=el('div','hero'),top=el('div');
     var part=profile?(profile.members||[]).filter(function(m){return m.when}):[];
-    var hp=el('button','hpill',profileLine());hp.type='button';hp.setAttribute('aria-label','Your home profile: '+profileLine());hp.onclick=openProfile;
-    top.append(el('h2','',!items.length?'Nothing tracked yet':n?n+(n===1?' thing needs you':' things need you'):"You're all set"));
-    top.append(el('p','says',toteLine(use,buy,n)));
-    var hr=el('div','herorow'),th=el('div','totehost');th.id='toteHome';hr.append(top,th);hero.append(hp,hr);
-    if(window.Tote&&!$('chatDlg').open){Tote.onTap=openChat;Tote.mood(!items.length?'sleepy':use.some(function(i){return expiry(i).d<=0})||buy.some(function(i){return i.essential&&i.qty<=0})?'alert':'happy');Tote.mount(th,112,buddy()+', your helper. Tap to talk.')}
-    var trio=el('div','trio');[[items.length,'items','pantry'],[use.length,'use soon','today'],[buy.length+extras.length,'to buy','list']].forEach(function(s){
-      var b=el('button');b.type='button';b.append(el('b','',String(s[0])),el('span','',s[1]));b.onclick=function(){go(s[2])};trio.append(b)});
-    hero.append(trio);v.append(hero);
-    if(log.length){var l0=log[0],d0=new Date(l0.at),mins=Math.round((Date.now()-d0)/60000),ago=isNaN(d0)?'':mins<2?'just now':mins<60?mins+' min ago':mins<1440?Math.round(mins/60)+' h ago':Math.round(mins/1440)+' d ago';
-      var lt=el('button','latest','Latest: '+(l0.who?l0.who+' ':'')+l0.summary+(ago?', '+ago:'')+'.');lt.type='button';lt.setAttribute('aria-label','Latest activity. Open the full history.');lt.onclick=function(){go('log')};v.append(lt)}
+    top.append(el('span','hpill',!items.length?'Hello':buddy()+' is keeping watch'));top.lastChild.style.minHeight='0';top.lastChild.style.padding='4px 12px';top.lastChild.style.fontSize='12.5px';top.lastChild.style.display='inline-block';
+    var words=['','One thing','Two things','Three things'];
+    top.append(el('h2','',!items.length?'Hi'+(me?' '+me:'')+', I’m '+buddy()+'.':n?(words[n]||n+' things')+(n===1?' wants':' want')+' you today':"You're all set"));top.lastChild.style.marginTop='8px';
+    top.append(el('p','says',!items.length?'Let’s see what you have. One photo is enough to start.':toteLine(use,buy,n)));
+    var hr=el('div','herorow'),th=el('div','totehost');th.id='toteHome';hr.append(top,th);hero.append(hr);
+    if(window.Tote&&!$('chatDlg').open){Tote.onTap=openChat;Tote.mood(!items.length?'happy':use.some(function(i){return expiry(i).d<=0})||buy.some(function(i){return i.essential&&i.qty<=0})?'alert':'happy');Tote.mount(th,112,buddy()+', your helper. Tap to talk.')}
+    v.append(hero);
+    doneCard(v);
+    if(!items.length){welcome(v);return}
     if(part.length){var wh=el('div','card'),wc=el('div','wrapchips');wh.append(el('h3','',"Who's home this week?"),el('p','sub','Tap anyone who is away. I stretch how long things last and plan dinners for who is here.'));
       part.forEach(function(m){var b=el('button','chip',m.name+(m.away?', away':', home'));b.type='button';b.setAttribute('aria-pressed',m.away?'false':'true');b.setAttribute('aria-label',m.name+(m.away?', away this week':', home this week'));
         b.onclick=async function(){m.away=!m.away;render();try{var r=await api('/api/profile',{method:'POST',body:JSON.stringify(profile)});profile=r.profile;render();toast(m.away?m.name+' is away this week.':m.name+' is home this week.')}
           catch(e){m.away=!m.away;render();if(e.code!=='locked')toast('Could not save that. Check your connection.')}};wc.append(b)});
       wh.append(wc);v.append(wh)}
-    var talk=el('button','talk');talk.type='button';talk.append(icon('M9 3h6v11H9zM5 11a7 7 0 0 0 14 0M12 18v3'));
-    var tt=el('span');tt.append(el('b','','Talk to '+buddy()),el('span','sub','Say \u201cI\u2019m cooking pasta\u201d and I update what you have'));talk.append(tt);
-    talk.onclick=openChat;v.append(talk);
-    if(items.filter(function(i){return areaOf(i)==='Kitchen'&&i.qty>0}).length>=2){
-      var ck=el('button','talk');ck.type='button';ck.append(icon(POT));var ct=el('span');
-      ct.append(el('b','','What can I cook?'),el('span','sub','Dinner ideas that use up what goes off soonest'));ck.append(ct);ck.onclick=cookIdeas;v.append(ck)}
-    if(!items.length)starterCard(v);
-    if(!items.length){v.append(emptyCard('Pantry','Start with one photo','Photograph a receipt, a bathroom shelf or a cupboard, scan a barcode, or just say what you bought.','Add your first items',function(){$('capDlg').showModal()}));return}
-    var ess=buy.filter(function(i){return i.essential});buy=buy.filter(function(i){return !i.essential});
-    if(ess.length){var s0=el('div','sec');s0.append(el('h2','',"Don't run out"));var c0=el('div','card');
-      ess.forEach(function(it){var p=plan(it),x=itemRow(it,el('span','pill bad',it.qty<=0?'Out':it.low?'Low':'By '+fmt(p.date)));
-        x.grow.append(el('div','sub',it.qty<=0?'An essential, and you have none':'An essential, running low'));c0.append(x.row)});
-      s0.append(c0);v.append(s0)}
-    if(use.length){var s1=el('div','sec');s1.append(el('h2','','Use soon'));var c1=el('div','card');
-      use.forEach(function(it){var e=expiry(it),x=itemRow(it,el('span','pill '+e.cls,e.text));
-        x.grow.append(el('div','sub',e.d<0?'Went past its date '+(-e.d)+(e.d===-1?' day ago':' days ago'):'Best before '+fmt(it.expiry)));c1.append(x.row)});
-      s1.append(c1);v.append(s1)}
-    var unk=items.filter(function(i){return i.unsure&&i.qty>0});
-    if(unk.length){var s4=el('div','sec');s4.append(el('h2','','How many are there?'),el('p','sub','I saw these in your photo but could not count them. Tap a number, or skip and I will assume one.'));var c4=el('div','card');
-      unk.slice(0,5).forEach(function(it){var wrap=el('div','sec'),x=itemRow(it);wrap.style.gap='8px';wrap.append(x.row,howMany(it.id,it.name,function(){refresh().catch(function(){})}));c4.append(wrap)});
-      if(unk.length>5)c4.append(el('p','sub','and '+(unk.length-5)+' more in At home'));s4.append(c4);v.append(s4)}
-    var chk=items.filter(function(i){return i.warn&&i.qty>0});
-    if(chk.length){var s3=el('div','sec');s3.append(el('h2','','Check the label'),el('p','sub','These may not suit someone at home. I can miss things, so read the pack before anyone eats them.'));var c3=el('div','card');
-      chk.forEach(function(it){var x=itemRow(it);x.grow.append(el('div','sub',it.warn.charAt(0).toUpperCase()+it.warn.slice(1)));c3.append(x.row)});s3.append(c3);v.append(s3)}
-    if(buy.length){var s2=el('div','sec'),h=el('div','sechead'),lk=el('button','link','Open list');lk.type='button';lk.onclick=function(){go('list')};
-      h.append(el('h2','','Buy next'),lk);s2.append(h);var c2=el('div','card');
-      buy.slice(0,4).forEach(function(it){var x=itemRow(it,el('span','pill '+(it.qty<=0?'bad':'warn'),it.qty<=0?'Out':'Low'));
-        x.grow.append(el('div','sub',it.qty<=0?"You're out":'Running low'));c2.append(x.row)});
-      if(buy.length>4)c2.append(el('p','sub','and '+(buy.length-4)+' more on the list'));
-      s2.append(c2);v.append(s2)}
-    var sug=items.filter(maybeLow).length;
-    if(sug){var sb=el('button','talk');sb.type='button';sb.append(icon('M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 8v5M12 16h.01'));
-      var st=el('span');st.append(el('b','',sug+(sug===1?' thing might be running low':' things might be running low')),el('span','sub','My guess. Tap to check them.'));sb.append(st);sb.onclick=function(){go('list')};v.append(sb)}
+    var shown=cards.slice(0,3);shown.forEach(function(c){v.append(needCard(c))});
+    if(shown.length<3&&items.filter(function(i){return areaOf(i)==='Kitchen'&&i.qty>0}).length>=2){var dc=el('div','need'),r=el('div','row'),g=el('div','grow');r.append(catIcon('Pantry'),g);
+      g.append(el('div','kicker','Dinner idea'),el('div','name','What can I cook tonight?'),el('div','sub','Ideas that use up what goes off first'));dc.append(r);var da=el('div','acts');da.append(btn('btn primary','See ideas',cookIdeas));dc.append(da);v.append(dc)}
+    if(cards.length>3){var more=btn('link','See everything that needs you ('+cards.length+')',function(){openNudges()});more.style.minHeight='44px';more.style.alignSelf='flex-start';v.append(more)}
   }
 
   var stat='all';
@@ -864,6 +903,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     else if(it.low)sub.append(el('span','pill warn','Running low'));
     else if(e&&e.cls)sub.append(el('span','pill '+e.cls,e.text));
     else if(it.expiry)sub.append(document.createTextNode(it.expiry_est&&daysFrom(it.expiry)>=150&&areaOf(it)!=='Health'?'Keeps a long time':'Best before '+fmt(it.expiry)));
+    if(it.learned&&it.qty>0&&!it.low){var lp=el('span','','You buy it about every '+every(it.finish_days));lp.style.color='var(--accent)';lp.style.fontWeight='600';sub.append(lp)}
     if(it.warn)sub.append(el('span','pill bad','Check label: '+it.warn));
     if(it.unsure&&it.qty>0)sub.append(el('span','pill warn','How many?'));
     if(it.frozen)sub.append(el('span','pill plain','Frozen'));
@@ -968,8 +1008,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     var card=null,last=null;
     shown.forEach(function(it){var gn=gkey(it);
       if(gn!==last){last=gn;var li=el('li','sec'),hd=el('div','sechead'),n=shown.filter(function(x){return gkey(x)===gn}).length;
-        var ab=el('button','link','+ Add'),hr=el('span','row');ab.type='button';ab.style.padding='0';ab.setAttribute('aria-label','Add to '+gn);hr.style.gap='14px';
-        (function(a,k){ab.onclick=function(){openAdd(a,k)}})(areaOf(it),kindOf(it));hr.append(el('span','sub',String(n)),ab);hd.append(el('h2','',gn),hr);card=el('div','card tight');li.append(hd,card);ul.append(li)}
+        hd.append(el('h2','',gn),el('span','sub',String(n)));card=el('div','card tight');li.append(hd,card);ul.append(li)}
       card.append(itemBlock(it))});
   }
 
@@ -981,27 +1020,31 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     inp.type='text';inp.id='extraText';inp.maxLength=80;inp.style.flex='1';inp.placeholder='Add anything, like birthday candles';inp.setAttribute('aria-label','Add something to the list');
     add.type='submit';f.append(inp,add);
     f.addEventListener('submit',async function(ev){ev.preventDefault();var t=inp.value.trim();if(!t)return;
-      try{var how=await addToList(t);await refresh();if(how!=='added')toast(t+LISTMSG[how]);var n=$('extraText');if(n)n.focus()}
+      try{var how=await addToList(t);await refresh();if(how!=='added')listSaid(t,how);var n=$('extraText');if(n)n.focus()}
       catch(er){if(er.code!=='locked')toast(er.code==='full'?'The list is full. Tick a few things off first.':'Could not add that. Check your connection.')}});
     v.append(f);
     if(!count)v.append(emptyCard('Pantry','Nothing to buy','Things land here when you run out, say they are low, or add them yourself.'));
     function tick(label,fn){var ck=el('button','check');ck.type='button';ck.setAttribute('aria-label',label);ck.onclick=function(){if(!ck.firstChild)ck.append(icon('M6 12l4 4 8-9'));fn()};return ck}
-    if(extras.length){var se=el('div','sec'),ce=el('div','card');se.append(el('h2','','Added by hand'),ce);
-      extras.forEach(function(x){var r=el('div','row'),g=el('div','grow');g.append(el('div','name',x.text));if(x.who)g.append(el('div','sub','Added by '+x.who));
-        r.append(tick('Mark '+x.text+' as bought',async function(){try{await api('/api/extras/'+x.id,{method:'DELETE'});await refresh()}catch(er){if(er.code!=='locked')toast('Could not save that. Check your connection.')}}),g);ce.append(r)});
+    if(count){var top=el('div','acts'),so=el('button','btn primary','Order online'),cp=el('button','btn','Copy the list');so.type=cp.type='button';so.style.flex=cp.style.flex='1';
+      so.onclick=function(){openShop(extras.map(function(x){return x.text}).concat(buy.map(function(i){return i.name})))};
+      cp.onclick=function(){var text='Shopping list\n'+extras.map(function(x){return '- '+x.text}).concat(buy.map(function(i){return '- '+i.name+(i.store?' ('+i.store+')':'')})).join('\n');
+        try{navigator.clipboard.writeText(text).then(function(){toast('Shopping list copied.')},function(){toast(text.replace(/\n/g,'  '))})}catch(e){toast(text.replace(/\n/g,'  '))}};
+      top.append(so,cp);v.append(top)}
+    var order=Object.keys(AREA);
+    function aisle(it){var a=areaOf(it),k=kindOf(it);return a==='Kitchen'?(k==='Other'?'Kitchen':kindLabel(k)):roomLabel(a)}
+    function aord(it){var a=areaOf(it),ki=ROOM_CATS[a].indexOf(it.category);return order.indexOf(a)*100+(ki<0?99:ki)}
+    buy.sort(function(a,b){return aord(a)-aord(b)||plan(a).days-plan(b).days});
+    var c=null,last=null;
+    buy.forEach(function(it){var p=plan(it),ai=aisle(it);
+      if(ai!==last){last=ai;var sec=el('div','sec');c=el('div','card tight');sec.append(el('p','grp',ai),c);v.append(sec)}
+      var why=it.qty<=0?(it.learned?'You ran out. You buy it about every '+every(it.finish_days):"You're out"):it.low?'Running low':p.days<=0?'My guess: about to run out':'My guess: out by '+fmt(p.date);
+      var r=el('div','row'),g=el('div','grow');r.style.minHeight='64px';g.append(el('div','name',fullName(it)),el('div','sub',(it.owner?it.owner+"'s. ":'')+why+(it.store?', last bought at '+it.store:'')));
+      r.append(iconFor(it),g,tick('Mark '+it.name+' as bought',function(){restock(it)}));c.append(r)});
+    if(extras.length){var se=el('div','sec'),ce=el('div','card tight');se.append(el('p','grp','Added by you'),ce);
+      extras.forEach(function(x){var r=el('div','row'),g=el('div','grow');r.style.minHeight='64px';g.append(el('div','name',x.text),el('div','sub',x.who?'Added by '+x.who:'Added by hand'));
+        r.append(catIcon('Other'),g,tick('Mark '+x.text+' as bought',async function(){try{await api('/api/extras/'+x.id,{method:'DELETE'});await refresh()}catch(er){if(er.code!=='locked')toast('Could not save that. Check your connection.')}}));ce.append(r)});
       v.append(se)}
-    var c=null,lastArea=null,order=Object.keys(AREA);
-    buy.sort(function(a,b){return order.indexOf(areaOf(a))-order.indexOf(areaOf(b))});
-    buy.forEach(function(it){var p=plan(it);
-      if(areaOf(it)!==lastArea){lastArea=areaOf(it);var sec=el('div','sec');c=el('div','card');sec.append(el('h2','',lastArea),c);v.append(sec)}
-      var r=el('div','row'),g=el('div','grow');g.append(el('div','name',fullName(it)),el('div','sub',(it.owner?it.owner+"'s. ":'')+(it.qty<=0?"You're out":it.low?'Running low':'Essential, runs out about '+fmt(p.date))+(it.store?', last bought at '+it.store:'')));
-      r.append(tick('Mark '+it.name+' as bought',function(){restock(it)}),g,iconFor(it));c.append(r)});
     if(count)v.append(el('p','sub','Tick something when you buy it. Tracked items are restocked at home.'));
-    var cp=el('button','btn block','Copy shopping list');cp.type='button';cp.onclick=function(){
-      var text='Shopping list\n'+extras.map(function(x){return '- '+x.text}).concat(buy.map(function(i){return '- '+i.name+(i.store?' ('+i.store+')':'')})).join('\n');
-      try{navigator.clipboard.writeText(text).then(function(){toast('Shopping list copied.')},function(){toast(text.replace(/\n/g,'  '))})}catch(e){toast(text.replace(/\n/g,'  '))}};
-    var so=el('button','btn block','Order online');so.type='button';so.onclick=function(){openShop(extras.map(function(x){return x.text}).concat(buy.map(function(i){return i.name})))};
-    if(count)v.append(cp,so);
     var sug=items.filter(maybeLow).sort(function(a,b){return plan(a).days-plan(b).days});
     if(sug.length){var ss=el('div','sec'),cs=el('div','card');ss.append(el('h2','','Might be running low'),el('p','sub','Going by your own pace where I know it, and a typical one where I do not. None of these are on your list unless you add them.'),cs);
       sug.forEach(function(it){var wrap=el('div','sec'),r=el('div','row'),g=el('div','grow'),acts=el('div','acts'),ad=el('button','mini','Add to list'),no=el('button','mini','Still have it');
@@ -1069,7 +1112,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
       list.forEach(function(n){var st=kitState(n),li=el('li','row'),g=el('span','grow');g.append(el('span','name',n));li.append(g);
         if(st==='home')li.append(el('span','pill ok','At home'));else if(st==='list')li.append(el('span','pill warn','On your list'));
         else{var b=el('button','mini','+ Add');b.type='button';b.setAttribute('aria-label','Add '+n+' to the shopping list');b.onclick=async function(){b.disabled=true;
-          try{var how=await addToList(n);await refresh();draw();if(how!=='added')toast(n+LISTMSG[how])}catch(e){b.disabled=false;if(e.code!=='locked')toast('Could not add that. Check your connection.')}};li.append(b)}
+          try{var how=await addToList(n);await refresh();draw();if(how!=='added')listSaid(n,how)}catch(e){b.disabled=false;if(e.code!=='locked')toast('Could not add that. Check your connection.')}};li.append(b)}
         ul.append(li)});
       var all=$('kitAll');all.hidden=!need.length;all.textContent='Add all '+need.length+' missing to my list';
       all.onclick=async function(){all.disabled=true;try{var kept=0;for(var i=0;i<need.length;i++)if((await addToList(need[i],true))==='kept')kept++;await refresh();draw();toast((need.length-kept)+' added to your shopping list.'+(kept?' '+kept+(kept===1?' was':' were')+' already there.':''))}
@@ -1081,6 +1124,18 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     var v=$('v-log');v.textContent='';
     var ps=pers().map(function(k){return ALIAS[k]||k}),mine=function(k){return k.p.some(function(x){return ps.indexOf(x)>-1})},kits=KITS.filter(function(k){return kitItems(k).length>=3&&(!k.p.length||!ps.length||mine(k)||ps.indexOf('other')>-1)})
       .sort(function(a,b){return mine(b)-mine(a)});
+    var kn=items.filter(function(i){return i.learned}).sort(function(a,b){return a.finish_days-b.finish_days}),sl=el('div','sec'),cl=el('div','card');
+    sl.append(el('h2','','What I have learned'),el('p','sub','Only from what you do: what you buy, what runs out, and how you answer me. Tap Fix if I have it wrong.'));
+    if(!kn.length&&!learnt.dishes.length)cl.append(el('p','sub','Nothing yet. Once you have bought the same thing twice I will know your pace, and remind you when it is due.'));
+    kn.slice(0,8).forEach(function(i){var r=el('div','row'),g=el('div','grow'),fx=el('button','mini','Fix');fx.type='button';fx.setAttribute('aria-label','Fix what I learned about '+i.name);
+      fx.onclick=function(){query=i.name;$('search').value=i.name;open[i.id]=true;go('pantry')};
+      g.append(el('div','name','You buy '+i.name.toLowerCase()+' about every '+every(i.finish_days)),el('div','sub',learnt.muted.indexOf(i.name_key)>-1?'Reminders off':'From your own shops'));r.append(iconFor(i),g,fx);cl.append(r)});
+    if(kn.length>8)cl.append(el('p','sub','And '+(kn.length-8)+' more.'));
+    if(learnt.dishes.length)cl.append(el('p','sub','Your dishes: '+learnt.dishes.slice(0,8).join(', ')+(learnt.dishes.length>8?' and '+(learnt.dishes.length-8)+' more':'')+'.'));
+    var rr=el('div','row'),rg=el('div','grow'),rb=el('button','mini',pushOn?'Turn off':'Turn on');rb.type='button';rb.id='pushBtn';rb.setAttribute('aria-label',(pushOn?'Turn off':'Turn on')+' reminders on this phone');
+    rg.append(el('div','name','Reminders on this phone'),el('div','sub',pushOn?'On. Around '+hourText(learnt.hour)+(learnt.hourLearned?', when you usually answer me':'')+', once a day at most, and only when something is due.':pushWhy()||'Off. I can tell you when something you buy regularly is due.'));
+    rb.onclick=async function(){rb.disabled=true;try{if(pushOn)await pushDisable();else await pushEnable()}catch(er){if(er.code!=='locked')toast('Could not change reminders. Check your connection and try again.')}rb.disabled=false};
+    rr.append(rg);if(pushOn||pushCan)rr.append(rb);cl.append(rr);var sc=el('div','row'),sg=el('div','grow'),sb=el('button','mini','Open');sb.type='button';sb.setAttribute('aria-label','Open how I am tested');sg.append(el('div','name','How I am doing'),el('div','sub','How I score on my tests, week by week, and where I still go wrong.'));sb.onclick=function(){location.href='/scorecard.html'};sc.append(sg,sb);cl.append(sc);sl.append(cl);v.append(sl);
     var sk=el('div','sec'),hd=el('div','sechead');hd.append(el('h2','',profile?(ps.length===1&&ps[0]!=='other'?'Curated for a '+PERSONA[ps[0]][0].toLowerCase():'Curated for your home'):'Curated kits'));
     if(!profile){var mk=el('button','link','Make it yours');mk.type='button';mk.onclick=openProfile;hd.append(mk)}
     sk.append(hd,el('p','sub','Checklists for real situations, checked against what you already have.'));
@@ -1091,16 +1146,6 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     sk.append(grid);v.append(sk);
     starterCard(v);spendCard(v);
     if(waste){var wc2=el('div','card');wc2.append(el('div','sub','Thrown away this month'),el('div','name',waste+(waste===1?' thing':' things')),el('p','sub','Tap Threw it away on anything you bin. I use it to suggest buying less of what gets wasted.'));v.append(wc2)}
-    var kn=items.filter(function(i){return i.learned}).sort(function(a,b){return a.finish_days-b.finish_days}),sl=el('div','sec'),cl=el('div','card');
-    sl.append(el('h2','','What I have learned'),el('p','sub','Only from what you do: what you buy, what runs out, and how you answer me. Change any of it under At home.'));
-    if(!kn.length&&!learnt.dishes.length)cl.append(el('p','sub','Nothing yet. Once you have bought the same thing twice I will know your pace, and remind you when it is due.'));
-    kn.slice(0,8).forEach(function(i){var r=el('div','row'),g=el('div','grow');g.append(el('div','name',i.name),el('div','sub','You buy it about every '+every(i.finish_days)+(learnt.muted.indexOf(i.name_key)>-1?'. Reminders off':'')));r.append(iconFor(i),g);cl.append(r)});
-    if(kn.length>8)cl.append(el('p','sub','And '+(kn.length-8)+' more.'));
-    if(learnt.dishes.length)cl.append(el('p','sub','Your dishes: '+learnt.dishes.slice(0,8).join(', ')+(learnt.dishes.length>8?' and '+(learnt.dishes.length-8)+' more':'')+'.'));
-    var rr=el('div','row'),rg=el('div','grow'),rb=el('button','mini',pushOn?'Turn off':'Turn on');rb.type='button';rb.id='pushBtn';rb.setAttribute('aria-label',(pushOn?'Turn off':'Turn on')+' reminders on this phone');
-    rg.append(el('div','name','Reminders on this phone'),el('div','sub',pushOn?'On. Around '+hourText(learnt.hour)+(learnt.hourLearned?', when you usually answer me':'')+', once a day at most, and only when something is due.':pushWhy()||'Off. I can tell you when something you buy regularly is due.'));
-    rb.onclick=async function(){rb.disabled=true;try{if(pushOn)await pushDisable();else await pushEnable()}catch(er){if(er.code!=='locked')toast('Could not change reminders. Check your connection and try again.')}rb.disabled=false};
-    rr.append(rg);if(pushOn||pushCan)rr.append(rb);cl.append(rr);var sc=el('div','row'),sg=el('div','grow'),sb=el('button','mini','Open');sb.type='button';sb.setAttribute('aria-label','Open how I am tested');sg.append(el('div','name','How I am doing'),el('div','sub','How I score on my tests, week by week, and where I still go wrong.'));sb.onclick=function(){location.href='/scorecard.html'};sc.append(sg,sb);cl.append(sc);sl.append(cl);v.append(sl);
     var sa=el('div','sec');sa.append(el('h2','','Recent activity'));
     if(!log.length){sa.append(el('p','sub','Every change is recorded here, with who made it and when.'));v.append(sa);return}
     var c=el('div','card'),ul=el('ul','tl');
@@ -1110,10 +1155,11 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
       li.append(ic,g);ul.append(li)});
     c.append(ul);sa.append(c);v.append(sa);
   }
-  var TITLES={today:'Today',pantry:'At home',list:'Shopping list',log:'For you'};
+  var TITLES={today:'Today',pantry:'At home',list:'Your list',log:'Tote'};
   function render(){renderToday();renderPantry();renderList();renderLog();
-    $('barDate').textContent=tab==='today'?'Stocker AI':today().toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});$('barTitle').textContent=TITLES[tab]}
-  var TABS=['today','pantry','list','log'],TITLE={today:'Today',pantry:'At home',list:'Shopping list',log:'For you'},scrollAt={},skipPop=0,byPop=false;
+    $('barDate').textContent=today().toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric'});$('barTitle').textContent=tab==='log'?buddy():TITLES[tab];
+    $('menuBtn').textContent=initial();$('tellText').textContent='Tell '+buddy()+' what changed';$('toteTab').textContent=buddy()}
+  var TABS=['today','pantry','list','log'],TITLE={today:'Today',pantry:'At home',list:'Your list',log:'Tote'},scrollAt={},skipPop=0,byPop=false;
   function go(t,how){if(TABS.indexOf(t)<0)t='today';var same=t===tab;if(!same)scrollAt[tab]=window.scrollY;tab=t;TABS.forEach(function(k){$('v-'+k).hidden=k!==t});
     document.querySelectorAll('.tab').forEach(function(b){if(b.dataset.tab===t)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current')});
     document.title=TITLE[t]+' \u00b7 Stocker AI';
@@ -1140,7 +1186,12 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
   /* ---- capture ---- */
   document.querySelectorAll('[data-close]').forEach(function(b){b.onclick=function(){b.closest('dialog').close()}});
   document.querySelectorAll('dialog.sheet').forEach(function(d){d.addEventListener('click',function(ev){if(ev.target===d)d.close()})});
-  $('fab').onclick=function(){if(!busy)$('capDlg').showModal()};
+  $('tellOpen').onclick=function(){if(!busy)openChat()};
+  $('tellSnap').onclick=function(){if(!busy)$('capDlg').showModal()};
+  $('tellMic').onclick=function(){if(busy)return;openChat();recMode='chat';startRec()};
+  $('chatSnap').onclick=function(){$('chatDlg').close();$('capDlg').showModal()};
+  $('chatTalk').onclick=function(){recMode='chat';startRec()};
+  $('chatCode').onclick=function(){$('chatDlg').close();$('capCode').click()};
   var draft=null,mem=null,memAt=-1,ui={more:{},adding:''};
   function redraw(){drawProfile();if(mem)drawMember()}
   /* a chip group: suggested options, anything the household added, and a plus chip to add their own */
@@ -1213,10 +1264,16 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     try{var r=await api('/api/profile',{method:'POST',body:JSON.stringify(draft)});profile=r.profile;try{localStorage.removeItem('stocker.starterHide')}catch(e){}var firstTime=!draft.had;$('profDlg').close();render();if(firstTime)say('Nice to meet you'+(me?', '+me:'')+'. I will keep an eye on things from here.','party');toast('Saved. Stocker is set up for '+(pers().length===1&&pers()[0]!=='other'?'a '+PERSONA[pers()[0]][0].toLowerCase():'your home')+'.')}
     catch(e){if(e.code!=='locked')toast('Could not save that. Check your connection.')}finally{$('profSave').disabled=false}};
   $('shareProf').onclick=openProfile;
-  function setBig(on){document.documentElement.classList.toggle('big',on);$('bigText').setAttribute('aria-pressed',on?'true':'false');$('bigText').textContent=on?'Larger text is on':'Larger text'}
+  function setBig(on){document.documentElement.classList.toggle('big',on);$('bigText').setAttribute('aria-pressed',on?'true':'false');$('bigSub').textContent=on?'On':'Off'}
   try{setBig(localStorage.getItem('stocker.big')==='1')}catch(e){}
   $('bigText').onclick=function(){var on=!document.documentElement.classList.contains('big');setBig(on);try{localStorage.setItem('stocker.big',on?'1':'0')}catch(e){}};
-  $('shareBtn').onclick=function(){$('shareLink').textContent=location.origin;$('shareMe').textContent=me?'You are signed in as '+me+'.':'';$('shareDlg').showModal()};
+  function initial(){return (me||'?').trim().charAt(0).toUpperCase()||'?'}
+  $('menuBtn').onclick=function(){$('menuMe').textContent=initial();$('menuH').textContent=me?me+'’s home':'Your home';$('menuSub').textContent=profileLine();
+    $('menuRemSub').textContent=pushOn?'Reminders are on':'Reminders are off';$('menuDlg').showModal()};
+  $('menuEdit').onclick=openProfile;
+  $('menuRemind').onclick=function(){$('menuDlg').close();go('log')};
+  $('menuScore').onclick=function(){location.href='/scorecard.html'};
+  $('menuShare').onclick=function(){$('menuDlg').close();$('shareLink').textContent=location.origin;$('shareMe').textContent=me?'You are signed in as '+me+'.':'';$('shareDlg').showModal()};
   $('shareCopy').onclick=function(){try{navigator.clipboard.writeText(location.origin).then(function(){toast('Link copied.')},function(){toast('Select the link and copy it.')})}catch(e){toast('Select the link and copy it.')}};
   try{$('who').value=localStorage.getItem('stocker.who')||''}catch(e){}
   var COPY={licence:'I need the vision model\u2019s licence accepted once before I can read photos.',
@@ -1383,7 +1440,7 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
     pool=pool.filter(function(x){return !sent[key(x.t)]&&!(sent.__cooked&&/^(i'?m cooking|what can i cook tonight|dinner ideas|what can i make in 20)/i.test(x.t))});
     pool.sort(by).slice(0,3).forEach(function(x){tipSeen[x.t]=(tipSeen[x.t]||0)+1;var b=el('button','mini',x.t);b.type='button';b.onclick=function(){chatSend({text:x.t},x.t)};box.append(b)})}
   function buddy(){return profile&&profile.buddy||'Tote'}
-  function openChat(){if($('chatDlg').open)return;if(!$('chatLog').firstChild){sent={};lastTurn=null;pending=null;cookUsed=[];wanted=null}$('chatH').textContent='Talk to '+buddy();
+  function openChat(){if($('chatDlg').open)return;if(!$('chatLog').firstChild){sent={};lastTurn=null;pending=null;cookUsed=[];wanted=null}$('chatH').textContent='What changed?';
     if(!$('chatLog').firstChild)bubble('bot','Hi'+(me?' '+me:'')+", I'm "+buddy()+'. I keep an eye on the house. Tell me what you cooked, used or bought and I will keep everything up to date, or ask me what you have.');
     chatTips();$('chatDlg').showModal();if(window.Tote&&Tote.mount($('toteChat'),84,buddy())){Tote.onTap=null;Tote.mood('happy');Tote.wave()}$('chatText').focus()}
   $('chatDlg').addEventListener('close',function(){if(window.Tote)Tote.talk(false);render()});
@@ -1444,38 +1501,35 @@ dialog.sheet .pad{padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px))
       acts.prepend(yes);li.append(acts);ul.append(li)});
     $('mealDlg').showModal();
   }
-  function drawDone(){
-    var ul=$('doneList');ul.textContent='';
-    done.forEach(function(c){
+  /* after a scan: a card on Today and a message with Undo, instead of a sheet in the way */
+  function doneRows(ul){
+    done.slice(0,6).forEach(function(c){
       var li=el('li','row'),g=el('div','grow'),x=el('button','iconbtn');
       g.append(el('div','name',c.name));if(c.warn)g.append(el('span','pill bad','Check label: '+c.warn));
       g.append(el('div','sub',c.action==='list'?(c.kept?'Already on your shopping list':'Added to your shopping list'+(c.note?', note: '+c.note:'')):c.action==='low'?'Marked as running low, added to your list':c.action==='use'?(c.qty<=0?'Marked as finished':'Now '+amount(c.qty,c.unit)+' left'):
-        (c.unsure?'I could not count these. How many?':amount(c.added,c.unit))+(c.expiry?' \u00b7 best before '+(c.est?'about ':'')+fmt(c.expiry):'')));
-      if(c.unsure&&c.created)g.append(howMany(c.id,c.name,function(n){c.unsure=false;c.added=c.qty=n;refresh().then(drawDone,drawDone)}));
+        (c.unsure?'I could not count these. How many?':amount(c.added,c.unit))+(c.expiry?' · best before '+(c.est?'about ':'')+fmt(c.expiry):'')));
+      if(c.unsure&&c.created)g.append(howMany(c.id,c.name,function(n){c.unsure=false;c.added=c.qty=n;refresh().catch(function(){})}));
       x.type='button';x.setAttribute('aria-label',"That's wrong, take back "+c.name);x.append(icon('M6 6l12 12M18 6L6 18'));
-      x.onclick=async function(){x.disabled=true;try{await takeBack(c);done=done.filter(function(k){return k!==c});await refresh();
-        if(done.length)drawDone();else{$('doneDlg').close();toast('Taken back. Nothing was changed.')}}
+      x.onclick=async function(){x.disabled=true;try{await takeBack(c);done=done.filter(function(k){return k!==c});if(!done.length)doneInfo=null;await refresh();if(!done.length)toast('Taken back. Nothing was changed.')}
         catch(e){x.disabled=false;if(e.code!=='locked')toast('Could not undo that. Try again.')}};
       li.append(iconFor(c),g,x);ul.append(li)});
+    if(done.length>6){var li2=el('li'),more=btn('link','See all '+done.length+' at home',function(){doneInfo=null;go('pantry')});more.style.minHeight='44px';li2.append(more);ul.append(li2)}
+  }
+  async function undoAll(){
+    try{for(var i=0;i<done.length;i++)await takeBack(done[i]);done=[];doneInfo=null;await refresh();toast('Undone. Everything is back to how it was.')}
+    catch(e){if(e.code!=='locked')toast('Could not undo everything. Check the At home tab.');try{await refresh()}catch(er){}}
   }
   function showResult(d,r){
     if(!r||!r.changes||!r.changes.length){
       toast(r&&r.missed&&r.missed.length?"I couldn't find "+r.missed.join(', ')+' in your things.':
-        d&&d.kind==='voice'&&d.heard?'I heard \u201c'+d.heard+'\u201d but found nothing to add or use.':"I couldn't find any items in that. Try a clearer photo, or tell me instead.");return}
+        d&&d.kind==='voice'&&d.heard?'I heard “'+d.heard+'” but found nothing to add or use.':"I couldn't find any items in that. Try a clearer photo, or tell me instead.");return}
     done=r.changes.slice();
-    var parts=[];if(r.added)parts.push('Added '+r.added+(r.added===1?' item':' items'));if(r.used||r.low)parts.push((r.added?'updated ':'Updated ')+((r.used||0)+(r.low||0)));
-    $('doneTitle').textContent=parts.join(', ');
-    $('doneSub').textContent=(d.store?'From '+d.store+'. ':'')+'Saved. Tap the cross on anything I got wrong.'+(r.missed&&r.missed.length?" I couldn't find "+r.missed.join(', ')+'.':'')+learntLine(r.changes);
-    $('doneHeard').hidden=!d.heard&&!d.label;$('doneHeard').textContent=d.heard?'\u201c'+d.heard+'\u201d':d.label?d.label.text:'';
-    drawDone();$('doneDlg').showModal();
+    var parts=[];if(r.added)parts.push('I added '+r.added+(r.added===1?' thing':' things'));if(r.used||r.low)parts.push((r.added?'updated ':'I updated ')+((r.used||0)+(r.low||0)));
+    var title=parts.join(', ')||'Done';
+    doneInfo={title:title,sub:(d.store?'From '+d.store+'. ':'')+'Saved. Tap the cross on anything I got wrong.'+(r.missed&&r.missed.length?" I couldn't find "+r.missed.join(', ')+'.':'')+learntLine(r.changes),
+      heard:d.heard?'“'+d.heard+'”':d.label?d.label.text:''};
+    go('today');window.scrollTo(0,0);toast(title+(d.store?' from '+d.store:'')+'.','Undo',undoAll);
   }
-  $('doneOk').onclick=function(){$('doneDlg').close()};
-  $('doneUndo').onclick=async function(){
-    $('doneUndo').disabled=true;
-    try{for(var i=0;i<done.length;i++)await takeBack(done[i]);done=[];await refresh();$('doneDlg').close();toast('Undone. Everything is back to how it was.')}
-    catch(e){if(e.code!=='locked')toast('Could not undo everything. Check the At home tab.');try{await refresh()}catch(er){}}
-    finally{$('doneUndo').disabled=false}
-  };
 
   async function start(){
     try{await refresh();$('gate').hidden=true;$('app').hidden=false;$('tabbar').hidden=false;go((location.hash||'').slice(1)||tab,'start');pushSync();
