@@ -6910,6 +6910,989 @@
      ]
     }
    ]
+  },
+  {
+   "id": "uat-allergy-lunchbox-no",
+   "group": "Allergies",
+   "suite": "capability",
+   "kind": "chat",
+   "offline": true,
+   "profile": {
+    "personas": [
+     "mom"
+    ],
+    "adults": 2,
+    "kids": 3,
+    "members": [
+     {
+      "name": "Leo",
+      "kind": "child",
+      "allergies": [
+       "Peanuts"
+      ]
+     }
+    ]
+   },
+   "inventory": [
+    {
+     "name": "Peanut Butter Pretzel Sandwich",
+     "qty": 6,
+     "unit": "pcs",
+     "category": "Snacks"
+    },
+    {
+     "name": "Apple Slices",
+     "qty": 4,
+     "unit": "pcs",
+     "category": "Produce"
+    },
+    {
+     "name": "Whole Milk",
+     "qty": 1,
+     "unit": "L",
+     "category": "Dairy"
+    },
+    {
+     "name": "Bread",
+     "qty": 1,
+     "unit": "pcs",
+     "category": "Bakery"
+    }
+   ],
+   "text": "Can I put the peanut butter pretzel sandwiches in Leo's lunchbox?",
+   "checks": [
+    {
+     "replyHas": "^No\\b"
+    },
+    {
+     "replyHas": "Leo"
+    },
+    {
+     "replyHas": "peanut"
+    },
+    {
+     "replyHas": "check the label"
+    },
+    {
+     "replyNot": "\\b(is|are|it's|its) safe\\b"
+    },
+    {
+     "count": [
+      0,
+      0
+     ]
+    },
+    {
+     "maxCalls": 0
+    }
+   ]
+  },
+  {
+   "id": "uat-allergy-lunchbox-other",
+   "group": "Allergies",
+   "suite": "capability",
+   "kind": "chat",
+   "offline": true,
+   "profile": {
+    "personas": [
+     "mom"
+    ],
+    "adults": 2,
+    "kids": 3,
+    "members": [
+     {
+      "name": "Leo",
+      "kind": "child",
+      "allergies": [
+       "Peanuts"
+      ]
+     }
+    ]
+   },
+   "inventory": [
+    {
+     "name": "Peanut Butter Pretzel Sandwich",
+     "qty": 6,
+     "unit": "pcs",
+     "category": "Snacks"
+    },
+    {
+     "name": "Apple Slices",
+     "qty": 4,
+     "unit": "pcs",
+     "category": "Produce"
+    },
+    {
+     "name": "Whole Milk",
+     "qty": 1,
+     "unit": "L",
+     "category": "Dairy"
+    },
+    {
+     "name": "Bread",
+     "qty": 1,
+     "unit": "pcs",
+     "category": "Bakery"
+    }
+   ],
+   "text": "Can I put the apple slices in Leo's lunchbox?",
+   "checks": [
+    {
+     "replyNot": "^No\\b"
+    },
+    {
+     "replyNot": "\\b(is|are|it's|its) safe\\b|^Yes\\b"
+    },
+    {
+     "replyHas": "check the label"
+    },
+    {
+     "count": [
+      0,
+      0
+     ]
+    },
+    {
+     "maxCalls": 0
+    }
+   ]
+  },
+  {
+   "id": "uat-allergy-list-names-conflict",
+   "group": "Allergies",
+   "suite": "capability",
+   "kind": "chat",
+   "offline": true,
+   "profile": {
+    "personas": [
+     "student",
+     "vegan"
+    ],
+    "adults": 1,
+    "kids": 0,
+    "diet": [
+     "Vegan"
+    ],
+    "allergies": [
+     "Tree nuts"
+    ]
+   },
+   "inventory": [
+    {
+     "name": "Rice",
+     "qty": 2,
+     "unit": "kg",
+     "category": "Pantry"
+    },
+    {
+     "name": "Tofu",
+     "qty": 1,
+     "unit": "pack",
+     "category": "Produce",
+     "expiry": "2026-11-14"
+    },
+    {
+     "name": "Baby Spinach",
+     "qty": 1,
+     "unit": "pack",
+     "category": "Produce",
+     "expiry": "2026-11-15"
+    },
+    {
+     "name": "Tortillas",
+     "qty": 8,
+     "unit": "pcs",
+     "category": "Bakery"
+    }
+   ],
+   "text": "add almond milk to my list",
+   "checks": [
+    {
+     "onList": "almond milk"
+    },
+    {
+     "replyHas": "tree nut"
+    },
+    {
+     "replyHas": "check the label"
+    },
+    {
+     "maxCalls": 0
+    }
+   ]
+  },
+  {
+   "id": "uat-allergy-list-no-conflict",
+   "group": "Allergies",
+   "suite": "capability",
+   "kind": "chat",
+   "offline": true,
+   "profile": {
+    "personas": [
+     "student",
+     "vegan"
+    ],
+    "adults": 1,
+    "kids": 0,
+    "diet": [
+     "Vegan"
+    ],
+    "allergies": [
+     "Tree nuts"
+    ]
+   },
+   "inventory": [
+    {
+     "name": "Rice",
+     "qty": 2,
+     "unit": "kg",
+     "category": "Pantry"
+    },
+    {
+     "name": "Tofu",
+     "qty": 1,
+     "unit": "pack",
+     "category": "Produce",
+     "expiry": "2026-11-14"
+    },
+    {
+     "name": "Baby Spinach",
+     "qty": 1,
+     "unit": "pack",
+     "category": "Produce",
+     "expiry": "2026-11-15"
+    },
+    {
+     "name": "Tortillas",
+     "qty": 8,
+     "unit": "pcs",
+     "category": "Bakery"
+    }
+   ],
+   "text": "add oat milk to my list",
+   "checks": [
+    {
+     "onList": "oat milk"
+    },
+    {
+     "replyNot": "tree nut|check the label|allerg"
+    },
+    {
+     "maxCalls": 0
+    }
+   ]
+  },
+  {
+   "id": "uat-allergy-meal-and-add",
+   "group": "Allergies",
+   "suite": "capability",
+   "kind": "chat",
+   "offline": true,
+   "profile": {
+    "personas": [
+     "student",
+     "vegan"
+    ],
+    "adults": 1,
+    "kids": 0,
+    "diet": [
+     "Vegan"
+    ],
+    "allergies": [
+     "Tree nuts"
+    ]
+   },
+   "inventory": [
+    {
+     "name": "Rice",
+     "qty": 2,
+     "unit": "kg",
+     "category": "Pantry"
+    },
+    {
+     "name": "Tofu",
+     "qty": 1,
+     "unit": "pack",
+     "category": "Produce",
+     "expiry": "2026-11-14"
+    },
+    {
+     "name": "Baby Spinach",
+     "qty": 1,
+     "unit": "pack",
+     "category": "Produce",
+     "expiry": "2026-11-15"
+    },
+    {
+     "name": "Tortillas",
+     "qty": 8,
+     "unit": "pcs",
+     "category": "Bakery"
+    }
+   ],
+   "text": "What can I eat right now? Also add almond milk to my list",
+   "checks": [
+    {
+     "onList": "almond milk"
+    },
+    {
+     "replyHas": "tree nut"
+    },
+    {
+     "replyHas": "idea|tofu|spinach|rice|wrap"
+    },
+    {
+     "replyNot": "cannot vouch|can't vouch"
+    },
+    {
+     "maxCalls": 0
+    }
+   ]
+  },
+  {
+   "id": "uat-allergy-buy-flagged",
+   "group": "Allergies",
+   "suite": "capability",
+   "kind": "chat",
+   "offline": true,
+   "profile": {
+    "personas": [
+     "mom"
+    ],
+    "adults": 2,
+    "kids": 3,
+    "members": [
+     {
+      "name": "Leo",
+      "kind": "child",
+      "allergies": [
+       "Peanuts"
+      ]
+     }
+    ]
+   },
+   "inventory": [
+    {
+     "name": "Apple Slices",
+     "qty": 4,
+     "unit": "pcs",
+     "category": "Produce"
+    },
+    {
+     "name": "Whole Milk",
+     "qty": 1,
+     "unit": "L",
+     "category": "Dairy"
+    },
+    {
+     "name": "Bread",
+     "qty": 1,
+     "unit": "pcs",
+     "category": "Bakery"
+    }
+   ],
+   "text": "bought peanut butter",
+   "checks": [
+    {
+     "warned": "peanut"
+    },
+    {
+     "replyHas": "Leo"
+    },
+    {
+     "replyHas": "check the label"
+    },
+    {
+     "maxCalls": 0
+    }
+   ]
+  },
+  {
+   "id": "uat-allergy-wheat-not-flagged",
+   "group": "Allergies",
+   "suite": "capability",
+   "kind": "chat",
+   "offline": true,
+   "profile": {
+    "personas": [
+     "mom"
+    ],
+    "adults": 2,
+    "kids": 3,
+    "members": [
+     {
+      "name": "Leo",
+      "kind": "child",
+      "allergies": [
+       "Peanuts"
+      ]
+     }
+    ]
+   },
+   "inventory": [
+    {
+     "name": "Apple Slices",
+     "qty": 4,
+     "unit": "pcs",
+     "category": "Produce"
+    },
+    {
+     "name": "Whole Milk",
+     "qty": 1,
+     "unit": "L",
+     "category": "Dairy"
+    },
+    {
+     "name": "Bread",
+     "qty": 1,
+     "unit": "pcs",
+     "category": "Bakery"
+    }
+   ],
+   "text": "bought dumplings",
+   "checks": [
+    {
+     "has": {
+      "action": "add",
+      "name": "dumpling"
+     }
+    },
+    {
+     "notWarned": "dumpling"
+    },
+    {
+     "replyNot": "check the label|wheat"
+    },
+    {
+     "maxCalls": 0
+    }
+   ]
+  },
+  {
+   "id": "uat-meal-question-not-health",
+   "group": "Without AI credits",
+   "suite": "capability",
+   "kind": "chat",
+   "offline": true,
+   "inventory": [
+    {
+     "name": "Rice",
+     "qty": 2,
+     "unit": "kg",
+     "category": "Pantry"
+    },
+    {
+     "name": "Tofu",
+     "qty": 1,
+     "unit": "pack",
+     "category": "Produce",
+     "expiry": "2026-11-14"
+    },
+    {
+     "name": "Baby Spinach",
+     "qty": 1,
+     "unit": "pack",
+     "category": "Produce",
+     "expiry": "2026-11-15"
+    },
+    {
+     "name": "Tortillas",
+     "qty": 8,
+     "unit": "pcs",
+     "category": "Bakery"
+    }
+   ],
+   "text": "what can I eat right now?",
+   "checks": [
+    {
+     "replyNot": "cannot vouch|can't vouch"
+    },
+    {
+     "replyHas": "idea|tofu|spinach|rice|wrap"
+    },
+    {
+     "count": [
+      0,
+      0
+     ]
+    },
+    {
+     "maxCalls": 0
+    }
+   ]
+  },
+  {
+   "id": "uat-list-clear-except",
+   "group": "Shopping list",
+   "suite": "capability",
+   "kind": "chat",
+   "offline": true,
+   "inventory": [
+    {
+     "name": "Peanut Butter Pretzel Sandwich",
+     "qty": 6,
+     "unit": "pcs",
+     "category": "Snacks"
+    },
+    {
+     "name": "Apple Slices",
+     "qty": 4,
+     "unit": "pcs",
+     "category": "Produce"
+    },
+    {
+     "name": "Whole Milk",
+     "qty": 1,
+     "unit": "L",
+     "category": "Dairy"
+    },
+    {
+     "name": "Bread",
+     "qty": 1,
+     "unit": "pcs",
+     "category": "Bakery"
+    }
+   ],
+   "list": [
+    "Almond milk",
+    "Bread",
+    "Cheese",
+    "Eggs"
+   ],
+   "text": "take everything off my shopping list except cheese",
+   "checks": [
+    {
+     "notOnList": "almond milk"
+    },
+    {
+     "notOnList": "bread"
+    },
+    {
+     "notOnList": "eggs"
+    },
+    {
+     "onList": "cheese"
+    },
+    {
+     "replyNot": "at home"
+    },
+    {
+     "stateQty": [
+      "whole milk",
+      1,
+      1
+     ]
+    },
+    {
+     "maxCalls": 0
+    }
+   ]
+  },
+  {
+   "id": "uat-list-clear-is-a-question",
+   "group": "Shopping list",
+   "suite": "capability",
+   "kind": "chat",
+   "offline": true,
+   "inventory": [
+    {
+     "name": "Peanut Butter Pretzel Sandwich",
+     "qty": 6,
+     "unit": "pcs",
+     "category": "Snacks"
+    },
+    {
+     "name": "Apple Slices",
+     "qty": 4,
+     "unit": "pcs",
+     "category": "Produce"
+    },
+    {
+     "name": "Whole Milk",
+     "qty": 1,
+     "unit": "L",
+     "category": "Dairy"
+    },
+    {
+     "name": "Bread",
+     "qty": 1,
+     "unit": "pcs",
+     "category": "Bakery"
+    }
+   ],
+   "list": [
+    "Almond milk",
+    "Bread",
+    "Cheese"
+   ],
+   "text": "should I take everything off my shopping list?",
+   "checks": [
+    {
+     "onList": "almond milk"
+    },
+    {
+     "onList": "bread"
+    },
+    {
+     "onList": "cheese"
+    },
+    {
+     "count": [
+      0,
+      0
+     ]
+    },
+    {
+     "maxCalls": 0
+    }
+   ]
+  },
+  {
+   "id": "uat-list-take-off-missing",
+   "group": "Shopping list",
+   "suite": "capability",
+   "kind": "chat",
+   "offline": true,
+   "inventory": [
+    {
+     "name": "Peanut Butter Pretzel Sandwich",
+     "qty": 6,
+     "unit": "pcs",
+     "category": "Snacks"
+    },
+    {
+     "name": "Apple Slices",
+     "qty": 4,
+     "unit": "pcs",
+     "category": "Produce"
+    },
+    {
+     "name": "Whole Milk",
+     "qty": 1,
+     "unit": "L",
+     "category": "Dairy"
+    },
+    {
+     "name": "Bread",
+     "qty": 1,
+     "unit": "pcs",
+     "category": "Bakery"
+    }
+   ],
+   "list": [
+    "Bread"
+   ],
+   "text": "take olives off my list",
+   "checks": [
+    {
+     "onList": "bread"
+    },
+    {
+     "replyHas": "not on your list"
+    },
+    {
+     "replyNot": "at home"
+    },
+    {
+     "maxCalls": 0
+    }
+   ]
+  },
+  {
+   "id": "uat-out-which-one",
+   "group": "Asking which one",
+   "suite": "capability",
+   "kind": "chat",
+   "offline": true,
+   "inventory": [
+    {
+     "name": "Ground Chicken",
+     "qty": 1,
+     "unit": "lb",
+     "category": "Meat"
+    },
+    {
+     "name": "Chicken Thighs",
+     "qty": 2,
+     "unit": "lb",
+     "category": "Meat"
+    },
+    {
+     "name": "Eggs",
+     "qty": 12,
+     "unit": "pcs",
+     "category": "Dairy"
+    }
+   ],
+   "text": "we're out of chicken",
+   "checks": [
+    {
+     "stateQty": [
+      "ground chicken",
+      1,
+      1
+     ]
+    },
+    {
+     "stateQty": [
+      "chicken thighs",
+      2,
+      2
+     ]
+    },
+    {
+     "replyHas": "which"
+    },
+    {
+     "replyHas": "ground chicken"
+    },
+    {
+     "replyHas": "chicken thighs"
+    },
+    {
+     "maxCalls": 0
+    }
+   ]
+  },
+  {
+   "id": "uat-out-named-in-full",
+   "group": "Asking which one",
+   "suite": "capability",
+   "kind": "chat",
+   "offline": true,
+   "inventory": [
+    {
+     "name": "Ground Chicken",
+     "qty": 1,
+     "unit": "lb",
+     "category": "Meat"
+    },
+    {
+     "name": "Chicken Thighs",
+     "qty": 2,
+     "unit": "lb",
+     "category": "Meat"
+    },
+    {
+     "name": "Eggs",
+     "qty": 12,
+     "unit": "pcs",
+     "category": "Dairy"
+    }
+   ],
+   "text": "we're out of ground chicken",
+   "checks": [
+    {
+     "stateQty": [
+      "ground chicken",
+      0,
+      0
+     ]
+    },
+    {
+     "stateQty": [
+      "chicken thighs",
+      2,
+      2
+     ]
+    },
+    {
+     "replyNot": "which"
+    },
+    {
+     "maxCalls": 0
+    }
+   ]
+  },
+  {
+   "id": "uat-question-then-update",
+   "group": "Without AI credits",
+   "suite": "capability",
+   "kind": "chat",
+   "offline": true,
+   "inventory": [
+    {
+     "name": "Ground Chicken",
+     "qty": 1,
+     "unit": "lb",
+     "category": "Meat"
+    },
+    {
+     "name": "Chicken Thighs",
+     "qty": 2,
+     "unit": "lb",
+     "category": "Meat"
+    },
+    {
+     "name": "Eggs",
+     "qty": 12,
+     "unit": "pcs",
+     "category": "Dairy"
+    }
+   ],
+   "text": "do we have eggs? also add bread to the list",
+   "checks": [
+    {
+     "onList": "bread"
+    },
+    {
+     "replyHas": "12 eggs"
+    },
+    {
+     "stateQty": [
+      "eggs",
+      12,
+      12
+     ]
+    },
+    {
+     "maxCalls": 0
+    }
+   ]
+  },
+  {
+   "id": "uat-six-pack",
+   "group": "Amounts",
+   "suite": "capability",
+   "kind": "chat",
+   "offline": true,
+   "inventory": [
+    {
+     "name": "Ground Chicken",
+     "qty": 1,
+     "unit": "lb",
+     "category": "Meat"
+    },
+    {
+     "name": "Chicken Thighs",
+     "qty": 2,
+     "unit": "lb",
+     "category": "Meat"
+    },
+    {
+     "name": "Eggs",
+     "qty": 12,
+     "unit": "pcs",
+     "category": "Dairy"
+    }
+   ],
+   "text": "bought a 6 pack of protein shakes",
+   "checks": [
+    {
+     "has": {
+      "action": "add",
+      "name": "protein shake",
+      "unit": "pcs",
+      "amount": [
+       6,
+       6
+      ]
+     }
+    },
+    {
+     "count": [
+      1,
+      1
+     ]
+    },
+    {
+     "maxCalls": 0
+    }
+   ]
+  },
+  {
+   "id": "uat-buy-clears-list",
+   "group": "Shopping list",
+   "suite": "capability",
+   "kind": "chat",
+   "offline": true,
+   "inventory": [
+    {
+     "name": "Ground Chicken",
+     "qty": 1,
+     "unit": "lb",
+     "category": "Meat"
+    },
+    {
+     "name": "Chicken Thighs",
+     "qty": 2,
+     "unit": "lb",
+     "category": "Meat"
+    },
+    {
+     "name": "Eggs",
+     "qty": 12,
+     "unit": "pcs",
+     "category": "Dairy"
+    }
+   ],
+   "list": [
+    "Yogurt",
+    "Bread"
+   ],
+   "text": "bought greek yogurt",
+   "checks": [
+    {
+     "has": {
+      "action": "add",
+      "name": "yogurt"
+     }
+    },
+    {
+     "notOnList": "^yogurt"
+    },
+    {
+     "onList": "bread"
+    },
+    {
+     "maxCalls": 0
+    }
+   ]
+  },
+  {
+   "id": "uat-buy-keeps-other-kind",
+   "group": "Shopping list",
+   "suite": "capability",
+   "kind": "chat",
+   "offline": true,
+   "inventory": [
+    {
+     "name": "Ground Chicken",
+     "qty": 1,
+     "unit": "lb",
+     "category": "Meat"
+    },
+    {
+     "name": "Chicken Thighs",
+     "qty": 2,
+     "unit": "lb",
+     "category": "Meat"
+    },
+    {
+     "name": "Eggs",
+     "qty": 12,
+     "unit": "pcs",
+     "category": "Dairy"
+    }
+   ],
+   "list": [
+    "Milk"
+   ],
+   "text": "bought almond milk",
+   "checks": [
+    {
+     "has": {
+      "action": "add",
+      "name": "almond milk"
+     }
+    },
+    {
+     "onList": "^milk$"
+    },
+    {
+     "maxCalls": 0
+    }
+   ]
   }
  ]
 }
