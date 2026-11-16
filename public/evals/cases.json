@@ -7893,6 +7893,125 @@
      "maxCalls": 0
     }
    ]
+  },
+  {
+   "id": "order-blinkit",
+   "group": "Order screens",
+   "suite": "capability",
+   "kind": "receipt",
+   "offline": true,
+   "text": "Blinkit\nOrder #ORD48211907\nDelivered in 9 minutes\nAmul Taaza Toned Milk\n500 ml x 2\n₹58\nFarm Fresh Eggs 6 pcs x 2 ₹96\nAashirvaad Atta 5 kg ₹265\nBananas 6 pcs ₹42\nItem total ₹461\nDelivery charge ₹25\nHandling charge ₹4\nGrand total ₹490\nDelivered to Home - Flat 4B, Lake View Apartments\nPaid via UPI",
+   "checks": [
+    {
+     "has": {
+      "action": "add",
+      "name": "milk",
+      "area": "Kitchen"
+     }
+    },
+    {
+     "has": {
+      "action": "add",
+      "name": "egg"
+     }
+    },
+    {
+     "has": {
+      "action": "add",
+      "name": "atta"
+     }
+    },
+    {
+     "has": {
+      "action": "add",
+      "name": "banana"
+     }
+    },
+    {
+     "hasNot": {
+      "name": "charge"
+     }
+    },
+    {
+     "hasNot": {
+      "name": "total"
+     }
+    },
+    {
+     "hasNot": {
+      "name": "flat"
+     }
+    },
+    {
+     "count": [
+      4,
+      4
+     ]
+    },
+    {
+     "maxCalls": 0
+    }
+   ]
+  },
+  {
+   "id": "order-instacart",
+   "group": "Order screens",
+   "suite": "capability",
+   "kind": "receipt",
+   "offline": true,
+   "text": "Instacart\nYour order from Costco\nKirkland Organic Whole Milk 1 gal  Qty 2  $9.98\nOrganic Bananas 3 lb $1.99\nService fee $3.50\nDriver tip $5.00\nTotal $20.47",
+   "checks": [
+    {
+     "has": {
+      "action": "add",
+      "name": "milk"
+     }
+    },
+    {
+     "has": {
+      "action": "add",
+      "name": "banana"
+     }
+    },
+    {
+     "hasNot": {
+      "name": "fee"
+     }
+    },
+    {
+     "hasNot": {
+      "name": "tip"
+     }
+    },
+    {
+     "count": [
+      2,
+      2
+     ]
+    },
+    {
+     "maxCalls": 0
+    }
+   ]
+  },
+  {
+   "id": "order-nothing-to-add",
+   "group": "Order screens",
+   "suite": "capability",
+   "kind": "receipt",
+   "offline": true,
+   "text": "Zepto\nOrder #Z99120\nYour order is on the way\nArriving in 7 mins\nDelivery charge ₹25\nHandling charge ₹5\nTip for your rider ₹20\nTo pay ₹50\nDelivering to Home - 14 Park Street\nPaid via UPI",
+   "checks": [
+    {
+     "count": [
+      0,
+      0
+     ]
+    },
+    {
+     "maxCalls": 0
+    }
+   ]
   }
  ]
 }

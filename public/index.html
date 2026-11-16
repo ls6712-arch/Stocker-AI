@@ -88,6 +88,8 @@ input[type=text],input[type=password],input[type=number],input[type=date],input[
 .qty{display:inline-flex;align-items:center;gap:4px;white-space:nowrap;font-variant-numeric:tabular-nums;font-weight:600}
 .qty button{width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:var(--surface2);font-weight:700;font-size:1.125rem;line-height:1}
 .bar{height:6px;border-radius:999px;background:var(--surface2);overflow:hidden}
+.fresh{display:flex;gap:3px;height:10px}.fresh i{display:block;height:100%;min-width:10px;border-radius:999px}.fresh .f{background:var(--ok)}.fresh .s{background:var(--warn)}.fresh .p{background:var(--bad)}
+#freshBar:empty{display:none}#freshBar{margin-bottom:12px}
 .bar i{display:block;height:100%;border-radius:999px;background:var(--ok)}
 .bar i.warn{background:var(--warn)} .bar i.bad{background:var(--bad)}
 .facts{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:.8125rem;color:var(--muted)}
@@ -413,11 +415,12 @@ button:active:not(:disabled),a.btn:active,label.btn:active,label.tile:active{tra
     <h2 id="capH">Snap, scan or type</h2>
     <p class="sub">I save it straight away. Undo anything I get wrong.</p>
     <div class="tiles">
-      <label class="tile"><span class="ico" style="--h:165"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6"/></svg></span><b>Scan a receipt</b><span>Photo of a receipt</span><input type="file" id="billFile" accept="image/*" title="" aria-label="Photograph a receipt"></label>
+      <label class="tile"><span class="ico" style="--h:165"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6"/></svg></span><b>Receipt or order</b><span>Paper receipt, or a screenshot of your order</span><input type="file" id="billFile" accept="image/*" title="" aria-label="Photograph a receipt, or pick a screenshot of an order"></label>
       <label class="tile"><span class="ico" style="--h:205"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h3l2-3h6l2 3h3v13H4z"/><circle cx="12" cy="13" r="3.500"/></svg></span><b>Snap what you have</b><span>Fridge, shelf or shopping bag</span><input type="file" id="shelfFile" accept="image/*" title="" aria-label="Photograph your fridge, a shelf or a shopping bag"></label>
       <button type="button" class="tile" id="capVoice"><span class="ico" style="--h:355"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></span><b>Voice note</b><span>Bought, cooked or running low</span></button>
       <button type="button" class="tile" id="capCode"><span class="ico" style="--h:265"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6v12M7 6v12M11 6v12M14 6v12M17 6v12M20 6v12"/></svg></span><b>Barcode</b><span>Scan a product</span></button>
-      <button type="button" class="tile wide" id="capType"><span class="ico" style="--h:35"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16zM13 7l4 4"/></svg></span><span style="display:flex;flex-direction:column;color:inherit"><b>Type or paste</b><span>A note, or an emailed receipt</span></span></button>
+      <button type="button" class="tile" id="capEmpty"><span class="ico" style="--h:20"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3h8v3l2 3v11a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V9l2-3zM9 14h6"/></svg></span><b>Empty pack</b><span>Scan it onto your list</span></button>
+      <button type="button" class="tile" id="capType"><span class="ico" style="--h:35"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16zM13 7l4 4"/></svg></span><b>Type or paste</b><span>A note, a receipt or an order</span></button>
     </div>
     <button type="button" class="btn block" data-close>Cancel</button>
   </div>
@@ -657,8 +660,9 @@ button:active:not(:disabled),a.btn:active,label.btn:active,label.tile:active{tra
 <dialog class="sheet" id="shopDlg" aria-labelledby="shopH">
   <div class="pad">
     <div class="grab"></div>
-    <h2 id="shopH">Order online</h2>
-    <p class="sub">Pick a store, then tap an item to find it there. Each opens in a new tab.</p>
+    <h2 id="shopH">Shop your list</h2>
+    <p class="sub" id="shopSub">Pick a store, then tap an item to find it there. Each opens in a new tab.</p>
+    <button type="button" class="btn primary block" id="shopGo"></button>
     <div class="chips" id="shopStores" role="group" aria-label="Store"></div>
     <ul class="list" id="shopList"></ul>
     <button type="button" class="btn block" data-close>Close</button>
@@ -771,7 +775,7 @@ button:active:not(:disabled),a.btn:active,label.btn:active,label.tile:active{tra
   function amount(q,u){var n=qtyText(q);return u==='pcs'?n:u==='pack'?n+(q<=1?' pack':' packs'):n+' '+u}
   function amt(it){return it.qty<=0?'Out':amount(it.qty,it.unit)}
 
-  var items=[],log=[],extras=[],waste=0,spend=null,profile=null,me='',tab='today',cat='All',query='',open={},turned=null,busy=false,pending=null,toastTimer=null;
+  var items=[],log=[],extras=[],waste=0,shelf=null,saved=null,shops=[],handoff=null,spend=null,profile=null,me='',tab='today',cat='All',query='',open={},turned=null,busy=false,pending=null,toastTimer=null;
 
   /* why something failed, said truthfully: offline only when the phone really is offline */
   function why(e,what){var c=e&&e.code;return c==='offline'?what+' You seem to be offline, so nothing was changed.':c&&c!=='server'&&COPY[c]?COPY[c]:what+' Something went wrong on my side, and nothing was changed. Try again.'}
@@ -1022,6 +1026,10 @@ button:active:not(:disabled),a.btn:active,label.btn:active,label.tile:active{tra
     if(window.Tote&&!$('chatDlg').open){Tote.onTap=openChat;Tote.mood(!items.length?'happy':use.some(function(i){return expiry(i).d<=0})||buy.some(function(i){return i.essential&&i.qty<=0})?'alert':'happy');Tote.mount(th,112,buddy()+', your helper. Tap to talk.')}
     v.append(hero);
     doneCard(v);
+    if(handoff){var hc=el('div','card'),ha=el('div','acts'),hs=el('label','btn primary filebtn','Scan the order'),hi=el('input'),hn=btn('btn','Not now',async function(){handoff=null;renderToday();try{await api('/api/handoff',{method:'DELETE'})}catch(er){}});
+      hi.type='file';hi.accept='image/*';hi.setAttribute('aria-label','Pick a screenshot of your '+handoff.store+' order');hs.append(hi);hs.style.flex=hn.style.flex='1';
+      hi.addEventListener('change',function(){var f=hi.files&&hi.files[0];hi.value='';if(!f)return;scan(async function(){return api('/api/scan/bill',{method:'POST',body:JSON.stringify({image:await shrink(f)})})},'Reading the order')});
+      hc.append(el('h3','','Has your '+handoff.store+' order arrived?'),el('p','sub','Take a screenshot of the order and I will put everything away. No typing.'));ha.append(hs,hn);hc.append(ha);v.append(hc)}
     if(!items.length){welcome(v);return}
     if(part.length){var wh=el('div','card'),wc=el('div','wrapchips');wh.append(el('h3','',"Who's home this week?"),el('p','sub','Tap anyone who is away. I stretch how long things last and plan dinners for who is here.'));
       part.forEach(function(m){var b=el('button','chip',m.name+(m.away?', away':', home'));b.type='button';b.setAttribute('aria-pressed',m.away?'false':'true');b.setAttribute('aria-label',m.name+(m.away?', away this week':', home this week'));
@@ -1121,8 +1129,21 @@ button:active:not(:disabled),a.btn:active,label.btn:active,label.tile:active{tra
       var went=res.changes&&res.changes[0]&&AREA[res.changes[0].area]?res.changes[0].area:room;
       await refresh();toast('Added '+name+' to '+ROOM_IN[went]+'. Add another, or tap Done.');$('addName').value='';$('addNote').value='';$('addEss').checked=false;$('addName').focus()}
     catch(e){if(e.code!=='locked')toast(why(e,'Could not add that.'))}finally{$('addGo').disabled=false}});
+  function cash(n,cur){if(!cur)return String(Math.round(n*100)/100);try{return new Intl.NumberFormat(undefined,{style:'currency',currency:cur,maximumFractionDigits:n%1?2:0}).format(n)}catch(e){return String(n)}}
+  function savedLine(){if(!saved||!saved.n)return '';return 'Used in time this month: '+saved.n+(saved.n===1?' thing':' things')+(saved.amount?', about '+cash(saved.amount,saved.currency):'')+'.'}
+  function freshCard(){var fb=$('freshBar');if(!fb){fb=el('div');fb.id='freshBar';$('rooms').parentNode.insertBefore(fb,$('rooms'))}
+    /* redrawn only when what it says changes, so the page under a finger does not move when something else is edited */
+    var n=shelf?shelf.fresh+shelf.soon+shelf.past:0,sig=!n||(cat!=='All'&&cat!=='Kitchen')?'':[shelf.fresh,shelf.soon,shelf.past,savedLine()].join('|');
+    if(fb.getAttribute('data-sig')===sig&&(sig===''||fb.firstChild))return;fb.setAttribute('data-sig',sig);if(!sig){fb.textContent='';return}
+    var c=el('div','card'),bar=el('div','fresh'),fx=el('div','facts');bar.setAttribute('role','img');
+    bar.setAttribute('aria-label',shelf.fresh+' fresh, '+shelf.soon+' to use soon, '+shelf.past+' past the date');
+    [['f',shelf.fresh],['s',shelf.soon],['p',shelf.past]].forEach(function(x){if(!x[1])return;var i=el('i',x[0]);i.style.flex=String(x[1]);bar.append(i)});
+    fx.style.alignItems='center';if(shelf.fresh){var a=el('span');a.append(el('b','',String(shelf.fresh)),document.createTextNode(' fresh'));fx.append(a)}
+    if(shelf.soon){var b=btn('link',shelf.soon+' to use soon',function(){stat='use';renderPantry()});b.style.minHeight='44px';fx.append(b)}
+    if(shelf.past){var p2=btn('link',shelf.past+' past the date',function(){stat='use';renderPantry()});p2.style.minHeight='44px';fx.append(p2)}
+    c.append(el('div','sub','Dated food in the kitchen'),bar,fx);var sl=savedLine();if(sl)c.append(el('p','sub',sl));fb.replaceChildren(c)}
   function renderPantry(){
-    var rooms=$('rooms');rooms.textContent='';
+    var rooms=$('rooms');rooms.textContent='';freshCard();
     [['All','Whole home',[160,'M4 11l8-7 8 7v9h-5v-6H9v6H4z']]].concat(Object.keys(AREA).map(function(a){return [a,roomLabel(a),AREA[a]]})).forEach(function(r){
       var list=r[0]==='All'?items:items.filter(function(i){return areaOf(i)===r[0]}),att=list.filter(function(i){return needsUse(i)||needsBuy(i)}).length;
       var b=el('button','room'),ic=el('span','ico');b.type='button';b.setAttribute('aria-pressed',cat===r[0]?'true':'false');ic.style.setProperty('--h',r[2][0]);ic.append(icon(r[2][1]));
@@ -1173,11 +1194,13 @@ button:active:not(:disabled),a.btn:active,label.btn:active,label.tile:active{tra
     v.append(f);
     if(!count)v.append(emptyCard('Pantry','Nothing to buy','Things land here when you run out, say they are low, or add them yourself.'));
     function tick(label,fn){var ck=el('button','check');ck.type='button';ck.setAttribute('aria-label',label);ck.onclick=function(){if(!ck.firstChild)ck.append(icon('M6 12l4 4 8-9'));fn()};return ck}
-    if(count){var top=el('div','acts'),so=el('button','btn primary','Order online'),cp=el('button','btn','Copy the list');so.type=cp.type='button';so.style.flex=cp.style.flex='1';
+    if(count){var top=el('div','acts'),so=el('button','btn primary',shops.length?'Shop at '+shopName():'Order online'),cp=el('button','btn','Copy the list');so.type=cp.type='button';so.style.flex=cp.style.flex='1';
       so.onclick=function(){openShop(extras.map(function(x){return x.text}).concat(buy.map(function(i){return i.name})))};
       cp.onclick=function(){var text='Shopping list\n'+extras.map(function(x){return '- '+x.text}).concat(buy.map(function(i){return '- '+i.name+(i.store?' ('+i.store+')':'')})).join('\n');
         try{navigator.clipboard.writeText(text).then(function(){toast('Shopping list copied.')},function(){toast(text.replace(/\n/g,'  '))})}catch(e){toast(text.replace(/\n/g,'  '))}};
-      top.append(so,cp);v.append(top)}
+      top.append(so,cp);v.append(top);
+      var known=buy.concat(extras).filter(function(q){return q.paid&&q.paid.amount>0}),cur0=known.length?known[0].paid.currency:'';known=known.filter(function(q){return q.paid.currency===cur0});
+      if(known.length)v.append(el('p','sub','About '+cash(known.reduce(function(t,q){return t+q.paid.amount},0),cur0)+' last time for '+(known.length===count?'everything here':known.length+' of these '+count)+', from receipts and orders you scanned.'))}
     var order=Object.keys(AREA);
     function aisle(it){var a=areaOf(it),k=kindOf(it);return a==='Kitchen'?(k==='Other'?'Kitchen':kindLabel(k)):roomLabel(a)}
     function aord(it){var a=areaOf(it),ki=ROOM_CATS[a].indexOf(it.category);return order.indexOf(a)*100+(ki<0?99:ki)}
@@ -1186,11 +1209,11 @@ button:active:not(:disabled),a.btn:active,label.btn:active,label.tile:active{tra
     buy.forEach(function(it){var p=plan(it),ai=aisle(it);
       if(ai!==last){last=ai;var sec=el('div','sec');c=el('div','card tight');sec.append(el('p','grp',ai),c);v.append(sec)}
       var why=it.qty<=0?(it.learned?'You ran out. You buy it about every '+every(it.finish_days):"You're out"):it.low?'Running low':p.days<=0?'My guess: about to run out':'My guess: out by '+fmt(p.date);
-      var r=el('div','row'),g=el('button','grow rowbtn');g.type='button';g.setAttribute('aria-label','Change or remove '+it.name);r.style.minHeight='64px';g.append(el('div','name',fullName(it)),el('div','sub',(it.owner?it.owner+"'s. ":'')+why+(it.store?', last bought at '+it.store:'')));
+      var r=el('div','row'),g=el('button','grow rowbtn');g.type='button';g.setAttribute('aria-label','Change or remove '+it.name);r.style.minHeight='64px';g.append(el('div','name',fullName(it)),el('div','sub',(it.owner?it.owner+"'s. ":'')+why+(it.store?', last bought at '+it.store:'')+(it.paid?'. '+cash(it.paid.amount,it.paid.currency)+' last time':'')));
       if(it.warn)g.append(el('span','pill bad','Check label: '+it.warn));g.onclick=function(){openRow(null,it)};
       r.append(iconFor(it),g,tick('Mark '+it.name+' as bought',function(){restock(it)}));c.append(r)});
     if(extras.length){var se=el('div','sec'),ce=el('div','card tight');se.append(el('p','grp','Added by you'),ce);
-      extras.forEach(function(x){var r=el('div','row'),g=el('button','grow rowbtn');g.type='button';g.setAttribute('aria-label','Change or remove '+x.text);r.style.minHeight='64px';g.append(el('div','name',x.text),el('div','sub',x.who?'Added by '+x.who:'Added by hand'));
+      extras.forEach(function(x){var r=el('div','row'),g=el('button','grow rowbtn');g.type='button';g.setAttribute('aria-label','Change or remove '+x.text);r.style.minHeight='64px';g.append(el('div','name',x.text),el('div','sub',(x.who?'Added by '+x.who:'Added by hand')+(x.paid?'. '+cash(x.paid.amount,x.paid.currency)+' last time':'')));
         if(x.warn)g.append(el('span','pill bad','Check label: '+x.warn));g.onclick=function(){openRow(x,null)};
         r.append(catIcon('Other'),g,tick('Mark '+x.text+' as bought',async function(){try{await api('/api/extras/'+x.id,{method:'DELETE'});await refresh();toast('Ticked off '+x.text+'.','Undo',putBack(x.text))}catch(er){if(er.code!=='locked')toast(why(er,'Could not save that.'))}}));ce.append(r)});
       v.append(se)}
@@ -1226,14 +1249,23 @@ button:active:not(:disabled),a.btn:active,label.btn:active,label.tile:active{tra
         toast('Took '+it.name+' off your list. It will come back the next time you run out.','Undo',async function(){try{await api('/api/items/'+it.id,{method:'PATCH',body:JSON.stringify({offList:false,low:low})});await refresh()}catch(er){if(er.code!=='locked')toast(why(er,'Could not undo that.'))}})}}
     catch(er){if(er.code!=='locked')toast(why(er,'Could not save that.'))}};
   $('rowHome').onclick=function(){var it=rowAt&&rowAt.it;if(!it)return;afterClose($('rowDlg'),function(){showItem(it)})};
-  var STORES={Amazon:'https://www.amazon.com/s?k=',Instacart:'https://www.instacart.com/store/s?k=',Walmart:'https://www.walmart.com/search?q='},store='Amazon';
+  /* Handing the list to a store. No store lets another app fill a basket, so each thing opens as a search in that store,
+     and one tap copies the whole list and opens the store. Links are built here from the list; nothing is sent by Tote. */
+  var STORES={Amazon:'https://www.amazon.com/s?k={q}',Instacart:'https://www.instacart.com/store/s?k={q}',Walmart:'https://www.walmart.com/search?q={q}'},store='';
+  function shopMap(){var m={};(shops.length?shops:Object.keys(STORES).map(function(k){return {name:k,url:STORES[k]}})).forEach(function(x){m[x.name]=x.url});return m}
+  function shopName(){var m=shopMap(),k=store;try{k=k||localStorage.getItem('stocker.store')||''}catch(e){}return m[k]?k:Object.keys(m)[0]}
+  function bareName(n){return String(n).replace(/ \u00d7\d+$/,'').replace(/\s*\([^)]*\)\s*$/,'').trim()}
+  function handed(k){if(!shops.some(function(x){return x.name===k}))return;handoff={store:k};api('/api/handoff',{method:'POST',body:JSON.stringify({store:k})}).catch(function(){})}
   function openShop(names){
-    try{store=localStorage.getItem('stocker.store')||store}catch(e){}if(!STORES[store])store='Amazon';
+    var m=shopMap();store=shopName();
     function draw(){
-      var ch=$('shopStores');ch.textContent='';Object.keys(STORES).forEach(function(k){var b=el('button','chip',k);b.type='button';b.setAttribute('aria-pressed',k===store?'true':'false');
-        b.onclick=function(){store=k;try{localStorage.setItem('stocker.store',k)}catch(e){}draw()};ch.append(b)});
-      var ul=$('shopList');ul.textContent='';names.forEach(function(n){var li=el('li'),a=el('a','btn block','Find '+n+' on '+store);a.href=STORES[store]+encodeURIComponent(n);a.target='_blank';a.rel='noopener';
-        a.style.textDecoration='none';a.style.justifyContent='flex-start';li.append(a);ul.append(li)});
+      var ch=$('shopStores');ch.textContent='';Object.keys(m).forEach(function(k){var b=el('button','chip',k);b.type='button';b.setAttribute('aria-pressed',k===store?'true':'false');
+        b.onclick=function(){store=k;try{localStorage.setItem('stocker.store',k)}catch(e){}draw();renderList()};ch.append(b)});
+      $('shopSub').textContent='Tap a thing to find it at '+store+'. Each opens in a new tab, and you add it to your basket there.';
+      var go1=$('shopGo');go1.textContent='Copy the list and open '+store;go1.hidden=!names.length;
+      go1.onclick=function(){var text=names.map(bareName).join('\n');try{navigator.clipboard.writeText(text)}catch(e){}handed(store);window.open(m[store].replace('{q}',encodeURIComponent(bareName(names[0]))),'_blank','noopener');toast('List copied. '+store+' is open at '+bareName(names[0])+'.')};
+      var ul=$('shopList');ul.textContent='';names.forEach(function(n){var li=el('li'),a=el('a','btn block','Find '+bareName(n)+' at '+store);a.href=m[store].replace('{q}',encodeURIComponent(bareName(n)));a.target='_blank';a.rel='noopener';
+        a.style.textDecoration='none';a.style.justifyContent='flex-start';a.addEventListener('click',function(){handed(store);a.textContent='Opened: '+bareName(n)});li.append(a);ul.append(li)});
     }
     draw();$('shopDlg').showModal();
   }
@@ -1318,6 +1350,7 @@ button:active:not(:disabled),a.btn:active,label.btn:active,label.tile:active{tra
       b.append(bar,el('span','',have===list.length?'All set':'Have '+have+' of '+list.length+(onl?', '+onl+' on your list':'')));b.onclick=function(){openKit(k)};grid.append(b)});
     sk.append(grid);v.append(sk);
     starterCard(v);spendCard(v);
+    if(saved&&saved.n){var sv=el('div','card');sv.append(el('div','sub','Used in time this month'),el('div','name',saved.n+(saved.n===1?' thing':' things')+(saved.amount?', about '+cash(saved.amount,saved.currency):'')),el('p','sub','Food finished in its last three days instead of being thrown away'+(saved.names&&saved.names.length?': '+saved.names.slice(0,4).join(', ').toLowerCase()+'.':'.')));v.append(sv)}
     if(waste){var wc2=el('div','card');wc2.append(el('div','sub','Thrown away this month'),el('div','name',waste+(waste===1?' thing':' things')),el('p','sub','Tap Threw it away on anything you bin. I use it to suggest buying less of what gets wasted.'));v.append(wc2)}
     var sa=el('div','sec');sa.append(el('h2','','Recent activity'));
     if(!log.length){sa.append(el('p','sub','Every change is recorded here, with who made it and when.'));v.append(sa);return}
@@ -1356,7 +1389,7 @@ button:active:not(:disabled),a.btn:active,label.btn:active,label.tile:active{tra
   var qtyTimer={};
   function setQty(it,q){it.qty=q;render();clearTimeout(qtyTimer[it.id]);
     qtyTimer[it.id]=setTimeout(function(){api('/api/items/'+it.id,{method:'PATCH',body:JSON.stringify({qty:q})}).catch(function(e){if(e.code!=='locked')toast(why(e,'Could not save that change.'))})},500)}
-  async function refresh(){var before=items.filter(needsBuy).length+extras.length;var d=await api('/api/items');items=d.items||[];log=d.log||[];extras=d.extras||[];waste=d.waste||0;spend=d.spend||null;profile=d.profile||null;me=d.me||'';learnt=d.learnt||learnt;reviewN=d.review||0;render();
+  async function refresh(){var before=items.filter(needsBuy).length+extras.length;var d=await api('/api/items');items=d.items||[];log=d.log||[];extras=d.extras||[];waste=d.waste||0;shelf=d.shelf||null;saved=d.saved||null;shops=d.shops||[];handoff=d.handoff||null;spend=d.spend||null;profile=d.profile||null;me=d.me||'';learnt=d.learnt||learnt;reviewN=d.review||0;render();
     if(before>0&&items.filter(needsBuy).length+extras.length===0)say('List done. Nicely shopped.','party')}
 
   /* ---- sheets follow the finger ----
@@ -1517,6 +1550,10 @@ button:active:not(:disabled),a.btn:active,label.btn:active,label.tile:active{tra
   function photo(input,kind){input.addEventListener('change',function(){var f=input.files&&input.files[0];input.value='';if(!f)return;$('capDlg').close();
     scan(async function(){return api('/api/scan/'+kind,{method:'POST',body:JSON.stringify({image:await shrink(f)})})},kind==='shelf'?'Looking at the shelf':'Reading the bill')})}
   photo($('billFile'),'bill');photo($('shelfFile'),'shelf');
+  /* paste a screenshot of an order (or a photo of a receipt) anywhere in the app and I read it */
+  document.addEventListener('paste',function(ev){if($('app').hidden||busy)return;var fs=ev.clipboardData&&ev.clipboardData.files,f=null;for(var i=0;fs&&i<fs.length;i++)if(/^image\//.test(fs[i].type)){f=fs[i];break}
+    if(!f)return;ev.preventDefault();Array.prototype.forEach.call(document.querySelectorAll('dialog[open]'),function(d){d.close()});
+    scan(async function(){return api('/api/scan/bill',{method:'POST',body:JSON.stringify({image:await shrink(f)})})},'Reading the order')});
 
   /* voice: talk to Tote right in the conversation. The phone's own speech-to-text when it has one (free, the words appear as you
      speak); otherwise a short recording that Tote transcribes. Either way it sends by itself when you pause, and the cross cancels. */
@@ -1566,7 +1603,12 @@ button:active:not(:disabled),a.btn:active,label.btn:active,label.tile:active{tra
   /* barcode */
   var qr=null;
   async function stopQr(){if(qr){var q=qr;qr=null;try{await q.stop()}catch(e){}try{q.clear()}catch(e){}}}
-  function lookup(code){$('codeDlg').close();scan(function(){return api('/api/scan/barcode?code='+encodeURIComponent(code))},'Looking up that product')}
+  var codeEmpty=false;
+  function lookup(code){var em=codeEmpty;$('codeDlg').close();scan(function(){return api('/api/scan/barcode?code='+encodeURIComponent(code)+(em?'&empty=1':''))},em?'Reading the empty pack':'Looking up that product')}
+  $('capCode').addEventListener('click',function(){codeEmpty=false;$('codeH').textContent='Scan a barcode'});
+  /* the pack is empty: scanning it is not a purchase. It goes on the list with its brand and size. */
+  $('capEmpty').onclick=function(){var open=$('capCode').onclick;if(open)open.call($('capCode'));codeEmpty=true;$('codeH').textContent='Scan the empty pack';
+    if(window.Html5Qrcode)$('codeNote').textContent='Point the camera at the barcode before you bin it. I put it on your list with its brand and size.'};
   $('capCode').onclick=async function(){$('capDlg').close();$('codeDlg').showModal();$('codeNote').textContent='Point the camera at the barcode on the pack.';
     if(!window.Html5Qrcode){$('codeNote').textContent='Camera scanning is not available here. Type the number under the barcode.';return}
     try{var F=window.Html5QrcodeSupportedFormats,cfg={verbose:false};if(F)cfg.formatsToSupport=[F.EAN_13,F.EAN_8,F.UPC_A,F.UPC_E];
@@ -1688,7 +1730,15 @@ button:active:not(:disabled),a.btn:active,label.btn:active,label.tile:active{tra
   async function chatSend(payload,label){
     if(chatBusy)return;var kk=String(payload.text||label||'').toLowerCase().replace(/\b(now|the|a|an|please)\b|[^a-z ]/g,'').replace(/\s+/g,' ').trim();if(kk)sent[kk]=1;if(COOKED.test(payload.text||'')&&!/^i also used/i.test(payload.text||''))sent.__cooked=dishOf(payload.text)||'it';if(!/^i also used/i.test(payload.text||''))pending=null;chatBusy=true;$('chatGo').disabled=true;$('chatTips').textContent='';
     var mine=bubble('me',label),wait=bubble('bot','Thinking\u2026');payload.history=chatHist.slice(-4);if(window.Tote)Tote.talk(true);
-    try{var r=await api('/api/chat',{method:'POST',body:JSON.stringify(payload)});
+    var part=false;
+    try{var r=null;
+      /* a long message: what I am certain of is done at once, and only the rest waits for the slower read */
+      if(payload.text&&!payload.audio&&/[.!?]\s+\S/.test(payload.text)){var f1=null;try{f1=await api('/api/chat',{method:'POST',body:JSON.stringify({text:payload.text,fast:true})})}catch(e1){if(e1.code==='locked')throw e1}
+        if(f1&&f1.reply){if(f1.blocked||!f1.rest)r=f1;
+          else{wait.textContent=f1.reply;chatChanges(wait,f1.changes||[]);chatHist.push({role:'user',text:payload.text},{role:'assistant',text:f1.reply});
+            if(f1.changes&&f1.changes.length){if(window.Tote)Tote.hop();await refresh()}
+            part=true;payload={text:f1.rest,spent:f1.spent,history:chatHist.slice(-4)};wait=bubble('bot','Reading the rest\u2026');$('chatLog').scrollTop=$('chatLog').scrollHeight}}}
+      if(!r)r=await api('/api/chat',{method:'POST',body:JSON.stringify(payload)});
       if(r.heard)mine.textContent=r.heard;wait.textContent=r.reply;if(window.Tote)Tote.mood(r.blocked?'oops':'happy');
       chatChanges(wait,r.changes||[]);
       if(r.proposal&&r.proposal.length){var pr=r.proposal.slice(),box=el('div');wait.append(box);
@@ -1713,7 +1763,7 @@ button:active:not(:disabled),a.btn:active,label.btn:active,label.tile:active{tra
       if(!(r.proposal&&r.proposal.length)){var fb=el('button','fb','Not right?');fb.type='button';fb.setAttribute('aria-label','Tell '+buddy()+' this reply was not right');
         fb.onclick=function(){fb.remove();tell('down',{said:saidNow,reply:r.reply,route:r.route||''});wanted={said:saidNow,reply:r.reply,route:r.route||''};bubble('bot','Thanks for telling me. I have noted it so I can do better. What should I have done?');$('chatText').focus()};wait.append(fb)}
       if(r.changes&&r.changes.length){if(window.Tote)Tote.hop();await refresh()}
-    }catch(e){if(window.Tote)Tote.mood('oops');wait.textContent=e.code==='ai_quota'?COPY.ai_quota:e.code==='slow_down'?COPY.slow_down:e.code==='silent'?"I couldn't hear anything in that. Try again a little closer to the phone.":e.code==='offline'?'You seem to be offline. Nothing was changed.':e.code==='locked'?'':'I could not work that out just now. Nothing was changed. Try again in a moment.'}
+    }catch(e){if(window.Tote)Tote.mood('oops');wait.textContent=part&&e.code!=='ai_quota'&&e.code!=='locked'?'I could not read the rest just now. What I listed above is done.':e.code==='ai_quota'?COPY.ai_quota:e.code==='slow_down'?COPY.slow_down:e.code==='silent'?"I couldn't hear anything in that. Try again a little closer to the phone.":e.code==='offline'?'You seem to be offline. Nothing was changed.':e.code==='locked'?'':'I could not work that out just now. Nothing was changed. Try again in a moment.'}
     if(window.Tote)Tote.talk(false);chatBusy=false;$('chatGo').disabled=false;chatTips();chatKeep();$('chatLog').scrollTop=$('chatLog').scrollHeight}
   $('chatForm').addEventListener('submit',function(ev){ev.preventDefault();var t=$('chatText').value.trim();if(!t)return;$('chatText').value='';chatSend({text:t},t)});
   $('chatMic').onclick=function(){startRec()};
@@ -1766,7 +1816,8 @@ button:active:not(:disabled),a.btn:active,label.btn:active,label.tile:active{tra
     done=r.changes.slice();
     var parts=[];if(r.added)parts.push('I added '+r.added+(r.added===1?' thing':' things'));if(r.used||r.low)parts.push((r.added?'updated ':'I updated ')+((r.used||0)+(r.low||0)));
     var title=parts.join(', ')||'Done';
-    doneInfo={title:title,sub:(d.store?'From '+d.store+'. ':'')+'Saved. Tap the cross on anything I got wrong.'+(r.missed&&r.missed.length?" I couldn't find "+r.missed.join(', ')+'.':'')+learntLine(r.changes),
+    if(d.empty)title='On your list: '+r.changes[0].name+(d.pack?' ('+d.pack+')':'');
+    doneInfo={title:title,sub:(d.store?'From '+d.store+'. ':'')+'Saved. Tap the cross on anything I got wrong.'+(r.priceNote?' '+r.priceNote:'')+(r.missed&&r.missed.length?" I couldn't find "+r.missed.join(', ')+'.':'')+learntLine(r.changes),
       heard:d.heard?'“'+d.heard+'”':d.label?d.label.text:''};
     go('today');window.scrollTo(0,0);toast(title+(d.store?' from '+d.store:'')+'.','Undo',undoAll);
   }
