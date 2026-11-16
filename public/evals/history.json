@@ -758,5 +758,93 @@
     "stores": 20
    }
   }
+ },
+ {
+  "at": "2026-11-16T17:02:33.421Z",
+  "commit": "451fcac",
+  "note": "Acceptance test fixes: allergies by rule and profile, editable list, which-one, undo on removals, one count on Today",
+  "suites": {
+   "households": {
+    "ok": true
+   },
+   "router": {
+    "pass": 18942,
+    "total": 18942,
+    "rate": 100,
+    "worst": [
+     "gate: attack changes nothing 100%",
+     "privacy: ordinary text is left alone 100%",
+     "attack: recognised as a probe or kept away from the home 100%"
+    ]
+   },
+   "routerHeldOut": {
+    "minGate": 74.2,
+    "meanGate": 92
+   },
+   "learning": {
+    "pass": 71,
+    "total": 71
+   },
+   "measuring": {
+    "pass": 85,
+    "total": 85
+   },
+   "lean": {
+    "offlineTasks": 40,
+    "offlinePass": 100,
+    "offlinePartial": 100,
+    "liveTasks": 93,
+    "noModel": 48.4,
+    "noModelPass": 100
+   },
+   "quick": {
+    "handsOffSafe": 100,
+    "handsOff": 362,
+    "updates": 209,
+    "coverage": 24.4,
+    "precision": 100,
+    "both": {
+     "pass": 68,
+     "total": 68
+    }
+   },
+   "delegate": {
+    "routing": {
+     "smallShare": 49.9,
+     "wronglySmall": 0
+    },
+    "cost": {
+     "allLarge": 0.428,
+     "delegated": 0.265
+    },
+    "checks": {
+     "pass": 23,
+     "total": 23
+    }
+   },
+   "acceptance": {
+    "pass": 40,
+    "total": 40
+   },
+   "pace": {
+    "reminderOnTime": 70.3,
+    "reminderLate": 16.4,
+    "reminderEarly": 13.4,
+    "errorDays": 1.45,
+    "within2": 85.5,
+    "livingAlone": 58.7,
+    "student": 39.7
+   },
+   "world": {
+    "overall": 86.2,
+    "knows": 77.2,
+    "allergy": 82.6,
+    "falseAlarm": 99,
+    "diet": 100,
+    "units": 100,
+    "lines": 57,
+    "stores": 20
+   }
+  }
  }
 ]
