@@ -113,4 +113,8 @@ svg text{fill:var(--muted);font-size:11px}.legend{display:flex;gap:14px;flex-wra
   $('stop').onclick=function(){send('POST','/api/scorecard/stop').then(function(){load()})};
   load().then(function(){var a=data&&(data.runs||[]).find(function(r){return r.status==='queued'||r.status==='running'});if(a)step()});offline();
 })();
+/* the helper's own name: a household that renamed Tote sees that name here too */
+(function(){fetch('/api/items',{credentials:'same-origin'}).then(function(r){return r.ok?r.json():null}).then(function(d){var n=d&&d.profile&&d.profile.buddy;if(!n||n==='Tote')return;window.BUDDY=n;
+  var swap=function(root){var w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT),t;while((t=w.nextNode()))if(/\bTote\b/.test(t.nodeValue)&&!/^(SCRIPT|STYLE)$/.test(t.parentNode.nodeName))t.nodeValue=t.nodeValue.replace(/\bTote\b/g,n)};
+  swap(document.body);document.title=document.title.replace(/\bTote\b/g,n);new MutationObserver(function(ms){ms.forEach(function(m){m.addedNodes.forEach(function(x){if(x.nodeType===1)swap(x);else if(x.nodeType===3&&/\bTote\b/.test(x.nodeValue))x.nodeValue=x.nodeValue.replace(/\bTote\b/g,n)})})}).observe(document.body,{childList:true,subtree:true})}).catch(function(){})})();
 </script></main></body></html>

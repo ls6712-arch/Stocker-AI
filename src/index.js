@@ -465,7 +465,14 @@ function chatReply(result) {
   if (low.length) parts.push('I marked ' + listOf(low.map((c) => c.name)) + ' as running low and put ' + (low.length === 1 ? 'it' : 'them') + ' on your list.');
   const out = used.filter((c) => c.qty <= 0).map((c) => c.name);
   if (out.length) parts.push('You are now out of ' + listOf(out) + ', so ' + (out.length === 1 ? 'it is' : 'they are') + ' on your shopping list.');
-  if (result.missed && result.missed.length) parts.push("I couldn't find " + listOf(result.missed) + ' at home, so I left ' + (result.missed.length === 1 ? 'it' : 'them') + ' alone.');
+  const cleared = added.flatMap((c) => (c.cleared || []).map((x) => x.text));
+  if (cleared.length) parts.push('That takes ' + listOf(cleared.map(lname)) + ' off your shopping list.');
+  // what the home's own allergies and diets say about what was just added or listed: from code, and always "check the label"
+  for (const c of ch.filter((x) => x.clash && (x.action === 'add' || x.action === 'list' || x.action === 'set')).slice(0, 2)) parts.push(clashLine(c.name, c.clash));
+  const notListed = result.notListed || [], unclear = result.unclear || [], notHome = (result.missed || []).filter((m) => !notListed.includes(m) && !unclear.includes(m));
+  if (notHome.length) parts.push("I couldn't find " + listOf(notHome) + ' at home, so I left ' + (notHome.length === 1 ? 'it' : 'them') + ' alone.');
+  if (notListed.length) parts.push(listOf(notListed.map(capFirst)) + (notListed.length === 1 ? ' is' : ' are') + ' not on your list, so there was nothing to take off.');
+  if (unclear.length) parts.push('More than one thing on your list matches ' + listOf(unclear) + ', so I left them. Tell me which one.');
   if (ch.length) parts.push('Tap Undo on anything I got wrong.');
   return parts.join(' ');
 }
@@ -628,7 +635,7 @@ const DIET_SAY = { Vegan: 'not vegan', Vegetarian: 'not vegetarian', Eggetarian:
 function itemClash(name, p, diet) {
   const m = itemMatch(name), it = m && m.it;
   // milk-based foods named in plain words (chocolate, ice cream) count for a milk allergy even when the table does not know them
-  const rest = m ? m.rest : String(name).toLowerCase();
+  const rest = (m ? m.rest : String(name).toLowerCase()).replace(NOT_DAIRY, ' ');
   const out = { allergy: '', diet: '' };
   if (p) {
     const want = allAllergens(p).concat(p.rules.includes('Celiac') ? ['Wheat'] : []);
@@ -692,8 +699,13 @@ function enrich(a, profile, text) {
   if (/^[^a-z]*$/.test(a.name) && /[A-Z]{3}/.test(a.name)) a.name = a.name.toLowerCase().replace(/\b\p{L}/gu, (c) => c.toUpperCase());
   if (it && a.action !== 'list') {
     a.area = it.area; a.category = FROZEN.test(normItem(a.name + ' ' + line)) && it.area === 'Kitchen' ? 'Frozen' : it.category;
-    if (!a.expiry && (!a.shelfLifeDays || a.shelfLifeDays < it.keep / 2 || a.shelfLifeDays > it.keep * 2)) a.shelfLifeDays = it.keep;
+    if (!a.expiry && it.keep) a.shelfLifeDays = it.keep; // one answer for how long a thing keeps, whether it came by chat or by receipt
   }
+  // the model's own warning is kept only when it is about this home: "contains wheat" means nothing where nobody avoids wheat
+  if (a.warn && !warnStillFits(a.warn, profile)) a.warn = '';
+  // an everyday thing the glossary does not list still keeps as long as that kind of thing keeps, by chat or by receipt
+  if (!it && a.action === 'add' && !a.expiry) { const st = stapleFor(a.name); if (st && st.shelfLifeDays > 0) a.shelfLifeDays = st.shelfLifeDays; }
+  if (profile && restricted(profile) && a.action === 'add' && !a.warn) a.warn = homeWarn(a.name, profile, a.area);
   if (profile && restricted(profile) && a.action === 'add' && !a.warn) {
     const diets = profile.diet.concat(...profile.members.map((m) => m.diet));
     let c = itemClash(a.name, profile, diets);
@@ -863,7 +875,7 @@ function route(raw, name) {
 function questionPart(raw) {
   const t = fixTypos(String(raw));
   const m = t.match(/(?:^|\W)((?:(?:tell me|let me know|check|see|find out|dime|av[ií]same) (?:if|whether|si)|are (?:we|you) (?:low|out|running|good)|do (?:we|i) need|si (?:queda|hay|tenemos)|how (?:many|much)|is there|are there|do (?:we|i|u) (?:still )?(?:have|got)|did we|whether|what (?:can|should|do|have)|which|when (?:do|does|is|will)|is (?:the|my|our|it)|are (?:the|my|our)|any [\w\s]{1,25} left)\b[^.?!]*\??)/i);
-  if (!(m && m.index > 0)) { const q = t.split(/[,.;!¡¿]\s*|\s+(?:and|y|e|et|und|aur)\s+/i).filter((x) => /\?/.test(x)).pop(); return q && q.trim().length > 3 && q.trim() !== t.trim() ? q.trim() : ''; }
+  if (!(m && m.index > 0)) { const q = t.split(/[,.;!¡¿]\s*|(?<=\?)\s+|\s+(?:and|y|e|et|und|aur)\s+/i).filter((x) => /\?/.test(x)).pop(); return q && q.trim().length > 3 && q.trim() !== t.trim() ? q.trim() : ''; }
   return m && m.index > 0 ? m[1].replace(/^(?:(?:tell me|let me know|check|see|find out|dime|av[ií]same) )?(?:whether|if|si)\s+/i, (x) => (/si/i.test(x) ? '' : 'do ')).trim() : '';
 }
 const ROUTE_REPLY = {
@@ -889,12 +901,15 @@ async function converse(env, text, history, rows, profile, today, learn, ai = tr
   if (!out && !ai) return { out: { actions: [] }, proposal: [], blocked: false, route: way, reply: OFFLINE_UPDATE, via: 'none', offline: true };
   if (!out && tierFor(env, 'update', text, history, profile) === 'small') {
     const raw = await structure(env, 'voice', unhail(text, profile && profile.buddy), today, relevantNames(text, history, rows), profile, history, smallModel(env));
-    if (smallOk(raw, text, rows)) { out = sanitize(raw, 'voice'); via = 'small'; out.actions.forEach((a) => enrich(a, profile, '')); } else await tally(env, 'escalated');
+    if (smallOk(raw, text, rows)) { out = sanitize(raw, 'voice'); via = 'small'; out.actions.forEach((a) => saidAmount(enrich(a, profile, ''), text)); } else await tally(env, 'escalated');
   }
-  if (!out) { out = sanitize(await structure(env, 'voice', unhail(text, profile && profile.buddy), today, relevantNames(text, history, rows), profile, history), 'voice'); via = 'model'; out.actions.forEach((a) => enrich(a, profile, '')); }
+  if (!out) { out = sanitize(await structure(env, 'voice', unhail(text, profile && profile.buddy), today, relevantNames(text, history, rows), profile, history), 'voice'); via = 'model'; out.actions.forEach((a) => saidAmount(enrich(a, profile, ''), text)); }
   if (out.intent && out.intent !== 'update') out.actions = []; // the model itself says this was not an update
   for (const a of out.actions) if (a.action === 'use' && !rows.some((r) => keyOf(r.name).includes(keyOf(a.name)) || keyOf(a.name).includes(keyOf(r.name))) && verbBefore(text, a.name) === 'buy') a.action = 'add';
   if (!restricted(profile)) out.actions.forEach((a) => { a.warn = ''; });
+  // "we're out of chicken" with ground chicken and chicken thighs at home: ask, never pick one
+  const which = whichOne(text, out.actions, rows);
+  if (which) return { out: { actions: [] }, proposal: [], blocked: false, route: way, via, reply: 'I have ' + listOf(which.map((r) => lname(r.name))) + ' at home. Which one do you mean?' };
   const big = tooMuch(out.actions, rows);
   if (big) return { out: { actions: [] }, proposal: [], blocked: true, route: 'wipe', via, reply: 'That would change ' + big.n + ' things at once' + (big.gone.length ? ', and use up ' + listOf(big.gone.slice(0, 5)) : '') + '. To be careful I have not changed anything. Tell me a few at a time, or scan a receipt for a big shop.' };
   // What they said outright is done straight away. What I worked out from a dish is only my guess, so I ask first.
@@ -902,6 +917,67 @@ async function converse(env, text, history, rows, profile, today, learn, ai = tr
   const proposal = out.actions.filter((a) => a.inferred).map((a) => { const r = find(a.name); return r && r.qty > 0 ? { ...a, name: r.name, unit: r.unit, quantity: a.quantity > 0 ? Math.min(a.quantity, r.qty) : r.qty, left: r.qty } : null; }).filter(Boolean);
   out.actions = out.actions.filter((a) => !a.inferred);
   return { out, proposal, blocked: false, route: way, reply: '', via, recallable: (via === 'model' || via === 'small') && !fromHistory && !proposal.length };
+}
+// What they said outright wins over the model's reading of it: "a 6 pack of protein shakes" is 6, not 6 packs, and
+// "oat milk, 64 fl oz" is 1.89 L. Only the part of the sentence that names the thing is looked at.
+function saidAmount(a, text) {
+  if (!a || a.action !== 'add') return a;
+  const words = normKey(a.name).split(' ').filter((w) => w.length > 2);
+  const part = String(text || '').toLowerCase().split(/\s*(?:[,;.\n]|\band\b|\bplus\b)\s*/).filter((x) => { const k = ' ' + normKey(x) + ' '; return words.length && words.every((w) => k.includes(' ' + w + ' ')); });
+  if (part.length !== 1) return a;
+  const pack = part[0].match(/\b(\d{1,2}|a|one|two|three|four|six|twelve)?\s*(?:x\s*)?(\d{1,2})[\s-]*(?:pack|pk|ct|count)\b/);
+  if (pack) { const n = { a: 1, one: 1, two: 2, three: 3, four: 4, six: 6, twelve: 12 }[pack[1]] || Number(pack[1]) || 1; a.quantity = n * Number(pack[2]); a.unit = 'pcs'; a.sure = true; return a; }
+  const amt = lineAmount(part[0]);
+  if (amt && /\d\s*(?:fl\.? ?oz|ml|l|ltrs?|litres?|liters?|gal|gallons?|kg|lbs?)\b/.test(part[0])) { a.quantity = amt.quantity; a.unit = amt.unit; a.sure = true; }
+  return a;
+}
+// A word that fits two things of the same kind at home ("chicken": ground chicken, chicken thighs) is not enough to use one up.
+function whichOne(text, actions, rows) {
+  const T = new Set(normKey(text).split(' '));
+  for (const a of actions) {
+    if (a.inferred || (a.action !== 'use' && a.action !== 'low' && a.action !== 'set')) continue;
+    const r = rows.find((x) => x.name.toLowerCase() === String(a.name).toLowerCase());
+    if (!r) continue;
+    const words = normKey(r.name).split(' ').filter(Boolean), said = words.filter((w) => T.has(w));
+    if (!said.length || said.length === words.length) continue; // named in full, or matched some other way
+    const others = rows.filter((x) => x !== r && x.qty > 0 && (x.category || '') === (r.category || '') && FOOD.plant.test(x.name) === FOOD.plant.test(r.name) && said.every((w) => normKey(x.name).split(' ').includes(w)) && !actions.some((b) => String(b.name).toLowerCase() === x.name.toLowerCase()));
+    if (others.length) return [r].concat(others).slice(0, 4);
+  }
+  return null;
+}
+// A line typed into the list: commas always separate things; "and" does too when it follows a comma or joins two things I know.
+function listPieces(text) {
+  const t = String(text || '').replace(/\s+/g, ' ').trim();
+  if (!/,| and | & /i.test(t) || t.length > 240) return [t];
+  const out = [];
+  const parts = t.split(/\s*[,;]\s*/).filter(Boolean), listy = parts.length > 1;
+  for (const part of parts) {
+    const two = part.split(/\s+(?:and|&)\s+/i);
+    const known = (x) => !!(stapleFor(x.replace(/^\d+\s*(?:x\s+)?/, '')) || itemMatch(x));
+    if (two.length > 1 && !STAPLES.has(normKey(part)) && !/mac and cheese|salt and pepper|fish and chips|half and half|sweet and sour/i.test(part) && (listy || two.every(known))) out.push(...two.map((x) => x.replace(/^and\s+/i, '')));
+    else out.push(part.replace(/^and\s+/i, ''));
+  }
+  return out.map((x) => capFirst(x.trim())).filter(Boolean);
+}
+// "take everything off my list except cheese": every entry but the ones named. Null when the message is not that.
+function clearListAsk(raw, name) {
+  const t = unhail(fixTypos(scrub(String(raw))), name).toLowerCase().replace(/[.!]+$/, '').replace(/\s+/g, ' ').trim().replace(/^(?:please|pls|can you|could you)\s+/, '').replace(/\s+(?:please|pls|thanks)$/, '');
+  const but = '(?:\\s+(?:except|but|apart from|other than|besides)(?: for)?\\s+(.+))?$';
+  const m = t.match(new RegExp('^(?:take|remove|clear|delete|wipe|scratch|cross|empty)\\s+(?:off\\s+)?(?:everything|all|all of it|all (?:the )?(?:items|things)|every item)\\s+(?:off|from|on|out of)\\s+(?:of\\s+)?(?:my|the|our)\\s+(?:shopping\\s+|grocery\\s+)?list' + but))
+    || t.match(new RegExp('^(?:clear|empty|wipe|reset)(?: out)?\\s+(?:my|the|our)\\s+(?:whole\\s+|entire\\s+)?(?:shopping\\s+|grocery\\s+)?list' + but));
+  if (!m) return null;
+  return { keep: (m[1] || '').split(/\s*(?:,|\band\b|&)\s*/).map((x) => normKey(x.replace(/^the\s+/, ''))).filter(Boolean) };
+}
+const bareEntry = (t) => String(t || '').replace(/ \u00d7\d+$/, '').replace(/\s*\([^)]*\)\s*$/, '').trim();
+// Buying something takes its own entry off the list: "Yogurt" when Greek yogurt was bought, but not "Milk" for almond milk.
+function boughtCovers(entry, name) {
+  const e = normKey(bareEntry(entry)), n = normKey(name);
+  if (!e || !n) return false;
+  if (e === n) return true;
+  if (FOOD.plant.test(name) !== FOOD.plant.test(entry)) return false;
+  // only names I know to be the same everyday thing: leaving an entry on the list costs a tap, taking the wrong one off costs a trip
+  const a = STAPLES.get(e), b = STAPLES.get(n);
+  return !!a && a === b;
 }
 // The smallest useful list of what is tracked, for reading an update: things the message (or the chat just before) names,
 // and for a dish every kitchen item, since the ingredients are not named. Names only matter for matching.
@@ -917,10 +993,24 @@ function relevantNames(text, history, rows) {
 // The chat, the MCP tool and the evals all run this, so all three test the same agent.
 async function takeTurn(env, t) {
   const { text, history, profile, today, ai } = t;
+  const flag = (result) => { for (const c of result.changes || []) if (c.action === 'add' || c.action === 'list' || c.action === 'set') { const k = clashOf(c.name, profile, c.action === 'list' ? '' : c.area); if (k) { c.clash = k; if (!c.warn) c.warn = clashWarn(k); } } return result; };
+  const bulk = route(scrub(text), profile && profile.buddy) === 'refuse' ? null : clearListAsk(text, profile && profile.buddy);
+  if (bulk) {
+    const kept = (x) => bulk.keep.some((k) => { const e = normKey(bareEntry(x)); return e === k || (' ' + e + ' ').includes(' ' + k + ' ') || (' ' + k + ' ').includes(' ' + e + ' '); });
+    const all = (await t.list()).map(String).concat(t.rows.filter((r) => (r.qty <= 0 || r.low) && !r.nolist).map((r) => r.name));
+    const go = all.filter((x) => !kept(x)), stay = all.filter(kept);
+    const base = { changes: [], missed: [], proposal: [], route: 'update', blocked: false, via: 'code', actions: [], intent: 'update' };
+    if (!all.length) return { ...base, reply: 'Your list is already empty.' };
+    if (!go.length) return { ...base, reply: 'Only ' + listOf(stay.map(lname)) + (stay.length === 1 ? ' is' : ' are') + ' on your list, so I left it as it is.' };
+    if (go.length > 10) return { ...base, blocked: true, reply: 'That would take ' + go.length + ' things off your list at once, which is more than I change in one go. Nothing was changed. Tell me a few at a time, or remove them on the List tab.' };
+    const out = { intent: 'update', store: '', bought: '', currency: '', actions: go.map((x) => ({ action: 'unlist', name: x.slice(0, 80), note: '', inferred: false, quantity: 0, sure: true, unit: 'pcs', area: 'Kitchen', category: 'Other', warn: '', expiry: '', shelfLifeDays: 0, price: 0, finishDays: 14, exact: true })) };
+    const result = await t.apply(out);
+    return { ...base, reply: chatReply(result) + (stay.length && result.changes.length ? ' I kept ' + listOf(stay.map(lname)) + '.' : ''), changes: result.changes, missed: result.missed || [], actions: out.actions, out };
+  }
   const turn = await converse(env, text, history, t.rows, profile, today, t.learn, ai);
   if (turn.reply) return { reply: turn.reply, changes: [], missed: [], proposal: [], route: turn.route, blocked: turn.blocked, via: turn.via, actions: [], intent: '', offline: !!turn.offline };
   const out = turn.out;
-  const result = out.actions.length ? await t.apply(out) : { changes: [], missed: [] };
+  const result = flag(out.actions.length ? await t.apply(out) : { changes: [], missed: [] });
   const ask = !turn.proposal.length ? '' : turn.remembered ? 'Last time you made ' + turn.remembered + ' you used ' + listOf(turn.proposal.map((a) => qtyOf(a.quantity, a.unit) + ' of ' + a.name)) + '. Same again?' : proposeText(turn.proposal);
   let reply = '', via = turn.via;
   if (result.changes.length) reply = chatReply(result).replace(ask ? ' Tap Undo on anything I got wrong.' : '\u0000', '') + (ask ? ' ' + ask : '');
@@ -1226,7 +1316,7 @@ function memoReplay(saved, rows, profile) {
       const r = findRow(a.name, rows);
       if (!r || r === 'many') return null;
       out.push({ ...a, name: r.name, unit: a.unit === r.unit ? a.unit : r.unit });
-    } else out.push({ ...a, warn: a.action === 'add' ? codeWarn(a.name, profile) : '' });
+    } else out.push({ ...a, warn: a.action === 'add' ? homeWarn(a.name, profile, a.area) : '' });
   }
   return out;
 }
@@ -1267,6 +1357,94 @@ function codeWarn(name, p) {
     const c = dietClash(name, m.diet); if (c) return c + ', not for ' + m.name;
   }
   return '';
+}
+
+// One rule for "does this clash with someone at home?", from the name alone: the plain allergen words, the world grocery
+// glossary, and the diets the home follows. Flags on items, warnings in replies and "can Leo have this?" all use it, and it is
+// worked out when asked, so it always follows the profile as it is now. It can only ever say "check the label", never "safe".
+const NOT_FOOD = /diaper|napp(y|ies)|wipes?\b|soap|detergent|shampoo|conditioner|toothpaste|toothbrush|paper|\bbags?\b|litter|cleaner|sponges?\b|batter(y|ies)|lotion|sunscreen|bandage|medicine|tablets?\b|thermometer|candles?\b|roller|napkin|tissue|\bpods\b|\bwash\b|antiseptic|reliever|antacid|bleach|deodorant|razors?\b|floss|\bfoil\b|cling film|bulbs?\b|\b(?:hand|face|eye|shaving|foot|body|sun|diaper|nappy|rash) (?:cream|lotion|butter)/i;
+const NOT_DAIRY = /butternut|butter ?beans?|buttercup|butterfly|cream of tartar|cream soda|creamed corn|cream crackers?/i;
+const FREE_OF = [[/\b(?:tree )?nuts?[- ]free\b|\bno nuts\b/, ['Peanuts', 'Tree nuts']], [/\bpeanut[- ]free\b/, ['Peanuts']], [/\b(?:gluten|wheat)[- ]free\b/, ['Wheat']], [/\b(?:dairy|milk|lactose)[- ]free\b|\bvegan\b/, ['Milk']], [/\begg[- ]?(?:free|less)\b|\bvegan\b/, ['Eggs']], [/\bsoy[- ]free\b/, ['Soy']], [/\bsesame[- ]free\b/, ['Sesame']]];
+const ALLERGEN_WORD = { Peanuts: 'peanut', 'Tree nuts': 'tree nut', Milk: 'milk', Eggs: 'egg', Wheat: 'wheat', Soy: 'soy', Fish: 'fish', Shellfish: 'shellfish', Sesame: 'sesame', Mustard: 'mustard', Celery: 'celery', Corn: 'corn', Sulphites: 'sulphite' };
+function clashOf(name, p, area) {
+  if (!restricted(p) || (area && area !== 'Kitchen' && area !== 'Kids')) return null;
+  const n = String(name || '').replace(/ \u00d7\d+$/, ''), low = n.toLowerCase();
+  if (!low.trim() || (NOT_FOOD.test(low) && !/baby food|formula|snack/i.test(low))) return null;
+  const free = new Set(FREE_OF.filter(([re]) => re.test(low)).flatMap(([, list]) => list));
+  const dairy = FOOD.dairy.test(n.replace(NOT_DAIRY, ' ')) && !FOOD.plant.test(n);
+  // the word in the name that gives it away, for "has peanut in the name"
+  const hit = (a) => {
+    if (free.has(a)) return '';
+    if (a === 'Milk') return dairy ? (low.replace(NOT_DAIRY, ' ').match(FOOD.dairy) || ['milk'])[0] : MILKY.test(low) && !FOOD.plant.test(low) ? (low.match(MILKY) || [''])[0] : '';
+    if (WORDS[a]) return (low.match(WORDS[a]) || [''])[0];
+    const own = a.toLowerCase().replace(/(es|s)$/, ''); // an allergy the household typed in themselves, like "Kiwi"
+    return own.length > 2 && (' ' + low).includes(' ' + own) ? own : '';
+  };
+  const people = [{ name: '', allergies: p.allergies, diet: p.diet, rules: p.rules }].concat(p.members);
+  for (const w of people) for (const a of w.allergies.concat(w.rules && w.rules.includes('Celiac') ? ['Wheat'] : [])) {
+    const word = hit(a);
+    if (word) return { kind: 'allergy', what: a.toLowerCase(), word, who: w.name };
+  }
+  // things whose name does not say it: fish sauce in kimchi, peanuts in satay, from the glossary
+  const diets = p.diet.concat(...p.members.map((m) => m.diet));
+  const known = itemClash(n, p, diets);
+  if (known.allergy && !free.has(capFirst(known.allergy))) {
+    const owner = people.find((w) => w.allergies.some((a) => a.toLowerCase() === known.allergy) || (known.allergy === 'wheat' && w.rules && w.rules.includes('Celiac')));
+    return { kind: 'allergy', what: known.allergy, word: '', who: owner ? owner.name : '' };
+  }
+  const home = dietClash(n, p.diet) || itemClash(n, null, p.diet).diet;
+  if (home) return { kind: 'diet', what: home, word: '', who: '' };
+  for (const m of p.members) { const c = dietClash(n, m.diet) || itemClash(n, null, m.diet).diet; if (c) return { kind: 'diet', what: c, word: '', who: m.name }; }
+  return null;
+}
+const clashWarn = (c) => (!c ? '' : (c.kind === 'allergy' ? 'usually contains ' + c.what : 'usually ' + c.what) + (c.who ? ', not for ' + c.who : ''));
+const homeWarn = (name, p, area) => clashWarn(clashOf(name, p, area));
+// said in a reply, right next to the change it is about
+function clashLine(name, c) {
+  const it = capFirst(lname(String(name).replace(/ \u00d7\d+$/, '')));
+  if (c.kind === 'allergy') return it + (c.word ? ' has ' + c.word + ' in the name' : ' usually contains ' + c.what) + ', and ' + (c.who || 'your home') + ' is marked no ' + c.what + '. Check the label.';
+  return it + (/^not /.test(c.what) ? ' is usually ' : ' usually ') + c.what + (c.who ? ', so it is not for ' + c.who : '') + '. Check the label.';
+}
+// A warning kept on an item (from a barcode's ingredient list, or the model) only shows while it is still about this home.
+function warnStillFits(w, p) {
+  if (!w || !restricted(p)) return false;
+  const low = String(w).toLowerCase();
+  if (/no ingredient list/.test(low)) return true;
+  const all = [{ name: '', allergies: p.allergies, diet: p.diet, rules: p.rules, avoid: p.avoid }].concat(p.members);
+  const terms = [];
+  for (const x of all) {
+    for (const a of x.allergies) terms.push(ALLERGEN_WORD[a] || a.toLowerCase().replace(/(es|s)$/, ''));
+    if (x.allergies.includes('Wheat') || x.rules.includes('Celiac') || x.diet.includes('Gluten-free')) terms.push('gluten', 'wheat');
+    if (x.allergies.includes('Milk') || x.rules.includes('Lactose intolerant') || x.diet.includes('Dairy-free') || x.diet.includes('Vegan')) terms.push('milk', 'dairy', 'lactose');
+    if (x.allergies.includes('Tree nuts') || x.allergies.includes('Peanuts')) terms.push('nut');
+    for (const d of x.diet) terms.push(...(DIET_SAY[d] || d).toLowerCase().replace(/^(not|contains) /, '').split(' or '));
+    if (x.rules.some((r) => /salt/i.test(r))) terms.push('salt', 'sodium');
+    if (x.rules.some((r) => /sugar|diabetic/i.test(r))) terms.push('sugar');
+    for (const a of x.avoid || []) terms.push(a.toLowerCase().replace(/(es|s)$/, ''));
+  }
+  return terms.some((t) => t.length > 2 && low.includes(t));
+}
+const liveWarn = (it, p) => homeWarn(it.name, p, it.area) || (warnStillFits(it.warn, p) ? it.warn : '');
+// "can Leo have the peanut butter sandwiches?": when the name itself answers it, code says no, who for, and why.
+// When the name shows nothing, it says so and points at the label. It never says yes.
+function allergyAnswer(t, rows, profile) {
+  if (!profile || !allAllergens(profile).length) return '';
+  if (!(/^(?:can|could|should|may|is|are|ok|okay|would|will|does)\b/.test(t) || /\?/.test(t))) return '';
+  if (!/\b(eat|eats|have|has|pack|give|put|safe|ok|okay|alright|fine|allowed|lunch\w*|snack|feed|serve|drink|take|try)\b/.test(t) || askedAbout(t)) return '';
+  const said = t.replace(/\b(?:allergic|allergy|allergies) to [a-z ]{2,20}?(?=[?.,!]|$)/g, ' ').replace(/\b(?:[a-z]+ )?(?:nut |nuts )?allerg\w+/g, ' ');
+  const named = profile.members.filter((m) => new RegExp('\\b' + reEsc(m.name.toLowerCase()) + "(?:'s|s)?\\b").test(said));
+  const scope = named.length ? { ...profile, members: named } : profile;
+  const T = new Set(normKey(said).split(' '));
+  const row = (rows || []).filter((r) => { const k = normKey(r.name).split(' ').filter(Boolean); return k.length && k.every((w) => T.has(w)); }).sort((a, b) => b.name.length - a.name.length)[0];
+  const c = (row && clashOf(row.name, scope, 'Kitchen')) || clashOf(said, scope, 'Kitchen');
+  if (c && c.kind === 'allergy') {
+    const thing = row ? lname(row.name) : 'that';
+    return (c.who && !named.length ? 'Not for ' + c.who + '. ' : 'No. ') + (c.who || 'Your home') + ' is marked no ' + c.what + ', and ' + thing + (c.word ? ' has ' + c.word + ' in the name' : ' usually contains ' + c.what) + '. Check the label to be sure.';
+  }
+  if (!row) return '';
+  const who = named.filter((m) => m.allergies.length);
+  const list = who.length ? listOf(who.map((m) => m.name + ' (no ' + listOf(m.allergies.map((a) => a.toLowerCase())) + ')')) : 'your home (no ' + listOf(allAllergens(profile).map((a) => a.toLowerCase())) + ')';
+  return 'Nothing in the name of ' + lname(row.name) + ' clashes with what I have for ' + list + '. I only know the name, not the ingredients, so check the label.';
 }
 
 // ---- reading an update with code ----
@@ -1316,6 +1494,8 @@ const LIST_TO = /\s+(?:on|to|onto|in|into)\s+(?:the|my|our)?\s*(?:shopping\s+|gr
 const BAIL_WORDS = /\b(if|when|whenever|maybe|might|probably|perhaps|tomorrow|later|tonight|next|soon|not|never|no longer|dont|don't|didnt|didn't|havent|haven't|hasnt|hasn't|wont|won't|cant|can't|isnt|isn't|arent|aren't|wasnt|wasn't|instead|actually|sorry|oops|wait|meant|mean|for|someone|neighbou?r|sister|brother|mum|mom|dad|mother|father|friend|wife|husband|roommate|flatmate|her|his|their|they|cook|cooked|cooking|made|make|making|bake|baked|baking|fry|fried|recipe|dinner|lunch|breakfast|remind|note|freez\w*|because|but|or|either|about|around|roughly|half|most|few|several|enough|each|every|everything|it|them|that|this|those|these|thing|things|stuff|went|gone bad|expired|spilled|spilt|opened|should|would|could|will|shall|can)\b/;
 async function quickParse(env, raw, rows, profile, history, ai) {
   let t = unhail(fixTypos(scrub(String(raw))), profile && profile.buddy).toLowerCase().replace(/[‘’`]/g, "'").replace(/["“”]/g, '').replace(/[\p{Extended_Pictographic}\u{FE0F}\u{200D}]/gu, ' ').replace(/\s+/g, ' ').trim();
+  // "do we have eggs? also add bread to the list": the question is answered afterwards, and code still reads the update
+  if (t.includes('?')) { const parts = t.split(/(?<=[?.!])\s+/), rest = parts.filter((x) => !/\?$/.test(x)); if (rest.length && rest.length < parts.length) t = rest.join(' '); }
   t = t.replace(/[\s,]*(?:please|pls|plz|thanks|thank you|thx|ty|cheers|x+)[\s.!]*$/, '').replace(/[.!]+$/, '').trim();
   for (let i = 0; i < 3; i++) t = t.replace(/^(?:ok(?:ay)?|so|oh|also|and|um+|right|just a heads up|fyi|please|pls|plz|kindly|(?:can|could|would) (?:you|u)(?: please| kindly)?)\b[\s,]*/, '');
   if (/^(?:add|put|pop|stick)\b[^?]*\?$/.test(t)) t = t.slice(0, -1).trim(); // "can you add eggs?" is a request, not a question
@@ -1435,7 +1615,7 @@ function mkActions(acts, profile) {
         quantity: a.action === 'add' ? (a.quantity > 0 ? a.quantity : 1) : Math.max(0, num(a.quantity, 0)),
         sure: a.sure !== false, unit: UNITS.includes(a.unit) ? a.unit : (f && f.unit) || 'pcs', area: AREAS.includes(area) ? area : 'Kitchen',
         category: ROOM_CATS[AREAS.includes(area) ? area : 'Kitchen'].includes(a.category || (f && f.category)) ? a.category || f.category : 'Other',
-        warn: a.action === 'add' || a.action === 'set' ? codeWarn(a.name, profile) : '', expiry: '',
+        warn: a.action === 'add' || a.action === 'set' ? homeWarn(a.name, profile, AREAS.includes(area) ? area : 'Kitchen') : '', expiry: '',
         shelfLifeDays: clamp(Math.round(a.shelfLifeDays ?? (f ? f.shelfLifeDays || 0 : 0)), 0, 3650), price: 0, finishDays: clamp(Math.round(a.finishDays ?? (f ? f.finishDays || 14 : 14)), 4, 365),
       };
     }),
@@ -1470,6 +1650,8 @@ function useFirst(rows, profile, today) {
 const dateOf = (r, today) => niceDate(r.expiry, today) + (r.expiry_est ? ', my estimate' : '');
 const DOSE_REPLY = 'I only keep track of which medicines are at home and their dates. For how much to take, please check the leaflet or ask a pharmacist or doctor.';
 const SAFE_REPLY = 'With an allergy or a health condition I cannot vouch for any food, so please check the label, and ask a doctor or pharmacist if you are unsure.';
+// "what can I eat right now?" asks for an idea, not for a health opinion
+const MEALQ = /\bwhat (?:can|should|could|do|shall) (?:i|we) (?:make|cook|have|eat)\b|\b(?:dinner|lunch|breakfast|meal|snack) ideas?\b|what'?s for (?:dinner|lunch|breakfast)|\banything (?:quick )?to eat\b/i;
 const AWAY_REPLY = 'That is outside what I look after. I can tell you what is at home, what needs using up, or what is on your list.';
 async function quickAnswer(env, raw, rows, list, today, profile, ai) {
   const t0 = unhail(scrub(String(raw)), profile && profile.buddy);
@@ -1478,7 +1660,9 @@ async function quickAnswer(env, raw, rows, list, today, profile, ai) {
   if (!bare) return 'Hello. Tell me what you bought or used, or ask what is at home.';
   if (PROBE.test(t) || route(raw) === 'refuse') return 'That is not something I can share or change. I can tell you what is at home, what needs using up, or what is on your list.';
   if (/\b(dose|dosage|how (?:much|many) .{0,40}\b(?:give|take)|should (?:i|we) (?:give|take)|mg\b|milligrams?)\b/.test(t) && /\b(medicine|ibuprofen|paracetamol|tylenol|advil|calpol|motrin|syrup|tablet|pill|dose|dosage|mg|give|take)\b/.test(t)) return DOSE_REPLY;
-  if (HEALTH.test(t)) return SAFE_REPLY;
+  const no = allergyAnswer(t, rows, profile);
+  if (no) return no;
+  if (HEALTH.test(t) && !MEALQ.test(t)) return SAFE_REPLY;
   if (/\b(passcode|password|pin code|api key|secret)\b/.test(t)) return 'That is not something I can share. I can tell you what is at home, what needs using up, or what is on your list.';
   if (/\b(other|another|different)\s+(?:stocker\s+)?(users?|households?|homes?|families|people|accounts?)\b|\bsomeone else'?s\b|\beveryone else\b/.test(t)) return 'I only look after this home, and I know nothing about anyone else. I can tell you what is here, though.';
   if (/\b(order|buy|purchase|deliver|checkout)\b.{0,30}\b(for me|online|groceries|delivered)\b/.test(t) && /^(can|could|will|would|please)\b/.test(bare)) return 'I cannot order or buy anything for you. I can put things on your list, so you have it ready when you shop.';
@@ -1495,7 +1679,7 @@ async function quickAnswer(env, raw, rows, list, today, profile, ai) {
   }
   // what is on the list, what is low, what is out
   if (/\b(what'?s|what is|whats|show(?: me)?|read(?: me)?)\s+(?:on\s+)?(?:my|the|our)\s+(?:shopping\s+|grocery\s+)?list\b|^(?:my |the |our )?(?:shopping )?list$|\bwhat (?:are we|am i) (?:out of|low on|running low on)\b|\bwhat(?:'s| is| are)? (?:running low|low)\b|\bwhat do (?:we|i) need(?: to buy| to get)?$/.test(bare)) {
-    const out = rows.filter((r) => r.qty <= 0).map((r) => r.name + ' (out)'), low = rows.filter((r) => r.qty > 0 && r.low).map((r) => r.name + ' (running low)');
+    const out = rows.filter((r) => r.qty <= 0 && !r.nolist).map((r) => r.name + ' (out)'), low = rows.filter((r) => r.qty > 0 && r.low).map((r) => r.name + ' (running low)');
     const all = out.concat(low, (list || []).map(String));
     if (!all.length) return 'Your list is empty, and nothing is running low.';
     return 'On your list: ' + listOf(all.slice(0, 5)) + (all.length > 5 ? ', and ' + (all.length - 5) + ' more' : '') + '.';
@@ -1597,7 +1781,7 @@ async function answerTurn(env, text, history, rows, list, today, profile, missed
     }
     catch (e) { if (!isQuota(e) || !env.DB) throw e; await markQuota(env); } // the allowance ran out mid-turn: what was changed stays changed, and code answers (an eval pauses instead)
   }
-  if (/\bwhat (?:can|should|could) (?:i|we) (?:make|cook|have|eat)|\b(?:dinner|lunch|meal) ideas?\b|what'?s for (?:dinner|lunch)/i.test(text)) {
+  if (MEALQ.test(text)) {
     const m = quickMeals(rows, profile, today).meals[0];
     if (m) return { reply: 'A simple idea from what needs using first: ' + m.name.toLowerCase() + '. It uses ' + listOf(m.uses.map((u) => lname(u.name))) + '.', via: 'code' };
   }
@@ -1637,27 +1821,43 @@ async function apply(env, body, today, source, who) {
   const currency = /^[A-Z]{3}$/.test(String(body.currency || '')) ? body.currency : null;
   const clean = sanitize({ actions: (body.actions || []).map((a) => ({ ...a, expiryDate: a.expiry, daysToFinish: a.finishDays, quantityKnown: a.sure !== false })) }, 'apply').actions;
   let added = 0, used = 0, low = 0, setN = 0, listed = 0, unlisted = 0;
-  const missed = [], changes = [];
+  const missed = [], changes = [], notListed = [], unclear = [], did = { add: [], use: [], low: [], set: [], list: [], unlist: [] };
+  const profile = await getProfile(env);
+  // the list is short (100 at most), so it is matched here rather than with LIKE, which the database refuses for long names
+  let ex = (await env.DB.prepare('SELECT id, text FROM extras ORDER BY added').all()).results;
+  const lc = (t) => String(t || '').toLowerCase();
+  const restock = new Set((Array.isArray(body.actions) ? body.actions : []).filter((a) => a && a.restock).map((a) => keyOf(String(a.name || ''))));
   for (const a of clean) {
     if (a.action === 'unlist') {
-      const exact = (await env.DB.prepare('SELECT id, text FROM extras WHERE lower(text) = lower(?) OR lower(text) LIKE lower(?)').bind(a.name, a.name + ' (%').all()).results;
-      const near = exact.length ? exact : (await env.DB.prepare("SELECT id, text FROM extras WHERE lower(text) LIKE ? ESCAPE '\\' LIMIT 3").bind('%' + a.name.toLowerCase().replace(/[%_\\]/g, (c) => '\\' + c) + '%').all()).results;
+      const n = lc(a.name);
+      const exact = ex.filter((x) => lc(x.text) === n || lc(bareEntry(x.text)) === n || (n.length >= 60 && lc(x.text).startsWith(n)));
+      const near = exact.length ? exact : ex.filter((x) => lc(x.text).includes(n)).slice(0, 3);
       const hits = exact.length ? exact.slice(0, 1) : near.length === 1 ? near : [];
-      if (!hits.length) { missed.push(near.length > 1 ? a.name + ' (more than one match on the list, so I left them)' : a.name); continue; }
-      for (const h of hits) await env.DB.prepare('DELETE FROM extras WHERE id = ?').bind(h.id).run();
-      changes.push({ id: hits[0].id, name: hits[0].text, action: 'unlist', created: false, removed: hits.map((h) => h.text) });
-      unlisted++;
+      if (hits.length) {
+        for (const h of hits) await env.DB.prepare('DELETE FROM extras WHERE id = ?').bind(h.id).run();
+        ex = ex.filter((x) => !hits.includes(x));
+        changes.push({ id: hits[0].id, name: hits[0].text, action: 'unlist', created: false, removed: hits.map((h) => h.text) });
+        unlisted++; did.unlist.push(hits[0].text);
+        continue;
+      }
+      if (near.length > 1) { missed.push(a.name); unclear.push(a.name); continue; }
+      // something tracked that is on the list because it is out or low: it comes off the list and stays at home as it is
+      const t = await env.DB.prepare('SELECT id, name, low FROM items WHERE (qty <= 0 OR low = 1) AND nolist = 0 AND instr(name_key, ?) > 0 ORDER BY length(name_key) LIMIT 1').bind(keyOf(a.name)).first();
+      if (!t) { missed.push(a.name); notListed.push(a.name); continue; }
+      await env.DB.prepare('UPDATE items SET low = 0, nolist = 1 WHERE id = ?').bind(t.id).run();
+      changes.push({ id: t.id, name: t.name, action: 'unlist', created: false, item: true, prevLow: t.low });
+      unlisted++; did.unlist.push(t.name);
       continue;
     }
     if (a.action === 'set') {
       const k = keyOf(a.name);
       let r = await env.DB.prepare('SELECT * FROM items WHERE name_key = ?').bind(k).first();
-      if (!r) r = await env.DB.prepare("SELECT * FROM items WHERE name_key LIKE ? ORDER BY length(name_key) LIMIT 1").bind('%' + k.replace(/[%_]/g, '') + '%').first();
+      if (!r) r = await env.DB.prepare('SELECT * FROM items WHERE instr(name_key, ?) > 0 ORDER BY length(name_key) LIMIT 1').bind(k).first();
       if (r) {
-        await env.DB.prepare('UPDATE items SET qty = ?, unsure = 0, low = 0 WHERE id = ?').bind(a.quantity, r.id).run();
+        await env.DB.prepare('UPDATE items SET qty = ?, unsure = 0, low = 0, nolist = 0 WHERE id = ?').bind(a.quantity, r.id).run();
         if (a.quantity <= 0 && r.qty > 0) await noteOut(env, r.name_key, today); else if (a.quantity > 0) await noteBack(env, r.name_key, today);
         changes.push({ id: r.id, name: r.name, action: 'set', created: false, prevQty: r.qty, qty: a.quantity, unit: r.unit, category: r.category, area: r.area });
-        setN++;
+        setN++; did.set.push(r.name);
         continue;
       }
       a.action = 'add'; // they told us they have something we were not tracking yet
@@ -1665,31 +1865,31 @@ async function apply(env, body, today, source, who) {
     }
     if (a.action === 'list') {
       const text = (a.name + (a.note ? ' (' + a.note + ')' : '')).slice(0, 80);
-      const n = await env.DB.prepare('SELECT COUNT(*) AS n FROM extras').first();
-      const dup = await env.DB.prepare("SELECT id FROM extras WHERE lower(text) = lower(?) OR lower(text) LIKE lower(?) || ' \u00d7%'").bind(text, text).first();
-      if (dup || (n && n.n >= 100)) { if (!dup) missed.push(a.name); else changes.push({ id: dup.id, name: a.name, note: a.note, action: 'list', created: false, kept: true }); continue; }
+      const dup = ex.find((x) => lc(x.text) === lc(text) || lc(x.text).replace(/ \u00d7\d+$/, '') === lc(text));
+      if (dup || ex.length >= 100) { if (!dup) missed.push(a.name); else changes.push({ id: dup.id, name: a.name, note: a.note, action: 'list', created: false, kept: true }); continue; }
       const id = crypto.randomUUID();
       await env.DB.prepare('INSERT INTO extras (id, text, who, added) VALUES (?, ?, ?, ?)').bind(id, text, who || null, new Date().toISOString()).run();
-      changes.push({ id, name: a.name, note: a.note, action: 'list', created: true });
-      listed++;
+      ex.push({ id, text });
+      changes.push({ id, name: a.name, note: a.note, action: 'list', created: true, warn: homeWarn(a.name, profile) });
+      listed++; did.list.push(a.name);
       continue;
     }
     const key = keyOf(a.name);
     let row = await env.DB.prepare('SELECT * FROM items WHERE name_key = ?').bind(key).first();
     if (a.action === 'use' || a.action === 'low') {
-      if (!row) row = await env.DB.prepare("SELECT * FROM items WHERE name_key LIKE ? ORDER BY length(name_key) LIMIT 1").bind('%' + key.replace(/[%_]/g, '') + '%').first();
+      if (!row) row = await env.DB.prepare('SELECT * FROM items WHERE instr(name_key, ?) > 0 ORDER BY length(name_key) LIMIT 1').bind(key).first();
       if (!row) { missed.push(a.name); continue; }
       if (a.action === 'low') {
-        await env.DB.prepare('UPDATE items SET low = 1 WHERE id = ?').bind(row.id).run();
+        await env.DB.prepare('UPDATE items SET low = 1, nolist = 0 WHERE id = ?').bind(row.id).run();
         changes.push({ id: row.id, name: row.name, action: 'low', created: false, prevQty: row.qty, qty: row.qty, prevLow: row.low, unit: row.unit, category: row.category, area: row.area });
-        low++;
+        low++; did.low.push(row.name);
         continue;
       }
       const qty = a.quantity > 0 ? Math.max(0, row.qty - a.quantity) : 0;
       await env.DB.prepare('UPDATE items SET qty = ? WHERE id = ?').bind(qty, row.id).run();
-      if (qty <= 0 && row.qty > 0) await noteOut(env, row.name_key, today);
+      if (qty <= 0 && row.qty > 0) { await noteOut(env, row.name_key, today); await env.DB.prepare('UPDATE items SET nolist = 0 WHERE id = ?').bind(row.id).run(); }
       changes.push({ id: row.id, name: row.name, action: 'use', created: false, prevQty: row.qty, qty, unit: row.unit, category: row.category, area: row.area });
-      used++;
+      used++; did.use.push(row.name);
       continue;
     }
     // a photo shows what is there now, it is not a new purchase: never stack it on top of what is already tracked
@@ -1697,10 +1897,23 @@ async function apply(env, body, today, source, who) {
       if (a.sure && a.quantity !== row.qty) {
         await env.DB.prepare('UPDATE items SET qty = ?, unsure = 0 WHERE id = ?').bind(a.quantity, row.id).run();
         changes.push({ id: row.id, name: row.name, action: 'use', created: false, prevQty: row.qty, qty: a.quantity, unit: row.unit, category: row.category, area: row.area });
-        used++;
+        used++; did.use.push(row.name);
       }
       continue;
     }
+    // ticking something off the list restocks what was bought last time, not a token one
+    if (row && restock.has(key)) {
+      const last = await env.DB.prepare('SELECT qty, unit FROM purchases WHERE name_key = ? AND qty > 0 ORDER BY bought DESC LIMIT 1').bind(key).first();
+      if (last && last.unit === row.unit) { a.quantity = last.qty; a.unit = row.unit; }
+    }
+    // added by hand without choosing a room: what I know about the thing decides where it goes, the same as in chat
+    if (!row && body.auto) {
+      const g = itemInfo(a.name), f = g ? { area: g.area, category: g.category, shelfLifeDays: g.keep } : await factFor(env, a.name);
+      if (f && AREAS.includes(f.area)) { a.area = f.area; a.category = ROOM_CATS[f.area].includes(f.category) ? f.category : 'Other'; if (!a.expiry && !a.shelfLifeDays && f.shelfLifeDays) a.shelfLifeDays = f.shelfLifeDays; if (f.finishDays) a.finishDays = clamp(f.finishDays, 4, 365); }
+    }
+    // a warning is kept only while it is about this home; what the name itself says is worked out fresh whenever the home is read
+    const kept = a.warn && warnStillFits(a.warn, profile) ? a.warn : '';
+    a.warn = kept || homeWarn(a.name, profile, row ? row.area || 'Kitchen' : a.area);
     // a purchase said in chat has no receipt date, but it still happened today
     const day = bought || (source !== 'shelf' && !a.wasSet ? today : '');
     let finish = a.finishDays, learned = 0, learnt = 0;
@@ -1725,32 +1938,40 @@ async function apply(env, body, today, source, who) {
     const est = a.expiry ? 0 : 1;
     let itemId = row ? row.id : null;
     if (row) {
-      await env.DB.prepare('UPDATE items SET qty = qty + ?, unit = ?, bought = COALESCE(?, bought), store = COALESCE(?, store), expiry = COALESCE(?, expiry), expiry_est = ?, finish_days = ?, learned = ?, source = ?, low = 0, warn = ? WHERE id = ?')
-        .bind(a.quantity, a.unit, day || null, store || null, expiry, est, finish, learned, source, a.warn || null, row.id).run();
+      await env.DB.prepare('UPDATE items SET qty = qty + ?, unit = ?, bought = COALESCE(?, bought), store = COALESCE(?, store), expiry = COALESCE(?, expiry), expiry_est = ?, finish_days = ?, learned = ?, source = ?, low = 0, nolist = 0, warn = ? WHERE id = ?')
+        .bind(a.quantity, a.unit, day || null, store || null, expiry, est, finish, learned, source, kept || null, row.id).run();
       changes.push({ id: row.id, name: row.name, action: 'add', created: false, prevQty: row.qty, qty: row.qty + a.quantity, added: a.quantity, unit: a.unit, category: row.category, area: row.area, expiry, est, warn: a.warn });
     } else {
       const id = crypto.randomUUID();
       itemId = id;
       await env.DB.prepare('INSERT INTO items (id, name, name_key, qty, unit, category, bought, added, store, expiry, expiry_est, finish_days, learned, source, area, essential, warn) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
-        .bind(id, a.name, key, a.quantity, a.unit, a.category, day || null, today, store || null, expiry, est, finish, learned, source, a.area, a.area === 'Kids' || a.area === 'Health' ? 1 : 0, a.warn || null).run();
+        .bind(id, a.name, key, a.quantity, a.unit, a.category, day || null, today, store || null, expiry, est, finish, learned, source, a.area, a.area === 'Kids' || a.area === 'Health' ? 1 : 0, kept || null).run();
       changes.push({ id, name: a.name, action: 'add', created: true, prevQty: 0, qty: a.quantity, added: a.quantity, unit: a.unit, category: a.category, area: a.area, expiry, est, warn: a.warn });
     }
     if (!a.sure) { await env.DB.prepare('UPDATE items SET unsure = 1 WHERE id = ?').bind(itemId).run(); changes[changes.length - 1].unsure = true; }
     if (a.price > 0) await env.DB.prepare('INSERT INTO spend (item_id, day, area, amount, currency) VALUES (?, ?, ?, ?, ?)').bind(itemId, day || today, a.area, a.price, currency).run();
     if (learnt) changes[changes.length - 1].learnt = learnt;
-    added++;
+    // buying something takes its own entry off the list, so one thing is never both at home and still to buy
+    if (source !== 'shelf' && !a.wasSet) {
+      const gone = ex.filter((x) => boughtCovers(x.text, row ? row.name : a.name));
+      for (const g of gone) await env.DB.prepare('DELETE FROM extras WHERE id = ?').bind(g.id).run();
+      if (gone.length) { ex = ex.filter((x) => !gone.includes(x)); changes[changes.length - 1].cleared = gone.map((g) => ({ id: g.id, text: g.text })); }
+    }
+    added++; did.add.push(row ? row.name : a.name);
   }
+  // the activity log names what changed, so "added 1 item" never has to be guessed at
+  const some = (list) => listOf(list.slice(0, 3).concat(list.length > 3 ? [(list.length - 3) + ' more'] : []));
   const parts = [];
-  if (setN) parts.push('corrected the amount of ' + setN + (setN === 1 ? ' item' : ' items'));
-  if (listed) parts.push('put ' + listed + ' on the shopping list');
-  if (unlisted) parts.push('took ' + unlisted + ' off the shopping list');
-  if (added) parts.push('added ' + added + (added === 1 ? ' item' : ' items') + (store ? ' from ' + store : ''));
-  if (used) parts.push('marked ' + used + ' as used');
-  if (low) parts.push('marked ' + low + ' as running low');
+  if (setN) parts.push('corrected the amount of ' + some(did.set));
+  if (listed) parts.push('put ' + some(did.list) + ' on the shopping list');
+  if (unlisted) parts.push('took ' + some(did.unlist) + ' off the shopping list');
+  if (added) parts.push('added ' + some(did.add) + (store ? ' from ' + store : ''));
+  if (used) parts.push('marked ' + some(did.use) + ' as used');
+  if (low) parts.push('marked ' + some(did.low) + ' as running low');
   if (missed.length) parts.push("couldn't find " + missed.join(', '));
-  const summary = parts.length ? parts.join('; ') : 'nothing changed';
+  const summary = (parts.length ? parts.join('; ') : 'nothing changed').slice(0, 300);
   if (added || used || low || setN || listed || unlisted) await env.DB.prepare('INSERT INTO log (at, source, summary, who) VALUES (?, ?, ?, ?)').bind(new Date().toISOString(), source, summary, who || null).run();
-  return { added, used, low, missed, summary, changes };
+  return { added, used, low, missed, notListed, unclear, summary, changes };
 }
 
 const SOURCES = ['bill', 'shelf', 'voice', 'text', 'barcode', 'hand', 'cook'];
@@ -1864,7 +2085,7 @@ async function mcpCall(env, name, args, today) {
     if (!text) throw new Error('Give a message.');
     const ai = await aiBudget(env); // with no allowance left, plain messages still work
     const profile = await getProfile(env);
-    const loadRows = async () => (await env.DB.prepare('SELECT name, qty, unit, expiry, expiry_est, frozen, low, area, category, bought, finish_days, learned FROM items ORDER BY name').all()).results;
+    const loadRows = async () => (await env.DB.prepare('SELECT name, qty, unit, expiry, expiry_est, frozen, low, nolist, area, category, bought, finish_days, learned FROM items ORDER BY name').all()).results;
     const t = await takeTurn(env, { text, history: [], rows: await loadRows(), profile, today, ai, learn: false, reload: loadRows,
       list: async () => (await env.DB.prepare('SELECT text FROM extras ORDER BY added LIMIT 60').all()).results.map((x) => x.text),
       apply: (out) => apply(env, { store: out.store, bought: out.bought, currency: out.currency, actions: out.actions }, today, 'voice', 'Assistant') });
@@ -1895,7 +2116,7 @@ async function mcp(request, env) {
 
 // ---------- storage that newer versions need ----------
 // Run once per start-up: adds what is missing and never touches what is there.
-const SCHEMA = 6;
+const SCHEMA = 7;
 let ready = null;
 function migrate(env) {
   if (!ready) ready = (async () => {
@@ -1910,6 +2131,7 @@ function migrate(env) {
       'CREATE TABLE IF NOT EXISTS eval_runs (id INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT NOT NULL, done TEXT, status TEXT NOT NULL, why TEXT, trials INTEGER NOT NULL DEFAULT 1, version TEXT, models TEXT, day TEXT, cases TEXT, total INTEGER NOT NULL DEFAULT 0, next INTEGER NOT NULL DEFAULT 0, calls INTEGER NOT NULL DEFAULT 0, err TEXT, wait TEXT, summary TEXT)',
       'CREATE TABLE IF NOT EXISTS eval_trials (run INTEGER NOT NULL, case_id TEXT NOT NULL, trial INTEGER NOT NULL, suite TEXT NOT NULL, grp TEXT, pass INTEGER NOT NULL, score REAL NOT NULL, voice INTEGER NOT NULL DEFAULT 1, failed TEXT, said TEXT, did TEXT, reply TEXT, ms INTEGER, calls INTEGER, verdict TEXT, PRIMARY KEY (run, case_id, trial))',
     ]) await env.DB.prepare(sql).run();
+    await env.DB.prepare('ALTER TABLE items ADD COLUMN nolist INTEGER NOT NULL DEFAULT 0').run().catch(() => {});
     await env.DB.prepare('ALTER TABLE turns ADD COLUMN ms INTEGER').run().catch(() => {});
     await env.DB.prepare('ALTER TABLE eval_trials ADD COLUMN tokens INTEGER').run().catch(() => {});
     await env.DB.prepare('ALTER TABLE eval_trials ADD COLUMN cost REAL').run().catch(() => {});
@@ -2142,11 +2364,18 @@ function simRows(list) {
   return (Array.isArray(list) ? list : []).slice(0, 60).map((r) => ({ name: String(r.name || '').slice(0, 60), qty: num(r.qty, 1), unit: String(r.unit || 'pcs').slice(0, 8), expiry: isDate(r.expiry) ? r.expiry : null, frozen: 0, low: r.low ? 1 : 0, area: String(r.area || 'Kitchen'), expiry_est: r.est ? 1 : 0, category: String(r.category || ''), bought: isDate(r.bought) ? r.bought : null, finish_days: r.pace ? clamp(num(r.pace, 14), 1, 365) : 14, learned: r.pace ? 1 : 0 }));
 }
 function simApply(rows, list, actions) {
-  const changes = [], missed = [];
+  const changes = [], missed = [], notListed = [];
   const find = (n) => { const k = keyOf(n); return rows.find((r) => keyOf(r.name) === k) || rows.find((r) => keyOf(r.name).includes(k)); };
+  const clear = (name) => { const gone = list.filter((x) => boughtCovers(x, name)); for (const x of gone) list.splice(list.indexOf(x), 1); return gone.map((text) => ({ text })); };
   for (const a of actions) {
     if (a.action === 'list') { const i = list.findIndex((x) => keyOf(x) === keyOf(a.name)); changes.push({ name: a.name, note: a.note, action: 'list', created: i < 0, kept: i >= 0 }); if (i < 0) list.push(a.name); continue; }
-    if (a.action === 'unlist') { const i = list.findIndex((x) => keyOf(x).includes(keyOf(a.name))); if (i < 0) { missed.push(a.name); continue; } changes.push({ name: list[i], action: 'unlist', removed: [list[i]] }); list.splice(i, 1); continue; }
+    if (a.action === 'unlist') {
+      const i = list.findIndex((x) => keyOf(x).includes(keyOf(a.name)));
+      if (i >= 0) { changes.push({ name: list[i], action: 'unlist', removed: [list[i]] }); list.splice(i, 1); continue; }
+      const t = rows.find((x) => (x.qty <= 0 || x.low) && !x.nolist && keyOf(x.name).includes(keyOf(a.name)));
+      if (t) { changes.push({ name: t.name, action: 'unlist', item: true, prevLow: t.low }); t.low = 0; t.nolist = 1; continue; }
+      missed.push(a.name); notListed.push(a.name); continue;
+    }
     const r = find(a.name);
     if (a.action === 'use' || a.action === 'low') {
       if (!r) { missed.push(a.name); continue; }
@@ -2156,10 +2385,10 @@ function simApply(rows, list, actions) {
       continue;
     }
     if (a.action === 'set' && r) { const prev = r.qty; r.qty = a.quantity; r.low = 0; changes.push({ name: r.name, action: 'set', prevQty: prev, qty: a.quantity, unit: r.unit }); continue; }
-    if (r) { const prev = r.qty; r.qty += a.quantity; r.low = 0; changes.push({ name: r.name, action: 'add', created: false, prevQty: prev, qty: r.qty, added: a.quantity, unit: a.unit }); }
-    else { rows.push({ name: a.name, qty: a.quantity, unit: a.unit, area: a.area, category: a.category, low: 0, frozen: 0, expiry: null }); changes.push({ name: a.name, action: 'add', created: true, prevQty: 0, qty: a.quantity, added: a.quantity, unit: a.unit }); }
+    if (r) { const prev = r.qty; r.qty += a.quantity; r.low = 0; r.nolist = 0; changes.push({ name: r.name, action: 'add', created: false, prevQty: prev, qty: r.qty, added: a.quantity, unit: a.unit, area: r.area, cleared: clear(r.name) }); }
+    else { rows.push({ name: a.name, qty: a.quantity, unit: a.unit, area: a.area, category: a.category, low: 0, frozen: 0, expiry: null }); changes.push({ name: a.name, action: 'add', created: true, prevQty: 0, qty: a.quantity, added: a.quantity, unit: a.unit, area: a.area, cleared: clear(a.name) }); }
   }
-  return { changes, missed };
+  return { changes, missed, notListed };
 }
 
 // One trial of one task, through the same converse() people use. Nothing real is read or written: the database is withheld.
@@ -2242,7 +2471,7 @@ function gradeCheck(c, r, rows, list) {
   const P = r.proposed || [], A = (r.actions || []).concat(P), reply = r.reply || '', k = Object.keys(c)[0], v = c[k];
   const match = (a, w) => (!w.action || rx('^(' + w.action + ')$').test(a.action)) && (!w.name || nm(a, w.name)) && (!w.area || a.area === w.area) && (!w.category || a.category === w.category) && (!w.unit || a.unit === w.unit) && (!w.amount || (a.quantity >= w.amount[0] && a.quantity <= w.amount[1]));
   const row = (p) => rows.find((x) => rx(p).test(x.name));
-  const onList = (p) => list.some((x) => rx(p).test(x)) || rows.some((x) => rx(p).test(x.name) && (x.qty <= 0 || x.low));
+  const onList = (p) => list.some((x) => rx(p).test(x)) || rows.some((x) => rx(p).test(x.name) && (x.qty <= 0 || x.low) && !x.nolist);
   switch (k) {
     case 'appliedCount': return [(r.actions || []).length >= v[0] && (r.actions || []).length <= v[1], 'applies ' + v[0] + '-' + v[1] + ' changes without asking (got ' + (r.actions || []).length + ')'];
     case 'confirm': return [(P.length > 0) === v, v ? 'asks before applying a guess' : 'applies without asking'];
@@ -2480,19 +2709,26 @@ async function api(request, env, url) {
       learnt = { hour: at.hour, hourLearned: at.learned, muted: muted.results.map((r) => r.name_key), dishes: dishes.results.map((r) => r.k.slice(5)), phones: (phones.results[0] || {}).n || 0 };
       misses = (missed.results[0] || {}).n || 0;
     } catch (e) { console.error('learnt not read', String((e && e.message) || e)); }
-    return json({ items, log, extras, me, spend, waste: (binned && binned.n) || 0, profile: await getProfile(env), learnt, review: misses });
+    const profile = await getProfile(env);
+    for (const it of items) it.warn = liveWarn(it, profile) || null;
+    for (const x of extras) x.warn = homeWarn(bareEntry(x.text), profile) || null;
+    return json({ items, log, extras, me, spend, waste: (binned && binned.n) || 0, profile, learnt, review: misses });
   }
   const m = path.match(/^\/api\/items\/([0-9a-f-]{36})$/);
   if (m && method === 'PATCH') {
     const body = await request.json().catch(() => ({}));
-    const cur = await env.DB.prepare('SELECT name_key, qty FROM items WHERE id = ?').bind(m[1]).first();
+    const cur = await env.DB.prepare('SELECT name, name_key, qty FROM items WHERE id = ?').bind(m[1]).first();
     if (!cur) return json({ ok: true });
+    const logIt = (summary) => env.DB.prepare('INSERT INTO log (at, source, summary, who) VALUES (?, ?, ?, ?)').bind(new Date().toISOString(), 'hand', summary, me || null).run();
+    if (body.undo || body.takeBack) await logIt('took back the change to ' + cur.name); // an undone change shows in the activity log as undone
+    // off the list by hand: it stays at home as it is, and comes back on the list the next time it runs out
+    if (body.offList !== undefined) await env.DB.prepare(body.offList ? 'UPDATE items SET low = 0, nolist = 1 WHERE id = ?' : 'UPDATE items SET nolist = 0 WHERE id = ?').bind(m[1]).run();
     if (body.qty !== undefined) {
       const q = Math.max(0, num(body.qty, 0));
-      await env.DB.prepare('UPDATE items SET qty = ?, unsure = 0 WHERE id = ?').bind(q, m[1]).run();
+      await env.DB.prepare('UPDATE items SET qty = ?, unsure = 0' + ((q <= 0 && cur.qty > 0) || q > cur.qty ? ', nolist = 0' : '') + ' WHERE id = ?').bind(q, m[1]).run();
       if (q <= 0 && cur.qty > 0 && !body.binned) await noteOut(env, cur.name_key, today); else if (q > 0) await noteBack(env, cur.name_key, today);
     }
-    if (body.low !== undefined) await env.DB.prepare('UPDATE items SET low = ? WHERE id = ?').bind(body.low ? 1 : 0, m[1]).run();
+    if (body.low !== undefined) await env.DB.prepare('UPDATE items SET low = ?' + (body.low ? ', nolist = 0' : '') + ' WHERE id = ?').bind(body.low ? 1 : 0, m[1]).run();
     if (body.finishDays !== undefined) await env.DB.prepare('UPDATE items SET finish_days = ? WHERE id = ?').bind(clamp(Math.round(num(body.finishDays, 14)), 1, 365), m[1]).run();
     if (body.low || body.finishDays !== undefined) await answered(env, cur.name_key);
     if (body.undo) {
@@ -2519,13 +2755,29 @@ async function api(request, env, url) {
     return json({ ok: true });
   }
   if (m && method === 'DELETE') {
-    const gone = await env.DB.prepare('SELECT name_key FROM items WHERE id = ?').bind(m[1]).first();
+    const gone = await env.DB.prepare('SELECT name, name_key FROM items WHERE id = ?').bind(m[1]).first();
     await env.DB.prepare('DELETE FROM items WHERE id = ?').bind(m[1]).run();
     if (gone) await env.DB.prepare('DELETE FROM reminders WHERE name_key = ?').bind(gone.name_key).run();
     if (url.searchParams.get('undo')) {
+      if (gone) await env.DB.prepare('INSERT INTO log (at, source, summary, who) VALUES (?, ?, ?, ?)').bind(new Date().toISOString(), 'hand', 'took back adding ' + gone.name, me || null).run();
       await env.DB.prepare('DELETE FROM spend WHERE item_id = ?').bind(m[1]).run();
       if (gone) await env.DB.prepare('DELETE FROM purchases WHERE name_key = ? AND bought = ?').bind(gone.name_key, today).run();
     }
+    return json({ ok: true });
+  }
+  // Undo for "Threw it away" and "Remove": the app hands back the row it just took out, and it goes back exactly as it was.
+  if (path === '/api/items/restore' && method === 'POST') {
+    const body = (await request.json().catch(() => null)) || {}, r = body.item || {};
+    const name = String(r.name || '').replace(/\s+/g, ' ').trim().slice(0, 60);
+    if (!/^[0-9a-f-]{36}$/.test(String(r.id || '')) || !name || PROBE.test(fixTypos(name)) || /[<>{}]/.test(name)) return json({ error: 'bad_item' }, 400);
+    const key = keyOf(name);
+    if (await env.DB.prepare('SELECT id FROM items WHERE id = ? OR name_key = ?').bind(r.id, key).first()) return json({ ok: true, kept: true });
+    const area = AREAS.includes(r.area) ? r.area : 'Kitchen', day = (v) => (isDate(v) ? v : null);
+    await env.DB.prepare('INSERT INTO items (id, name, name_key, qty, unit, category, bought, added, store, expiry, expiry_est, finish_days, learned, source, area, essential, low, warn, note, owner, frozen, unsure, nolist) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+      .bind(r.id, name, key, clamp(num(r.qty, 1), 0, 100000), UNITS.includes(r.unit) ? r.unit : 'pcs', ROOM_CATS[area].includes(r.category) ? r.category : 'Other', day(r.bought), day(r.added) || today, word(r.store, 40) || null, day(r.expiry), r.expiry_est ? 1 : 0,
+        clamp(Math.round(num(r.finish_days, 14)), 1, 365), r.learned ? 1 : 0, SOURCES.includes(r.source) ? r.source : 'hand', area, r.essential ? 1 : 0, r.low ? 1 : 0, null, word(scrub(r.note), 40) || null, word(r.owner, 20) || null, r.frozen ? 1 : 0, r.unsure ? 1 : 0, r.nolist ? 1 : 0).run();
+    if (body.binned) await env.DB.prepare("DELETE FROM log WHERE id = (SELECT MAX(id) FROM log WHERE summary = ?)").bind('threw away ' + name).run();
+    await env.DB.prepare('INSERT INTO log (at, source, summary, who) VALUES (?, ?, ?, ?)').bind(new Date().toISOString(), 'hand', 'put ' + name + ' back', me || null).run();
     return json({ ok: true });
   }
 
@@ -2656,11 +2908,27 @@ async function api(request, env, url) {
 
   if (path === '/api/extras' && method === 'POST') {
     const sent = (await request.json().catch(() => ({}))) || {};
-    const text = scrub(String(sent.text || '')).replace(/[<>]/g, ' ').replace(/\s+/g, ' ').replace(/\s*\u00d7\s*\d+$/, '').trim().slice(0, 76);
+    const tidy = (v) => scrub(String(v || '')).replace(/[<>]/g, ' ').replace(/\s+/g, ' ').replace(/\s*\u00d7\s*\d+$/, '').trim().slice(0, 76);
+    const all = (await env.DB.prepare('SELECT id, text FROM extras ORDER BY added').all()).results, lc = (v) => String(v).toLowerCase();
+    const find = (v) => all.find((x) => lc(x.text) === lc(v) || lc(x.text).replace(/ \u00d7\d+$/, '') === lc(v));
+    // "2 gallons whole milk, birthday candles and size 5 diapers" is three things to buy, so it becomes three rows
+    const pieces = sent.again || sent.whole ? [] : listPieces(String(sent.text || '')).map(tidy).filter(Boolean);
+    if (pieces.length > 1) {
+      const made = [], had = [];
+      for (const piece of pieces.slice(0, 12)) {
+        if (find(piece)) { had.push(piece); continue; }
+        if (all.length >= 100) return json(made.length ? { ok: true, many: true, added: made, kept: had, full: true } : { error: 'full' }, made.length ? 200 : 400);
+        const id = crypto.randomUUID();
+        await env.DB.prepare('INSERT INTO extras (id, text, who, added) VALUES (?, ?, ?, ?)').bind(id, piece, me || null, new Date().toISOString()).run();
+        all.push({ id, text: piece }); made.push({ id, text: piece });
+      }
+      return json({ ok: true, many: true, added: made, kept: had });
+    }
+    const text = tidy(sent.text);
     if (!text) return json({ error: 'empty' }, 400);
-    const n = await env.DB.prepare('SELECT COUNT(*) AS n FROM extras').first();
+    const n = { n: all.length };
     // already there: never add silently and never drop silently. The app asks, and "again" raises the count on the same line.
-    const same = await env.DB.prepare("SELECT id, text FROM extras WHERE lower(text) = lower(?) OR lower(text) LIKE lower(?) || ' \u00d7%'").bind(text, text).first();
+    const same = find(text);
     if (same) {
       if (!sent.again) return json({ ok: true, already: true, id: same.id, text: same.text });
       const m2 = same.text.match(/^(.*) \u00d7(\d+)$/), next = (m2 ? m2[1] : same.text) + ' \u00d7' + Math.min(99, (m2 ? Number(m2[2]) : 1) + 1);
@@ -2668,10 +2936,25 @@ async function api(request, env, url) {
       return json({ ok: true, bumped: true, id: same.id, text: next });
     }
     if (n && n.n >= 100) return json({ error: 'full' }, 400);
-    await env.DB.prepare('INSERT INTO extras (id, text, who, added) VALUES (?, ?, ?, ?)').bind(crypto.randomUUID(), text, me || null, new Date().toISOString()).run();
-    return json({ ok: true });
+    const id = crypto.randomUUID();
+    await env.DB.prepare('INSERT INTO extras (id, text, who, added) VALUES (?, ?, ?, ?)').bind(id, text, me || null, new Date().toISOString()).run();
+    return json({ ok: true, id, text });
   }
   const x = path.match(/^\/api\/extras\/([0-9a-f-]{36})$/);
+  // rename a row, or change how many: the count lives at the end of the text, as "Milk ×2"
+  if (x && method === 'PATCH') {
+    const sent = (await request.json().catch(() => ({}))) || {};
+    const cur = await env.DB.prepare('SELECT text FROM extras WHERE id = ?').bind(x[1]).first();
+    if (!cur) return json({ error: 'not_found' }, 404);
+    const name = sent.text === undefined ? cur.text.replace(/ \u00d7\d+$/, '') : scrub(String(sent.text || '')).replace(/[<>]/g, ' ').replace(/\s+/g, ' ').replace(/\s*\u00d7\s*\d+$/, '').trim().slice(0, 76);
+    if (!name || PROBE.test(fixTypos(name))) return json({ error: 'empty' }, 400);
+    const was = Number((cur.text.match(/ \u00d7(\d+)$/) || [])[1] || 1), count = sent.count === undefined ? was : clamp(Math.round(num(sent.count, 1)), 1, 99);
+    const text = name + (count > 1 ? ' \u00d7' + count : '');
+    const clash = await env.DB.prepare('SELECT id FROM extras WHERE id != ? AND (lower(text) = lower(?) OR lower(text) = lower(?))').bind(x[1], name, text).first();
+    if (clash) return json({ error: 'already' }, 409);
+    await env.DB.prepare('UPDATE extras SET text = ? WHERE id = ?').bind(text, x[1]).run();
+    return json({ ok: true, id: x[1], text });
+  }
   if (x && method === 'DELETE') {
     await env.DB.prepare('DELETE FROM extras WHERE id = ?').bind(x[1]).run();
     return json({ ok: true });
@@ -2705,12 +2988,12 @@ async function api(request, env, url) {
       let text = String(body.text || '').replace(/\s+/g, ' ').trim().slice(0, 600), heard = '';
       if (!text && typeof body.audio === 'string' && body.audio.length <= 8_000_000) { if (!ai) return limited(env); text = heard = (await hearAudio(m.env, body.audio)).slice(0, 600); if (!text) return json({ error: 'silent' }, 422); }
       if (!text) return json({ error: 'empty' }, 400);
-      const loadRows = async () => (await env.DB.prepare('SELECT name, qty, unit, expiry, expiry_est, frozen, low, area, category, bought, finish_days, learned FROM items ORDER BY name').all()).results;
+      const loadRows = async () => (await env.DB.prepare('SELECT name, qty, unit, expiry, expiry_est, frozen, low, nolist, area, category, bought, finish_days, learned FROM items ORDER BY name').all()).results;
       const profile = await getProfile(env);
       const history = (Array.isArray(body.history) ? body.history : []).slice(-4).map((h) => ({ role: h && h.role === 'assistant' ? 'assistant' : 'user', content: String((h && h.text) || '').slice(0, 400) })).filter((h) => h.content);
       const go = async (withAi) => takeTurn(m.env, { text, history, rows: await loadRows(), profile, today, ai: withAi, learn: true, reload: loadRows,
         list: async () => (await env.DB.prepare('SELECT text FROM extras ORDER BY added LIMIT 60').all()).results.map((x) => x.text),
-        apply: (out) => apply(env, { store: out.store, bought: out.bought, currency: out.currency, actions: out.actions }, today, 'voice', me) });
+        apply: (out) => apply(env, { store: out.store, bought: out.bought, currency: out.currency, actions: out.actions }, today, heard ? 'voice' : 'text', me) });
       let t;
       try { t = await go(ai); }
       catch (e) { if (!isQuota(e)) throw e; await markQuota(env); ai = false; t = await go(false); } // nothing is applied before the model has read the message
