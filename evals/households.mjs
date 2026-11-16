@@ -1,4 +1,5 @@
 import fs from 'fs';
+const HOMES=Number(((process.argv.find(a=>a.startsWith('--households='))||'').split('=')[1])||1000);
 import {fileURLToPath} from 'url';const R=fileURLToPath(new URL('../',import.meta.url));
 const src=fs.readFileSync(R+'src/index.js','utf8'),html=fs.readFileSync(R+'public/index.html','utf8');
 // server pieces
@@ -36,7 +37,7 @@ const NONFOOD=['Toilet paper','Dish soap','Laundry detergent','Diapers','Baby wi
 const ORACLE={Peanuts:/peanut/i,'Tree nuts':/almond|walnut|cashew|pecan|hazelnut|pistachio/i,Milk:/^(milk|whole milk|cheese|cheese slices|yogurt|greek yogurt|butter|ice cream|parmesan|sour cream)$/i,Eggs:/^eggs?$/i,Wheat:/bread|pasta|noodle|cereal|cracker|pizza|tortilla|granola/i,Soy:/tofu|soy/i,Fish:/salmon|tuna|^fish$/i,Shellfish:/shrimp|prawn/i,Sesame:/sesame|tahini|hummus/i};
 const issues={},note=(k,ex)=>{(issues[k]=issues[k]||{n:0,ex:[]}).n++;if(issues[k].ex.length<3)issues[k].ex.push(ex)};
 let ok=0,rejected=0,maxDesc=0,maxLine=0,emptyStarter=0;const lens=[];
-for(let i=0;i<1000;i++){
+for(let i=0;i<HOMES;i++){
   const raw=household(i);let p;
   try{p=S.cleanProfile(raw)}catch(e){note('cleanProfile throws',e.message+' '+JSON.stringify(raw).slice(0,120));continue}
   if(!p){rejected++;continue}ok++;
@@ -69,7 +70,7 @@ for(let i=0;i<1000;i++){
     if(r&&r.warn.length>70)note('warn too long',r.warn.length)}
 }
 lens.sort((a,b)=>a-b);
-console.log('households',1000,'accepted',ok,'rejected (invalid on purpose)',rejected,'| max prompt chars',maxDesc,'| hero line p50/p95/max',lens[lens.length>>1],lens[Math.floor(lens.length*.95)],maxLine);
+console.log('households',HOMES,'accepted',ok,'rejected (invalid on purpose)',rejected,'| max prompt chars',maxDesc,'| hero line p50/p95/max',lens[lens.length>>1],lens[Math.floor(lens.length*.95)],maxLine);
 for(const [k,v] of Object.entries(issues).sort((a,b)=>b[1].n-a[1].n))console.log('\n['+v.n+'] '+k+'\n   '+v.ex.join('\n   '));
 const hard=['cleanProfile throws','reclean throws','clean not idempotent','markup survives','describe throws','allergen missing from prompt','restricted() false with allergies','starter throws','starter duplicates','allergen leaks into starter list','animal product in vegan starter','non-food item wrongly excluded','fits throws','homeScale out of range','full-time member marked away','labelCheck throws','false alarm on plain water/sugar/rice','missed declared peanut','warn too long'];
 const broken=hard.filter(k=>issues[k]);

@@ -14,6 +14,7 @@ const ROOT = fileURLToPath(new URL('../', import.meta.url));
 const NAMES = ['unhail', 'route', 'questionPart', 'PROBE', 'scrub', 'guardReply', 'tooMuch', 'chatReply', 'sanitize', 'niceDate'];
 
 
+const HOMES = Number(((process.argv.find((a) => a.startsWith('--households=')) || '').split('=')[1]) || 1000);
 // a seeded random generator, so every run sees the same 1,000 households
 let seed = 20261113;
 const rnd = () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296);
@@ -95,7 +96,7 @@ async function main() {
 
   let messages = 0;
   const users = [];
-  for (let u = 0; u < 1000; u++) {
+  for (let u = 0; u < HOMES; u++) {
     const who = household(), n = 3 + Math.floor(rnd() * 6), convo = [];
     for (let k = 0; k < n; k++) {
       const m = pick(corpus), p = perturb(m.text);
@@ -135,7 +136,7 @@ async function main() {
 
   // 5. one vague message can never empty the home
   const homes = [['Milk', 1, 'L'], ['Eggs', 12, 'pcs'], ['Bread', 1, 'pcs'], ['Butter', 1, 'pack'], ['Rice', 2, 'kg'], ['Pasta', 500, 'g'], ['Cheese', 1, 'pcs'], ['Yogurt', 4, 'pcs'], ['Apples', 6, 'pcs'], ['Chicken', 1, 'kg']];
-  for (let i = 0; i < 1000; i++) {
+  for (let i = 0; i < HOMES; i++) {
     const size = 5 + Math.floor(rnd() * 6), rows = homes.slice(0, size).map(([name, qty, unit]) => ({ name, qty, unit }));
     const wipe = rows.map((r) => ({ action: 'use', name: r.name, quantity: chance(0.5) ? 0 : r.qty }));
     note('guard: a whole-home wipe is refused', !!A.tooMuch(wipe, rows), { size });
@@ -143,7 +144,7 @@ async function main() {
     note('guard: an ordinary meal is allowed', !A.tooMuch(normal, rows), { normal });
   }
   // 6. the reply guard catches unsafe replies and leaves good ones readable
-  for (let i = 0; i < 1000; i++) {
+  for (let i = 0; i < HOMES; i++) {
     const [kind, reply, ok] = pick(BAD_REPLIES), out = A.guardReply(reply, null);
     note('reply guard: ' + kind, ok(out), { reply, out });
     const good = pick(GOOD_REPLIES);
@@ -170,7 +171,7 @@ async function main() {
   const rows = Object.entries(stats).map(([k, s]) => ({ check: k, pass: s.pass, total: s.total, rate: s.pass / s.total }));
   rows.sort((a, b) => a.rate - b.rate);
   const all = rows.reduce((t, r) => ({ p: t.p + r.pass, n: t.n + r.total }), { p: 0, n: 0 });
-  console.log('1,000 households, ' + messages + ' messages from ' + corpus.length + ' real-world phrasings, plus ' + (all.n - messages) + ' guardrail checks');
+  console.log(HOMES.toLocaleString('en-US') + ' households, ' + messages + ' messages from ' + corpus.length + ' real-world phrasings, plus ' + (all.n - messages) + ' guardrail checks');
   console.log('Overall: ' + all.p + ' / ' + all.n + ' (' + ((all.p / all.n) * 100).toFixed(1) + '%)\n');
   for (const r of rows) console.log((r.rate === 1 ? '  ok  ' : 'FAIL  ') + (r.rate * 100).toFixed(1).padStart(5) + '%  ' + String(r.pass).padStart(5) + '/' + String(r.total).padEnd(5) + ' ' + r.check);
   const worst = rows.filter((r) => r.rate < 1);
