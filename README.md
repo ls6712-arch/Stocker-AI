@@ -46,9 +46,10 @@ Model names are plain variables in `wrangler.jsonc` (`VISION_MODEL`, `TEXT_MODEL
 
 - Workers AI has a free daily allowance; heavy use is billed to your Cloudflare account.
 - Photos and audio are sent to the models and not stored. The item list, the activity log, purchase dates and chat messages (see below) are kept.
-- The passcode is a single shared secret. Use a long one, and do not put anything sensitive in the pantry.
+- The passcode is a single shared secret for your own home. Use a long one, and do not put anything sensitive in the pantry.
 - Barcode lookup covers food products in Open Food Facts; unknown products fall back to typing or voice.
 - Everyone in a household shares one passcode and one list; names are for the activity log, not separate accounts.
+- Friends who test it get a personal code each (household menu, "Friends testing"). A code opens a private home of its own; see `docs/AGENT.md`, "Separate homes".
 - Allergen flags are guesses from product names. They can miss things and are no substitute for reading the label.
 - Reminders are off until someone taps Turn on under For you. Then that phone gets at most one a day, when something bought regularly is due or wants using today. On an iPhone, Stocker must first be added to the Home Screen.
 - Chat messages are kept, with card, phone and identity numbers and email addresses removed, so mistakes can be reviewed at `/evals.html`. The newest 1,500 are kept.

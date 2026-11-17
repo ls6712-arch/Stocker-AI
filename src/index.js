@@ -220,14 +220,168 @@ async function sha(s) {
 }
 // The sign-in cookie is derived from the passcode and a random value kept only in the database,
 // so a copied cookie cannot be used to work the passcode out.
-async function sessionToken(env) {
-  let row = await env.DB.prepare("SELECT v FROM settings WHERE k = 'salt'").first();
+async function saltOf(env) {
+  const db = rootDB(env);
+  let row = await db.prepare("SELECT v FROM settings WHERE k = 'salt'").first();
   if (!row) {
     const salt = [...crypto.getRandomValues(new Uint8Array(32))].map((b) => b.toString(16).padStart(2, '0')).join('');
-    await env.DB.prepare("INSERT OR IGNORE INTO settings (k, v) VALUES ('salt', ?)").bind(salt).run();
-    row = await env.DB.prepare("SELECT v FROM settings WHERE k = 'salt'").first();
+    await db.prepare("INSERT OR IGNORE INTO settings (k, v) VALUES ('salt', ?)").bind(salt).run();
+    row = await db.prepare("SELECT v FROM settings WHERE k = 'salt'").first();
   }
-  return sha('stocker:v2:' + row.v + ':' + env.APP_PIN);
+  return row.v;
+}
+const sessionToken = async (env) => sha('stocker:v2:' + (await saltOf(env)) + ':' + env.APP_PIN);
+
+// ---------- separate homes ----------
+// The owner's home uses the tables as they are. Every other home has the same tables under its own prefix, and everything it
+// does goes through a database handle that points each query at that prefix. Code written for one home therefore cannot reach
+// another: there is no query a forgotten "WHERE home = ?" could leak through. The list of homes and codes is the owner's alone.
+const HOME_TABLES = ['items', 'purchases', 'log', 'extras', 'pics', 'spend', 'settings', 'feedback', 'push_subs', 'reminders', 'turns', 'cases', 'eval_runs', 'eval_trials', 'facts', 'memo', 'prices', 'saves'];
+const SCOPE_RE = new RegExp('\\b(FROM|INTO|UPDATE|JOIN|TABLE(?:\\s+IF\\s+NOT\\s+EXISTS)?|ON)(\\s+)(' + HOME_TABLES.join('|') + ')\\b', 'gi'); // any letter case: a query can never slip past by how it is typed
+const homePrefix = (id) => { if (!/^[a-z0-9]{6,16}$/.test(String(id))) throw new Error('bad home'); return 'h_' + id + '_'; };
+function scopeSql(sql, id) {
+  const pre = homePrefix(id);
+  if (/\b(homes|accounts|waitlist|signin_codes)\b|sqlite_|\bh_[a-z0-9]+_/i.test(sql)) throw new Error('not for a home');
+  return sql.replace(/\b(INDEX(?:\s+IF\s+NOT\s+EXISTS)?\s+)(\w+)(?=\s+ON\b)/gi, '$1' + pre + '$2').replace(SCOPE_RE, '$1$2' + pre + '$3');
+}
+const homeDB = (db, id) => ({ prepare: (sql) => db.prepare(scopeSql(sql, id)), batch: (list) => db.batch(list) });
+const forHome = (env, id) => (id ? { ...env, DB: homeDB(env.DB, id), ROOT: env.DB, HOME: id } : env);
+// what is shared by every home lives in the owner's database: the sign-in secret, the push keys and "the AI allowance is used up"
+const rootDB = (env) => env.ROOT || env.DB;
+// A personal code: 8 characters from an alphabet with no look-alikes (no 0, O, 1, I or L), about 40 bits. Only its hash is kept.
+const CODE_ABC = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+function randomText(n, abc) {
+  let out = '';
+  while (out.length < n) for (const b of crypto.getRandomValues(new Uint8Array(16))) if (b < 248 && out.length < n) out += abc[b % 31];
+  return out;
+}
+const newCode = () => { const c = randomText(8, CODE_ABC); return c.slice(0, 4) + '-' + c.slice(4); };
+const cleanCode = (t) => String(t || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12);
+const codeKey = async (env, code) => sha('stocker:code:v1:' + (await saltOf(env)) + ':' + cleanCode(code));
+const homeToken = async (env, h) => 'h.' + h.id + '.' + (await sha('stocker:v2:' + (await saltOf(env)) + ':home:' + h.id + ':' + h.code_hash));
+// who is signed in: the owner ({ id: '' }), a friend's home, or nobody
+async function homeOf(request, env) {
+  const pk = cookie(request, 'pk');
+  if (!pk) return null;
+  if (same(pk, await sessionToken(env))) return { id: '' };
+  // someone who signed up: the cookie names the account and the day it was made, and stops working after thirty days
+  const am = /^a\.([a-z0-9]{6,16})\.(\d{4}-\d{2}-\d{2})\.[0-9a-f]{64}$/.exec(pk);
+  if (am) {
+    const age = dayGap(am[2], utcDay());
+    if (!(age >= 0 && age <= SIGNED_IN_DAYS)) return null;
+    const a = await env.DB.prepare('SELECT a.id, a.epoch, a.home, h.name, h.off, h.seen FROM accounts a JOIN homes h ON h.id = a.home WHERE a.id = ?').bind(am[1]).first().catch(() => null);
+    return a && !a.off && same(pk, await acctToken(env, a, am[2])) ? { id: a.home, name: a.name, seen: a.seen, acct: a.id } : null;
+  }
+  const m = /^h\.([a-z0-9]{6,16})\.[0-9a-f]{64}$/.exec(pk);
+  if (!m) return null;
+  const h = await env.DB.prepare('SELECT id, name, code_hash, off, seen FROM homes WHERE id = ?').bind(m[1]).first().catch(() => null);
+  return h && !h.off && same(pk, await homeToken(env, h)) ? h : null;
+}
+const homeList = async (env) => (await rootDB(env).prepare('SELECT id, name, made, seen, off, phones, acct FROM homes ORDER BY made').all().catch(() => ({ results: [] }))).results;
+// one query over the same table in every home, for the owner's weekly numbers and review: "home" says whose row it is
+// (Cloudflare's database joins at most five SELECTs with UNION ALL in one go, so larger sets are joined in groups of five.)
+function unionAll(parts) {
+  while (parts.length > 5) { const next = []; for (let i = 0; i < parts.length; i += 5) next.push('SELECT * FROM (' + parts.slice(i, i + 5).join(' UNION ALL ') + ')'); parts = next; }
+  return parts.join(' UNION ALL ');
+}
+const everyHome = (homes, table, cols, where) => unionAll([''].concat(homes.map((h) => h.id)).map((id) => "SELECT '" + (id && homePrefix(id) && id) + "' AS home, " + cols + ' FROM ' + (id ? homePrefix(id) : '') + table + (where ? ' WHERE ' + where : '')));
+// ---------- real sign-in ----------
+// Anyone can make a home of their own, with Google or with a code sent to their email address, until the homes are all taken.
+// An account is an address and the home it opens; there are no passwords. Google's token is checked here against Google's own
+// public keys and then thrown away. A signed-up home is stored exactly like a friend's home, so it is kept apart the same way.
+const SIGNED_IN_DAYS = 30;
+const FRIENDS_MAX = 25; // homes opened by a personal code
+const homesMax = (env) => Math.max(1, Math.min(300, Math.round(Number(env.HOMES_MAX) || 100))); // every home there is, signed up or by code
+const cleanEmail = (t) => { const e = String(t || '').trim().toLowerCase(); return e.length <= 120 && /^[a-z0-9._%+-]+@[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z]{2,}$/.test(e) ? e : ''; };
+const acctToken = async (env, a, day) => 'a.' + a.id + '.' + day + '.' + (await sha('stocker:v3:' + (await saltOf(env)) + ':acct:' + a.id + ':' + (Number(a.epoch) || 0) + ':' + day));
+const fromOf = async (request) => (await sha('from:' + (request.headers.get('cf-connecting-ip') || 'none'))).slice(0, 16);
+// Google's public keys change every few days; they are read at most once an hour, and once more if a token names a key not seen yet
+let gKeys = null;
+async function googleKeys(again) {
+  if (gKeys && Date.now() - gKeys.at < (again ? 60000 : 3600000)) return gKeys.keys;
+  const r = await fetch('https://www.googleapis.com/oauth2/v3/certs');
+  if (!r.ok) throw new Error('google keys ' + r.status);
+  gKeys = { at: Date.now(), keys: ((await r.json()) || {}).keys || [] };
+  return gKeys.keys;
+}
+// who a Google token is for, or null: signed by Google, made for this app, not run out, and with an address Google has checked
+async function googleWho(env, credential) {
+  try {
+    const parts = String(credential || '').split('.');
+    if (String(credential || '').length > 4096 || parts.length !== 3 || parts.some((x) => !/^[A-Za-z0-9_-]+$/.test(x))) return null;
+    const text = (x) => JSON.parse(new TextDecoder().decode(unb64u(x)));
+    const head = text(parts[0]);
+    if (head.alg !== 'RS256' || !head.kid) return null;
+    const jwk = (await googleKeys()).find((k) => k.kid === head.kid) || (await googleKeys(true)).find((k) => k.kid === head.kid);
+    if (!jwk || jwk.kty !== 'RSA') return null;
+    const key = await crypto.subtle.importKey('jwk', { kty: 'RSA', n: jwk.n, e: jwk.e, alg: 'RS256', ext: true }, { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['verify']);
+    if (!(await crypto.subtle.verify('RSASSA-PKCS1-v1_5', key, unb64u(parts[2]), new TextEncoder().encode(parts[0] + '.' + parts[1])))) return null;
+    const c = text(parts[1]), now = Date.now() / 1000;
+    if (!env.GOOGLE_CLIENT_ID || c.aud !== env.GOOGLE_CLIENT_ID) return null;
+    if (c.iss !== 'accounts.google.com' && c.iss !== 'https://accounts.google.com') return null;
+    if (!(Number(c.exp) > now) || Number(c.iat) > now + 300) return null;
+    if (c.email_verified !== true && c.email_verified !== 'true') return null;
+    const email = cleanEmail(c.email);
+    return email && c.sub ? { email, sub: String(c.sub).slice(0, 64), name: cleanName(c.given_name || c.name || '') } : null;
+  } catch (e) { return null; }
+}
+// a six-digit code, every one equally likely
+function sixDigits() {
+  for (;;) { const n = crypto.getRandomValues(new Uint32Array(1))[0]; if (n < 4294000000) return String(n % 1000000).padStart(6, '0'); }
+}
+const mailCodeKey = async (env, email, code) => sha('stocker:mail:v1:' + (await saltOf(env)) + ':' + email + ':' + code);
+// The one message Stocker ever sends by email. The mail service gets the address and this text, and nothing about the home.
+async function sendCode(env, email, code) {
+  const r = await fetch('https://api.resend.com/emails', {
+    method: 'POST', headers: { authorization: 'Bearer ' + env.MAIL_KEY, 'content-type': 'application/json' },
+    body: JSON.stringify({ from: env.MAIL_FROM, to: [email], subject: 'Your Stocker code: ' + code, text: 'Your code for Stocker is ' + code + '. It works for 10 minutes.\n\nIf you did not ask for it, ignore this message and nothing changes.\n\nTote' }),
+  });
+  return r.ok;
+}
+const nameFromEmail = (email) => { const n = cleanName(email.split('@')[0].split(/[._+\d-]/)[0]); return n ? n[0].toUpperCase() + n.slice(1) : ''; };
+// Let a checked address in: its own home if it has one, a new home if there is a place, the waiting list if there is not.
+async function enter(env, request, who, via) {
+  const db = env.DB, at = new Date().toISOString();
+  let acct = await db.prepare('SELECT id, epoch, home FROM accounts WHERE email = ?').bind(who.email).first();
+  let fresh = false;
+  if (acct) {
+    const h = await db.prepare('SELECT off FROM homes WHERE id = ?').bind(acct.home).first();
+    if (!h || h.off) return json({ error: 'home_off' }, 403);
+    await db.prepare('UPDATE accounts SET seen = ?, sub = COALESCE(sub, ?) WHERE id = ?').bind(utcDay(), who.sub || null, acct.id).run().catch(() => {});
+  } else {
+    if (((await db.prepare('SELECT COUNT(*) AS n FROM homes').first()) || { n: 0 }).n >= homesMax(env)) {
+      await db.prepare('INSERT OR IGNORE INTO waitlist (email, at, via) VALUES (?, ?, ?)').bind(who.email, at, via).run();
+      return json({ error: 'full', waiting: true }, 403);
+    }
+    // one phone or network cannot take home after home
+    if (!(await allow(env, 'newhome', 1440, 3, await fromOf(request)))) return json({ error: 'too_many' }, 429);
+    const id = randomText(10, CODE_ABC).toLowerCase(), home = randomText(10, CODE_ABC).toLowerCase(), name = who.name || nameFromEmail(who.email) || 'Home';
+    await migrate(forHome(env, home)); // its tables exist before its account does
+    try {
+      await db.batch([
+        db.prepare('INSERT INTO homes (id, name, code_hash, made, acct) VALUES (?, ?, ?, ?, ?)').bind(home, name, 'acct:' + id, at, id), // no personal code opens it: a code's hash never looks like this
+        db.prepare('INSERT INTO accounts (id, email, sub, home, made, seen, agreed, via) VALUES (?, ?, ?, ?, ?, ?, ?, ?)').bind(id, who.email, who.sub || null, home, at, utcDay(), at, via),
+        db.prepare('DELETE FROM waitlist WHERE email = ?').bind(who.email),
+      ]);
+      acct = { id, epoch: 0, home }; fresh = true;
+    } catch (e) {
+      // the same address signing up twice at once: the first one won, so open that
+      await dropHome(env, home).catch(() => {});
+      acct = await db.prepare('SELECT id, epoch, home FROM accounts WHERE email = ?').bind(who.email).first();
+      if (!acct) throw e;
+    }
+  }
+  const h = new Headers({ 'content-type': 'application/json', 'cache-control': 'no-store' });
+  const opts = '; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=' + SIGNED_IN_DAYS * 86400;
+  h.append('set-cookie', 'pk=' + (await acctToken(env, acct, utcDay())) + opts);
+  h.append('set-cookie', 'who=' + encodeURIComponent(who.name || nameFromEmail(who.email)) + opts);
+  return new Response(JSON.stringify({ ok: true, fresh }), { status: 200, headers: h });
+}
+// Delete a home for good: every table of its own, its account and its row in the list of homes, in one go.
+async function dropHome(env, id) {
+  const db = rootDB(env), pre = homePrefix(id);
+  await db.batch(HOME_TABLES.map((t) => db.prepare('DROP TABLE IF EXISTS ' + pre + t)).concat([db.prepare('DELETE FROM accounts WHERE home = ?').bind(id), db.prepare('DELETE FROM homes WHERE id = ?').bind(id)]));
+  readyFor.delete(id);
 }
 function cookie(request, name) {
   const m = (request.headers.get('cookie') || '').match(new RegExp('(?:^|; )' + name + '=([^;]+)'));
@@ -370,6 +524,8 @@ async function picture(env, name) {
   // Only draw things that are actually in the inventory, so the endpoint cannot be used as a free image generator.
   const item = await env.DB.prepare('SELECT name, category FROM items WHERE name_key = ?').bind(key).first();
   if (!item || (await quotaOut(env))) return null;
+  // a signed-up home gets a share of new pictures a day, and pictures count towards the ceiling for all homes
+  if (env.HOME && (!(await allow(env, 'pics', 1440, 40)) || !(await underCeiling(env)))) return null;
   const style = ', household product, close-up filling most of the frame, soft matte 3D clay render, centered, three-quarter view, plain very light warm grey background, soft studio lighting, gentle shadow, pastel colours, no text, no labels, no people, no hands';
   const subject = item.name.replace(/[^\p{L}\p{N} '&-]/gu, ' ').replace(/\s+/g, ' ').trim().slice(0, 60);
   // the image filter sometimes objects to ordinary grocery words (chicken breast, thighs, rump); the second try names only the kind of thing
@@ -379,7 +535,7 @@ async function picture(env, name) {
     try { r = await env.AI.run(env.IMAGE_MODEL || '@cf/black-forest-labs/flux-1-schnell', { prompt, steps: 4 }); if (r && r.image) break; }
     catch (e) {
       const msg = String((e && e.message) || e);
-      if (/4006|daily free allocation|neurons/i.test(msg)) { await env.DB.prepare("INSERT INTO settings (k, v) VALUES ('aiq', ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v").bind(utcDay()).run().catch(() => {}); return null; }
+      if (/4006|daily free allocation|neurons/i.test(msg)) { await markQuota(env); return null; }
       if (!/8007|NSFW/i.test(msg)) throw e;
       r = null;
     }
@@ -597,17 +753,38 @@ const LIMITS =
 
 // ---------- guardrails ----------
 // Counters live in the settings table, one row per time window, so limits hold across requests.
-async function allow(env, name, mins, limit) {
-  const key = 'rl:' + name + ':' + Math.floor(Date.now() / (mins * 60000));
+async function allow(env, name, mins, limit, who = '') {
+  const slot = 'rl:' + name + ':' + Math.floor(Date.now() / (mins * 60000)), key = slot + (who ? ':' + who : '');
   await env.DB.prepare("INSERT INTO settings (k, v) VALUES (?, '1') ON CONFLICT(k) DO UPDATE SET v = CAST(CAST(v AS INTEGER) + 1 AS TEXT)").bind(key).run();
   const row = await env.DB.prepare('SELECT v FROM settings WHERE k = ?').bind(key).first();
-  if (Math.random() < 0.05) await env.DB.prepare("DELETE FROM settings WHERE k LIKE ? AND k <> ?").bind('rl:' + name + ':%', key).run();
+  if (Math.random() < 0.05) await env.DB.prepare("DELETE FROM settings WHERE k LIKE ? AND k NOT LIKE ?").bind('rl:' + name + ':%', slot + '%').run();
   return Number(row && row.v) <= limit;
 }
 // every model call passes through here: a burst limit and a daily ceiling, so a loop or a stranger cannot run up a bill
 const utcDay = () => new Date().toISOString().slice(0, 10);
-const quotaOut = async (env) => { const r = await env.DB.prepare("SELECT v FROM settings WHERE k = 'aiq'").first(); return !!r && r.v === utcDay(); };
-const aiBudget = async (env) => !(await quotaOut(env)) && (await allow(env, 'ai', 10, 40)) && (await allow(env, 'aiday', 1440, 400));
+// "out for today" is true for everyone when the allowance or the day's ceiling is used up, and for one home when its own share is
+const quotaOut = async (env) => {
+  const r = await rootDB(env).prepare("SELECT v FROM settings WHERE k = 'aiq'").first();
+  if (r && r.v === utcDay()) return true;
+  if (!env.HOME) return false;
+  const h = await env.DB.prepare("SELECT v FROM settings WHERE k = 'aiq'").first();
+  return !!h && h.v === utcDay();
+};
+// A home that is not the owner's gets a share of model-using messages a day, and all homes together have a ceiling, so the bill has
+// a top whatever anyone does. Past either, Tote answers from code alone until the day ends (UTC), as when the allowance runs out.
+const homeShare = (env) => Math.max(1, Math.round(Number(env.AI_HOME_DAY) || 60));
+const allShare = (env) => Math.max(1, Math.round(Number(env.AI_ALL_DAY) || 2000));
+const underCeiling = async (env) => { if (await allow({ DB: rootDB(env) }, 'aiall', 1440, allShare(env))) return true; await markQuota(env); return false; };
+async function aiBudget(env) {
+  if (await quotaOut(env)) return false;
+  if (!(await allow(env, 'ai', 10, 40))) return false;
+  if (!env.HOME) { if (!(await allow(env, 'aiday', 1440, 400))) return false; }
+  else if (!(await allow(env, 'aihome', 1440, homeShare(env)))) {
+    await env.DB.prepare("INSERT INTO settings (k, v) VALUES ('aiq', ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v").bind(utcDay()).run().catch(() => {});
+    return false;
+  }
+  return underCeiling(env);
+}
 // turn a model failure into the right answer for the app; the daily allowance running out is remembered until the day ends (UTC)
 async function aiFail(env, e, what) {
   const msg = String((e && e.message) || e);
@@ -620,7 +797,7 @@ async function aiFail(env, e, what) {
   return json({ error: 'ai_failed' }, 502);
 }
 const isQuota = (e) => /4006|daily free allocation|neurons/i.test(String((e && e.message) || e));
-const markQuota = (env) => env.DB.prepare("INSERT INTO settings (k, v) VALUES ('aiq', ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v").bind(utcDay()).run().catch(() => {});
+const markQuota = (env) => rootDB(env).prepare("INSERT INTO settings (k, v) VALUES ('aiq', ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v").bind(utcDay()).run().catch(() => {});
 // counts the model calls and tokens one request spends, for the weekly numbers
 function meter(env) {
   const m = { calls: 0, small: 0, tokens: 0, cost: 0 };
@@ -2485,34 +2662,71 @@ async function mcp(request, env) {
 }
 
 // ---------- storage that newer versions need ----------
-// Run once per start-up: adds what is missing and never touches what is there.
-const SCHEMA = 8;
-let ready = null;
+// Run once per start-up and per home: adds what is missing and never touches what is there. A new home starts with no tables
+// at all, so the first step makes every table from the same list schema.sql is written from.
+const SCHEMA = 9;
+const BASE_SCHEMA = [
+  "CREATE TABLE IF NOT EXISTS items (id TEXT PRIMARY KEY, name TEXT NOT NULL, name_key TEXT NOT NULL, qty REAL NOT NULL DEFAULT 1, unit TEXT NOT NULL DEFAULT 'pcs', category TEXT, bought TEXT, added TEXT NOT NULL, store TEXT, expiry TEXT, expiry_est INTEGER NOT NULL DEFAULT 0, finish_days INTEGER NOT NULL DEFAULT 14, learned INTEGER NOT NULL DEFAULT 0, source TEXT, area TEXT, essential INTEGER NOT NULL DEFAULT 0, low INTEGER NOT NULL DEFAULT 0, warn TEXT, note TEXT, owner TEXT, frozen INTEGER NOT NULL DEFAULT 0, unsure INTEGER NOT NULL DEFAULT 0, nolist INTEGER NOT NULL DEFAULT 0)",
+  "CREATE UNIQUE INDEX IF NOT EXISTS items_name_key ON items(name_key)",
+  "CREATE TABLE IF NOT EXISTS purchases (name_key TEXT NOT NULL, bought TEXT NOT NULL, qty REAL, unit TEXT, ran_out TEXT, PRIMARY KEY (name_key, bought))",
+  "CREATE TABLE IF NOT EXISTS log (id INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT NOT NULL, source TEXT NOT NULL, summary TEXT NOT NULL, who TEXT)",
+  "CREATE TABLE IF NOT EXISTS extras (id TEXT PRIMARY KEY, text TEXT NOT NULL, who TEXT, added TEXT NOT NULL)",
+  "CREATE TABLE IF NOT EXISTS pics (name_key TEXT PRIMARY KEY, data BLOB NOT NULL, made TEXT NOT NULL)",
+  "CREATE TABLE IF NOT EXISTS spend (id INTEGER PRIMARY KEY AUTOINCREMENT, item_id TEXT, day TEXT NOT NULL, area TEXT, amount REAL NOT NULL, currency TEXT)",
+  "CREATE TABLE IF NOT EXISTS settings (k TEXT PRIMARY KEY, v TEXT NOT NULL)",
+  "CREATE TABLE IF NOT EXISTS feedback (id INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT NOT NULL, kind TEXT NOT NULL, said TEXT, reply TEXT, route TEXT, detail TEXT)",
+  "CREATE TABLE IF NOT EXISTS push_subs (endpoint TEXT PRIMARY KEY, p256dh TEXT NOT NULL, auth TEXT NOT NULL, who TEXT, tz TEXT NOT NULL DEFAULT 'UTC', added TEXT NOT NULL, last_day TEXT, fails INTEGER NOT NULL DEFAULT 0)",
+  "CREATE TABLE IF NOT EXISTS reminders (name_key TEXT PRIMARY KEY, sent INTEGER NOT NULL DEFAULT 0, streak INTEGER NOT NULL DEFAULT 0, muted INTEGER NOT NULL DEFAULT 0, answered INTEGER NOT NULL DEFAULT 1, last_day TEXT)",
+  "CREATE TABLE IF NOT EXISTS turns (id INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT NOT NULL, said TEXT, route TEXT, intent TEXT, did TEXT, reply TEXT, outcome TEXT, wanted TEXT, label TEXT, ms INTEGER)",
+  "CREATE TABLE IF NOT EXISTS cases (id INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT NOT NULL, said TEXT NOT NULL UNIQUE, expect TEXT NOT NULL, name TEXT)",
+  "CREATE TABLE IF NOT EXISTS eval_runs (id INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT NOT NULL, done TEXT, status TEXT NOT NULL, why TEXT, trials INTEGER NOT NULL DEFAULT 1, version TEXT, models TEXT, day TEXT, cases TEXT, total INTEGER NOT NULL DEFAULT 0, next INTEGER NOT NULL DEFAULT 0, calls INTEGER NOT NULL DEFAULT 0, err TEXT, wait TEXT, summary TEXT)",
+  "CREATE TABLE IF NOT EXISTS eval_trials (run INTEGER NOT NULL, case_id TEXT NOT NULL, trial INTEGER NOT NULL, suite TEXT NOT NULL, grp TEXT, pass INTEGER NOT NULL, score REAL NOT NULL, voice INTEGER NOT NULL DEFAULT 1, failed TEXT, said TEXT, did TEXT, reply TEXT, ms INTEGER, calls INTEGER, tokens INTEGER, cost REAL, verdict TEXT, PRIMARY KEY (run, case_id, trial))",
+  "CREATE TABLE IF NOT EXISTS facts (name_key TEXT PRIMARY KEY, name TEXT NOT NULL, unit TEXT, area TEXT, category TEXT, shelf_days INTEGER, finish_days INTEGER, seen INTEGER NOT NULL DEFAULT 1, at TEXT NOT NULL)",
+  "CREATE TABLE IF NOT EXISTS memo (k TEXT PRIMARY KEY, actions TEXT NOT NULL, hits INTEGER NOT NULL DEFAULT 0, at TEXT NOT NULL, used TEXT, bad INTEGER NOT NULL DEFAULT 0)",
+  "CREATE TABLE IF NOT EXISTS prices (id INTEGER PRIMARY KEY AUTOINCREMENT, name_key TEXT NOT NULL, day TEXT NOT NULL, unit_price REAL NOT NULL, unit TEXT NOT NULL, qty REAL, amount REAL NOT NULL, currency TEXT, store TEXT)",
+  "CREATE INDEX IF NOT EXISTS prices_key ON prices(name_key, day)",
+  "CREATE TABLE IF NOT EXISTS saves (id INTEGER PRIMARY KEY AUTOINCREMENT, name_key TEXT NOT NULL, name TEXT NOT NULL, day TEXT NOT NULL, left_days INTEGER, amount REAL, currency TEXT)",
+];
+// what only the owner's database holds: the list of homes, who signed up, codes on their way by email, and who is waiting for a place
+const ROOT_SCHEMA = [
+  'CREATE TABLE IF NOT EXISTS homes (id TEXT PRIMARY KEY, name TEXT NOT NULL, code_hash TEXT NOT NULL UNIQUE, made TEXT NOT NULL, seen TEXT, off INTEGER NOT NULL DEFAULT 0, phones INTEGER NOT NULL DEFAULT 0, acct TEXT)',
+  'CREATE TABLE IF NOT EXISTS accounts (id TEXT PRIMARY KEY, email TEXT NOT NULL UNIQUE, sub TEXT, home TEXT NOT NULL, made TEXT NOT NULL, seen TEXT, epoch INTEGER NOT NULL DEFAULT 0, agreed TEXT, via TEXT)',
+  'CREATE TABLE IF NOT EXISTS signin_codes (email TEXT PRIMARY KEY, code_hash TEXT NOT NULL, expires INTEGER NOT NULL, tries INTEGER NOT NULL DEFAULT 0)',
+  'CREATE TABLE IF NOT EXISTS waitlist (email TEXT PRIMARY KEY, at TEXT NOT NULL, via TEXT)',
+];
+const readyFor = new Map();
 function migrate(env) {
-  if (!ready) ready = (async () => {
+  const key = env.HOME || '';
+  if (!readyFor.has(key)) readyFor.set(key, (async () => {
     const v = await env.DB.prepare("SELECT v FROM settings WHERE k = 'schema'").first().catch(() => null);
     if (v && Number(v.v) >= SCHEMA) return;
-    for (const col of ['qty REAL', 'unit TEXT', 'ran_out TEXT']) await env.DB.prepare('ALTER TABLE purchases ADD COLUMN ' + col).run().catch(() => {});
-    for (const sql of [
-      "CREATE TABLE IF NOT EXISTS push_subs (endpoint TEXT PRIMARY KEY, p256dh TEXT NOT NULL, auth TEXT NOT NULL, who TEXT, tz TEXT NOT NULL DEFAULT 'UTC', added TEXT NOT NULL, last_day TEXT, fails INTEGER NOT NULL DEFAULT 0)",
-      'CREATE TABLE IF NOT EXISTS reminders (name_key TEXT PRIMARY KEY, sent INTEGER NOT NULL DEFAULT 0, streak INTEGER NOT NULL DEFAULT 0, muted INTEGER NOT NULL DEFAULT 0, answered INTEGER NOT NULL DEFAULT 1, last_day TEXT)',
-      'CREATE TABLE IF NOT EXISTS turns (id INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT NOT NULL, said TEXT, route TEXT, intent TEXT, did TEXT, reply TEXT, outcome TEXT, wanted TEXT, label TEXT)',
-      'CREATE TABLE IF NOT EXISTS cases (id INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT NOT NULL, said TEXT NOT NULL UNIQUE, expect TEXT NOT NULL, name TEXT)',
-      'CREATE TABLE IF NOT EXISTS eval_runs (id INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT NOT NULL, done TEXT, status TEXT NOT NULL, why TEXT, trials INTEGER NOT NULL DEFAULT 1, version TEXT, models TEXT, day TEXT, cases TEXT, total INTEGER NOT NULL DEFAULT 0, next INTEGER NOT NULL DEFAULT 0, calls INTEGER NOT NULL DEFAULT 0, err TEXT, wait TEXT, summary TEXT)',
-      'CREATE TABLE IF NOT EXISTS eval_trials (run INTEGER NOT NULL, case_id TEXT NOT NULL, trial INTEGER NOT NULL, suite TEXT NOT NULL, grp TEXT, pass INTEGER NOT NULL, score REAL NOT NULL, voice INTEGER NOT NULL DEFAULT 1, failed TEXT, said TEXT, did TEXT, reply TEXT, ms INTEGER, calls INTEGER, verdict TEXT, PRIMARY KEY (run, case_id, trial))',
-    ]) await env.DB.prepare(sql).run();
-    await env.DB.prepare('ALTER TABLE items ADD COLUMN nolist INTEGER NOT NULL DEFAULT 0').run().catch(() => {});
-    await env.DB.prepare('ALTER TABLE turns ADD COLUMN ms INTEGER').run().catch(() => {});
-    await env.DB.prepare('ALTER TABLE eval_trials ADD COLUMN tokens INTEGER').run().catch(() => {});
-    await env.DB.prepare('ALTER TABLE eval_trials ADD COLUMN cost REAL').run().catch(() => {});
-    await env.DB.prepare('CREATE TABLE IF NOT EXISTS facts (name_key TEXT PRIMARY KEY, name TEXT NOT NULL, unit TEXT, area TEXT, category TEXT, shelf_days INTEGER, finish_days INTEGER, seen INTEGER NOT NULL DEFAULT 1, at TEXT NOT NULL)').run();
-    await env.DB.prepare('CREATE TABLE IF NOT EXISTS memo (k TEXT PRIMARY KEY, actions TEXT NOT NULL, hits INTEGER NOT NULL DEFAULT 0, at TEXT NOT NULL, used TEXT, bad INTEGER NOT NULL DEFAULT 0)').run();
-    await env.DB.prepare('CREATE TABLE IF NOT EXISTS prices (id INTEGER PRIMARY KEY AUTOINCREMENT, name_key TEXT NOT NULL, day TEXT NOT NULL, unit_price REAL NOT NULL, unit TEXT NOT NULL, qty REAL, amount REAL NOT NULL, currency TEXT, store TEXT)').run();
-    await env.DB.prepare('CREATE INDEX IF NOT EXISTS prices_key ON prices(name_key, day)').run();
-    await env.DB.prepare('CREATE TABLE IF NOT EXISTS saves (id INTEGER PRIMARY KEY AUTOINCREMENT, name_key TEXT NOT NULL, name TEXT NOT NULL, day TEXT NOT NULL, left_days INTEGER, amount REAL, currency TEXT)').run();
+    // one trip to the database for every table (Cloudflare allows a limited number of trips per request)
+    await env.DB.batch(BASE_SCHEMA.map((sql) => env.DB.prepare(sql)));
+    if (!env.HOME) {
+      await env.DB.batch(ROOT_SCHEMA.map((sql) => env.DB.prepare(sql)));
+      await env.DB.prepare('ALTER TABLE homes ADD COLUMN acct TEXT').run().catch(() => {}); // a database that had friends' homes before sign-up
+    }
+    // what follows brings an older database up to date; one already at 7, or a friend's brand-new home, has it all
+    if (!env.HOME && !(v && Number(v.v) >= 7)) {
+      for (const col of ['qty REAL', 'unit TEXT', 'ran_out TEXT']) await env.DB.prepare('ALTER TABLE purchases ADD COLUMN ' + col).run().catch(() => {});
+      for (const sql of [
+        "CREATE TABLE IF NOT EXISTS push_subs (endpoint TEXT PRIMARY KEY, p256dh TEXT NOT NULL, auth TEXT NOT NULL, who TEXT, tz TEXT NOT NULL DEFAULT 'UTC', added TEXT NOT NULL, last_day TEXT, fails INTEGER NOT NULL DEFAULT 0)",
+        'CREATE TABLE IF NOT EXISTS reminders (name_key TEXT PRIMARY KEY, sent INTEGER NOT NULL DEFAULT 0, streak INTEGER NOT NULL DEFAULT 0, muted INTEGER NOT NULL DEFAULT 0, answered INTEGER NOT NULL DEFAULT 1, last_day TEXT)',
+        'CREATE TABLE IF NOT EXISTS turns (id INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT NOT NULL, said TEXT, route TEXT, intent TEXT, did TEXT, reply TEXT, outcome TEXT, wanted TEXT, label TEXT)',
+        'CREATE TABLE IF NOT EXISTS cases (id INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT NOT NULL, said TEXT NOT NULL UNIQUE, expect TEXT NOT NULL, name TEXT)',
+        'CREATE TABLE IF NOT EXISTS eval_runs (id INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT NOT NULL, done TEXT, status TEXT NOT NULL, why TEXT, trials INTEGER NOT NULL DEFAULT 1, version TEXT, models TEXT, day TEXT, cases TEXT, total INTEGER NOT NULL DEFAULT 0, next INTEGER NOT NULL DEFAULT 0, calls INTEGER NOT NULL DEFAULT 0, err TEXT, wait TEXT, summary TEXT)',
+        'CREATE TABLE IF NOT EXISTS eval_trials (run INTEGER NOT NULL, case_id TEXT NOT NULL, trial INTEGER NOT NULL, suite TEXT NOT NULL, grp TEXT, pass INTEGER NOT NULL, score REAL NOT NULL, voice INTEGER NOT NULL DEFAULT 1, failed TEXT, said TEXT, did TEXT, reply TEXT, ms INTEGER, calls INTEGER, verdict TEXT, PRIMARY KEY (run, case_id, trial))',
+      ]) await env.DB.prepare(sql).run();
+      await env.DB.prepare('ALTER TABLE items ADD COLUMN nolist INTEGER NOT NULL DEFAULT 0').run().catch(() => {});
+      await env.DB.prepare('ALTER TABLE turns ADD COLUMN ms INTEGER').run().catch(() => {});
+      await env.DB.prepare('ALTER TABLE eval_trials ADD COLUMN tokens INTEGER').run().catch(() => {});
+      await env.DB.prepare('ALTER TABLE eval_trials ADD COLUMN cost REAL').run().catch(() => {});
+      await env.DB.prepare('CREATE TABLE IF NOT EXISTS facts (name_key TEXT PRIMARY KEY, name TEXT NOT NULL, unit TEXT, area TEXT, category TEXT, shelf_days INTEGER, finish_days INTEGER, seen INTEGER NOT NULL DEFAULT 1, at TEXT NOT NULL)').run();
+      await env.DB.prepare('CREATE TABLE IF NOT EXISTS memo (k TEXT PRIMARY KEY, actions TEXT NOT NULL, hits INTEGER NOT NULL DEFAULT 0, at TEXT NOT NULL, used TEXT, bad INTEGER NOT NULL DEFAULT 0)').run();
+    }
     await env.DB.prepare("INSERT INTO settings (k, v) VALUES ('schema', ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v").bind(String(SCHEMA)).run();
-  })().catch((e) => { ready = null; console.error('migrate failed', String((e && e.message) || e)); });
-  return ready;
+  })().catch((e) => { readyFor.delete(key); console.error('migrate failed', String((e && e.message) || e)); }));
+  return readyFor.get(key);
 }
 
 // ---------- reminders on the phone (Web Push) ----------
@@ -2525,12 +2739,13 @@ const bytes = (t) => new TextEncoder().encode(t);
 const cat = (...parts) => { const out = new Uint8Array(parts.reduce((n, p) => n + p.length, 0)); let at = 0; for (const p of parts) { out.set(p, at); at += p.length; } return out; };
 // The key that proves a reminder comes from this Stocker. Made here on first use and kept only in the database; it can do nothing except send to phones that subscribed.
 async function vapid(env) {
-  let row = await env.DB.prepare("SELECT v FROM settings WHERE k = 'vapid'").first();
+  const db = rootDB(env);
+  let row = await db.prepare("SELECT v FROM settings WHERE k = 'vapid'").first();
   if (!row) {
     const pair = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign', 'verify']);
     const made = JSON.stringify({ jwk: await crypto.subtle.exportKey('jwk', pair.privateKey), pub: b64u(await crypto.subtle.exportKey('raw', pair.publicKey)) });
-    await env.DB.prepare("INSERT OR IGNORE INTO settings (k, v) VALUES ('vapid', ?)").bind(made).run();
-    row = await env.DB.prepare("SELECT v FROM settings WHERE k = 'vapid'").first();
+    await db.prepare("INSERT OR IGNORE INTO settings (k, v) VALUES ('vapid', ?)").bind(made).run();
+    row = await db.prepare("SELECT v FROM settings WHERE k = 'vapid'").first();
   }
   return JSON.parse(row.v);
 }
@@ -2670,6 +2885,16 @@ async function tick(env, now) {
   return { sent };
 }
 
+// Friends' homes: the one whose turn this minute is. Only homes that are on and have a phone are visited at all.
+async function tickHome(env, now) {
+  await migrate(env);
+  const homes = (await env.DB.prepare('SELECT id FROM homes WHERE off = 0 AND phones > 0 ORDER BY id').all().catch(() => ({ results: [] }))).results;
+  let sent = 0;
+  // minutes 1 to 59 share the homes out between them: with more than 59 homes, a minute takes more than one
+  for (let i = now.getUTCMinutes() - 1; i >= 0 && i < homes.length; i += 59) sent += ((await tick(forHome(env, homes[i].id), now).catch((e) => { console.error('reminders failed', String((e && e.message) || e)); return null; })) || { sent: 0 }).sent;
+  return { sent };
+}
+
 // ---------- learning from real conversations ----------
 // Every turn is kept with private details removed, so a weekly look shows where I went wrong. Nothing here changes how I behave:
 // a person decides what each miss should have been, and that becomes a test I must pass from then on.
@@ -2691,6 +2916,7 @@ async function noteTurn(env, t) {
   } catch (e) { console.error('turn not kept', String((e && e.message) || e)); }
 }
 const MISSES = ['down', 'undo', 'rejected', 'corrected', 'repeated', 'missed'];
+const TURN_COLS = 'id, at, said, route, intent, did, reply, outcome, wanted, label, ms';
 const MISS_KINDS = {
   guess: ['Guessed the wrong ingredients', 'The dish guess. Teach the household dish, or tighten what a dish may assume.', 'nothing'],
   missed: ['Could not find the thing they named', 'Name matching. They probably call it something else than the name it is stored under.', 'update'],
@@ -2701,7 +2927,9 @@ const MISS_KINDS = {
 };
 const missKind = (r) => (r.outcome === 'rejected' ? 'guess' : r.outcome === 'missed' ? 'missed' : r.outcome === 'repeated' ? 'repeat' : r.route === 'refuse' || r.route === 'wipe' ? 'refused' : r.route === 'update' ? 'wrong' : 'quiet');
 async function review(env, today) {
-  const rows = (await env.DB.prepare('SELECT * FROM turns WHERE at >= ? ORDER BY id DESC LIMIT 1500').bind(addDays(today, -27)).all()).results;
+  // misses from every home that is testing, each marked with whose home it came from
+  const homes = await homeList(env), nameOf = Object.fromEntries(homes.map((h) => [h.id, h.name]));
+  const rows = (await env.DB.prepare('SELECT * FROM (' + everyHome(homes, 'turns', TURN_COLS, 'at >= ?1') + ') ORDER BY at DESC LIMIT 1500').bind(addDays(today, -27)).all()).results;
   const weeks = [0, 1, 2, 3].map((w) => {
     const from = addDays(today, -7 * w - 6), to = addDays(today, -7 * w), mine = rows.filter((r) => r.at.slice(0, 10) >= from && r.at.slice(0, 10) <= to);
     return { from, to, turns: mine.length, missed: mine.filter((r) => MISSES.includes(r.outcome)).length };
@@ -2711,7 +2939,7 @@ async function review(env, today) {
     const k = missKind(r), g = groups[k] || (groups[k] = { kind: k, title: MISS_KINDS[k][0], fix: MISS_KINDS[k][1], suggest: MISS_KINDS[k][2], count: 0, examples: [] });
     g.count++;
     const twin = g.examples.find((e) => e.said.toLowerCase() === r.said.toLowerCase());
-    if (twin) twin.times++; else if (g.examples.length < 12) g.examples.push({ id: r.id, at: r.at, said: r.said, reply: r.reply, did: r.did, outcome: r.outcome, wanted: r.wanted || '', route: r.route, times: 1 });
+    if (twin) twin.times++; else if (g.examples.length < 12) g.examples.push({ id: r.id, home: r.home || '', from: r.home ? nameOf[r.home] || 'a friend' : '', at: r.at, said: r.said, reply: r.reply, did: r.did, outcome: r.outcome, wanted: r.wanted || '', route: r.route, times: 1 });
   }
   const cases = (await env.DB.prepare('SELECT id, at, said, expect, name FROM cases ORDER BY id DESC LIMIT 200').all()).results;
   return { weeks, groups: Object.values(groups).sort((a, b) => b.count - a.count), cases };
@@ -2988,9 +3216,11 @@ async function bump(env, name, by = 1) {
 }
 async function health(env, today) {
   const weeks = Array.from({ length: 8 }, (_, i) => addDays(weekOf(today), -7 * i));
-  const turns = (await env.DB.prepare('SELECT at, route, outcome, ms FROM turns WHERE at >= ? ORDER BY id DESC LIMIT 1500').bind(weeks[7]).all()).results;
-  const stats = (await env.DB.prepare("SELECT k, v FROM settings WHERE k LIKE 'stat:%' AND substr(k, -10) >= ?").bind(weeks[7]).all()).results;
-  const stat = (name, w) => Number((stats.find((s) => s.k === 'stat:' + name + ':' + w) || {}).v || 0);
+  // the owner's numbers count every home that is testing; a friend's home never gets here
+  const homes = env.HOME ? [] : await homeList(env);
+  const turns = (await env.DB.prepare('SELECT * FROM (' + everyHome(homes, 'turns', 'at, route, outcome, ms', 'at >= ?1') + ') ORDER BY at DESC LIMIT 3000').bind(weeks[7]).all()).results;
+  const stats = (await env.DB.prepare(everyHome(homes, 'settings', 'k, v', "k LIKE 'stat:%' AND substr(k, -10) >= ?1")).bind(weeks[7]).all()).results;
+  const stat = (name, w) => stats.filter((s) => s.k === 'stat:' + name + ':' + w).reduce((t, s) => t + Number(s.v || 0), 0);
   const pct = (a, b) => (b ? Math.round((a / b) * 1000) / 10 : null);
   return weeks.map((w) => {
     const mine = turns.filter((t) => weekOf(t.at.slice(0, 10)) === w), n = mine.length, o = (k) => mine.filter((t) => t.outcome === k).length;
@@ -3050,20 +3280,122 @@ async function api(request, env, url) {
 
   if (path === '/api/login' && method === 'POST') {
     const body = await request.json().catch(() => ({}));
-    if (!(await allow(env, 'login', 10, 12))) return json({ error: 'too_many' }, 429);
-    if (!same(body.pin, env.APP_PIN)) {
+    // wrong tries are counted per phone or network, so one person guessing cannot lock everyone else out
+    const from = (await sha('from:' + (request.headers.get('cf-connecting-ip') || 'none'))).slice(0, 16);
+    if (!(await allow(env, 'login', 10, 12, from)) || !(await allow(env, 'loginall', 10, 300))) return json({ error: 'too_many' }, 429);
+    // the owner's passcode opens the owner's home; a friend's personal code opens that friend's home and nothing else
+    let token = '';
+    if (same(body.pin, env.APP_PIN)) token = await sessionToken(env);
+    else if (cleanCode(body.pin).length === 8) {
+      const friend = await env.DB.prepare('SELECT id, code_hash, off FROM homes WHERE code_hash = ?').bind(await codeKey(env, body.pin)).first().catch(() => null);
+      if (friend && !friend.off) token = await homeToken(env, friend);
+    }
+    if (!token) {
       await new Promise((r) => setTimeout(r, 600));
       return json({ error: 'wrong_pin' }, 401);
     }
     const h = new Headers({ 'content-type': 'application/json', 'cache-control': 'no-store' });
     const opts = '; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=2592000';
-    h.append('set-cookie', 'pk=' + (await sessionToken(env)) + opts);
+    h.append('set-cookie', 'pk=' + token + opts);
     h.append('set-cookie', 'who=' + encodeURIComponent(cleanName(body.name)) + opts);
     return new Response(JSON.stringify({ ok: true }), { status: 200, headers: h });
   }
+  // ---- real sign-in: what the sign-in screen may offer, Google, and a code by email ----
+  if (path === '/api/signin/options' && method === 'GET') {
+    const n = ((await env.DB.prepare('SELECT COUNT(*) AS n FROM homes').first().catch(() => null)) || { n: 0 }).n;
+    return json({ google: env.GOOGLE_CLIENT_ID || '', email: !!(env.MAIL_KEY && env.MAIL_FROM), places: n < homesMax(env), contact: String(env.CONTACT || '').slice(0, 120) });
+  }
+  if (path === '/api/signin/google' && method === 'POST') {
+    if (!env.GOOGLE_CLIENT_ID) return json({ error: 'signin_off' }, 503);
+    if (!(await allow(env, 'signin', 10, 30, await fromOf(request)))) return json({ error: 'too_many' }, 429);
+    const who = await googleWho(env, ((await request.json().catch(() => null)) || {}).credential);
+    if (!who) return json({ error: 'bad_token' }, 401);
+    return enter(env, request, who, 'google');
+  }
+  if (path === '/api/signin/email' && method === 'POST') {
+    if (!env.MAIL_KEY || !env.MAIL_FROM) return json({ error: 'email_off' }, 503);
+    const email = cleanEmail(((await request.json().catch(() => null)) || {}).email);
+    if (!email) return json({ error: 'bad_email' }, 400);
+    // a few codes per address and per phone or network, so nobody's inbox can be flooded from here
+    if (!(await allow(env, 'mailip', 10, 10, await fromOf(request))) || !(await allow(env, 'mailto', 10, 3, (await sha('to:' + email)).slice(0, 16)))) return json({ error: 'too_many' }, 429);
+    const code = sixDigits();
+    await env.DB.prepare('INSERT INTO signin_codes (email, code_hash, expires, tries) VALUES (?, ?, ?, 0) ON CONFLICT(email) DO UPDATE SET code_hash = excluded.code_hash, expires = excluded.expires, tries = 0')
+      .bind(email, await mailCodeKey(env, email, code), Date.now() + 600000).run();
+    if (Math.random() < 0.05) await env.DB.prepare('DELETE FROM signin_codes WHERE expires < ?').bind(Date.now()).run().catch(() => {});
+    const sent = await sendCode(env, email, code).catch((e) => { console.error('code not sent', String((e && e.message) || e)); return false; });
+    return sent ? json({ ok: true }) : json({ error: 'mail_failed' }, 502); // the same answer whether or not the address has a home
+  }
+  if (path === '/api/signin/email/check' && method === 'POST') {
+    if (!env.MAIL_KEY || !env.MAIL_FROM) return json({ error: 'email_off' }, 503);
+    if (!(await allow(env, 'signin', 10, 30, await fromOf(request)))) return json({ error: 'too_many' }, 429);
+    const body = (await request.json().catch(() => null)) || {}, email = cleanEmail(body.email), code = String(body.code || '').replace(/\D/g, '').slice(0, 6);
+    const row = email ? await env.DB.prepare('SELECT code_hash, expires, tries FROM signin_codes WHERE email = ?').bind(email).first() : null;
+    const live = row && row.expires > Date.now() && row.tries < 5 && code.length === 6;
+    if (!live || !same(await mailCodeKey(env, email, code), row.code_hash)) {
+      if (live) await env.DB.prepare('UPDATE signin_codes SET tries = tries + 1 WHERE email = ?').bind(email).run(); // five wrong tries and the code is dead
+      await new Promise((r) => setTimeout(r, 600));
+      return json({ error: 'wrong_code' }, 401);
+    }
+    await env.DB.prepare('DELETE FROM signin_codes WHERE email = ?').bind(email).run(); // a code works once
+    return enter(env, request, { email, name: '' }, 'email');
+  }
   if (path === '/api/mcp') return mcp(request, env);
-  if (!same(cookie(request, 'pk'), await sessionToken(env))) return json({ error: 'locked' }, 401);
+  const home = await homeOf(request, env);
+  if (!home) return json({ error: 'locked' }, 401);
   if (path === '/api/logout' && method === 'POST') return json({ ok: true }, 200, { 'set-cookie': 'pk=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0' });
+  const owner = !home.id;
+  if (path === '/api/signout/all' && method === 'POST') {
+    // every phone signed in to this account is locked; a personal code is replaced by the owner instead
+    if (home.acct) await env.DB.prepare('UPDATE accounts SET epoch = epoch + 1 WHERE id = ?').bind(home.acct).run();
+    return json({ ok: true }, 200, { 'set-cookie': 'pk=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0' });
+  }
+  if (path === '/api/home/delete' && method === 'POST') {
+    if (owner) return json({ error: 'owner_home' }, 400);
+    if (((await request.json().catch(() => null)) || {}).confirm !== 'delete') return json({ error: 'confirm' }, 400);
+    await dropHome(env, home.id); // its things, what was typed, its reminders and its account: all of it, and it cannot be undone
+    return json({ ok: true }, 200, { 'set-cookie': 'pk=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0' });
+  }
+  if (!owner) {
+    // the scorecard, the review of misses and the list of homes are the owner's alone
+    if (/^\/api\/(homes|scorecard|review)(\/|$)/.test(path) || (path === '/api/feedback' && method === 'GET')) return json({ error: 'owner_only' }, 403);
+    if (home.seen !== utcDay()) await env.DB.prepare('UPDATE homes SET seen = ? WHERE id = ?').bind(utcDay(), home.id).run().catch(() => {});
+    env = forHome(env, home.id); // from here on, every query is this home's own
+    await migrate(env);
+  }
+
+  // ---- friends testing: the owner makes a personal code for each friend, and each code opens a home of its own ----
+  if (path === '/api/homes' && method === 'GET') {
+    const homes = await homeList(env), since = addDays(utcDay(), -6);
+    const use = homes.length ? (await env.DB.prepare(unionAll(homes.map((h) => "SELECT '" + h.id + "' AS home, (SELECT COUNT(*) FROM " + homePrefix(h.id) + 'items) AS items, (SELECT COUNT(*) FROM ' + homePrefix(h.id) + 'turns WHERE at >= ?1) AS turns'))).bind(since).all().catch(() => ({ results: [] }))).results : [];
+    const waiting = ((await env.DB.prepare('SELECT COUNT(*) AS n FROM waitlist').first().catch(() => null)) || { n: 0 }).n;
+    return json({ homes: homes.map((h) => { const u = use.find((x) => x.home === h.id) || {}; return { id: h.id, name: h.name, made: h.made, seen: h.seen || '', off: !!h.off, signup: !!h.acct, items: u.items || 0, turns: u.turns || 0 }; }), link: url.origin, max: homesMax(env), waiting });
+  }
+  if (path === '/api/homes' && method === 'POST') {
+    const body = (await request.json().catch(() => null)) || {}, name = cleanName(body.name);
+    if (!name) return json({ error: 'empty' }, 400);
+    const have = await homeList(env);
+    if (have.length >= homesMax(env) || have.filter((h) => !h.acct).length >= FRIENDS_MAX) return json({ error: 'full' }, 400);
+    const id = randomText(10, CODE_ABC).toLowerCase(), code = newCode();
+    await migrate(forHome(env, id)); // its tables exist before its code does
+    await env.DB.prepare('INSERT INTO homes (id, name, code_hash, made) VALUES (?, ?, ?, ?)').bind(id, name, await codeKey(env, code), new Date().toISOString()).run();
+    return json({ ok: true, id, name, code, link: url.origin }); // the code is shown this once and never kept
+  }
+  if (path === '/api/homes/code' && method === 'POST') {
+    const body = (await request.json().catch(() => null)) || {};
+    const h = await env.DB.prepare('SELECT id, name, acct FROM homes WHERE id = ?').bind(String(body.id || '')).first();
+    if (!h) return json({ error: 'not_found' }, 404);
+    if (h.acct) return json({ error: 'signup_home' }, 400); // a signed-up home is opened by its account, never by a code
+    const code = newCode();
+    await env.DB.prepare('UPDATE homes SET code_hash = ? WHERE id = ?').bind(await codeKey(env, code), h.id).run(); // phones signed in with the old code are locked too
+    return json({ ok: true, id: h.id, name: h.name, code, link: url.origin });
+  }
+  if (path === '/api/homes/off' && method === 'POST') {
+    const body = (await request.json().catch(() => null)) || {};
+    const h = await env.DB.prepare('SELECT id FROM homes WHERE id = ?').bind(String(body.id || '')).first();
+    if (!h) return json({ error: 'not_found' }, 404);
+    await env.DB.prepare('UPDATE homes SET off = ? WHERE id = ?').bind(body.off ? 1 : 0, h.id).run(); // nothing is deleted; turned back on, it is all still there
+    return json({ ok: true, id: h.id, off: !!body.off });
+  }
 
   let me = '';
   try { me = cleanName(decodeURIComponent(cookie(request, 'who') || '')); } catch (e) {}
@@ -3112,7 +3444,11 @@ async function api(request, env, url) {
     // how often this home shops, so the list can look ahead to the next shop; the app must still open if this cannot be read
     let shop = { days: 1, known: false };
     try { shop = shopGapFrom((await env.DB.prepare('SELECT DISTINCT bought FROM purchases WHERE bought <= ? ORDER BY bought DESC LIMIT 9').bind(today).all()).results.map((r) => r.bought)); } catch (e) { console.error('shop gap not read', String((e && e.message) || e)); }
-    return json({ items, log, extras, me, spend, waste: (binned && binned.n) || 0, profile, learnt, review: misses, shelf, saved, shops, handoff, shop });
+    if (owner) {
+      const homes = await homeList(env);
+      if (homes.length) misses = ((await env.DB.prepare('SELECT COUNT(DISTINCT lower(said)) AS n FROM (' + everyHome(homes, 'turns', 'said, label, outcome, at', '') + ") WHERE label IS NULL AND outcome IN ('down','undo','rejected','corrected','repeated','missed') AND at >= ?1").bind(addDays(today, -27)).first().catch(() => null)) || { n: misses }).n;
+    }
+    return json({ items, log, extras, me, spend, waste: (binned && binned.n) || 0, profile, learnt, review: owner ? misses : 0, owner, signup: !!home.acct, shelf, saved, shops, handoff, shop });
   }
   // The list was handed to a store (the person tapped a store's link). Only the store's name and the day are kept, so Today can ask
   // for the order screen when it arrives. Nothing is sent anywhere by this.
@@ -3212,6 +3548,7 @@ async function api(request, env, url) {
     await env.DB.prepare('INSERT INTO push_subs (endpoint, p256dh, auth, who, tz, added) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(endpoint) DO UPDATE SET p256dh = excluded.p256dh, auth = excluded.auth, who = excluded.who, tz = excluded.tz, fails = 0')
       .bind(sub.endpoint, sub.p256dh, sub.auth, me || null, okZone(body.tz), new Date().toISOString()).run();
     await env.DB.prepare("INSERT INTO settings (k, v) VALUES ('origin', ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v").bind(url.origin).run();
+    if (env.HOME) await rootDB(env).prepare('UPDATE homes SET phones = 1 WHERE id = ?').bind(env.HOME).run().catch(() => {});
     const hello = body.quiet ? 0 : await pushSend(env, sub, { title: 'Reminders are on', body: 'Once a day at most, when something runs low.', url: '/', ids: [], actions: [] }, url.origin).catch(() => 0);
     return json({ ok: true, hello: hello >= 200 && hello < 300 });
   }
@@ -3281,9 +3618,10 @@ async function api(request, env, url) {
   if (path === '/api/review' && method === 'POST') {
     const body = (await request.json().catch(() => null)) || {};
     const label = ['nothing', 'update', 'list', 'ok'].includes(body.label) ? body.label : '';
-    const t = await env.DB.prepare('SELECT said FROM turns WHERE id = ?').bind(Math.round(num(body.id, 0))).first();
+    const homes = await homeList(env), fromHome = homes.find((h) => h.id === body.home);
+    const t = await (fromHome ? forHome(env, fromHome.id) : env).DB.prepare('SELECT said FROM turns WHERE id = ?').bind(Math.round(num(body.id, 0))).first();
     if (!label || !t || !t.said) return json({ error: 'empty' }, 400);
-    await env.DB.prepare('UPDATE turns SET label = ? WHERE lower(said) = lower(?)').bind(label, t.said).run();
+    await env.DB.batch([env].concat(homes.map((h) => forHome(env, h.id))).map((e) => e.DB.prepare('UPDATE turns SET label = ? WHERE lower(said) = lower(?)').bind(label, t.said)));
     if (label === 'ok') await env.DB.prepare('DELETE FROM cases WHERE said = ?').bind(t.said).run();
     else await env.DB.prepare('INSERT INTO cases (at, said, expect, name) VALUES (?, ?, ?, ?) ON CONFLICT(said) DO UPDATE SET expect = excluded.expect, name = excluded.name').bind(new Date().toISOString(), t.said, label, word(body.name, 40) || null).run();
     return json({ ok: true });
@@ -3292,7 +3630,7 @@ async function api(request, env, url) {
     const c = await env.DB.prepare('SELECT said FROM cases WHERE id = ?').bind(Math.round(num(url.searchParams.get('case'), 0))).first();
     if (c) {
       await env.DB.prepare('DELETE FROM cases WHERE said = ?').bind(c.said).run();
-      await env.DB.prepare('UPDATE turns SET label = NULL WHERE lower(said) = lower(?)').bind(c.said).run();
+      await env.DB.batch([env].concat((await homeList(env)).map((h) => forHome(env, h.id))).map((e) => e.DB.prepare('UPDATE turns SET label = NULL WHERE lower(said) = lower(?)').bind(c.said)));
     }
     return json({ ok: true });
   }
@@ -3572,7 +3910,9 @@ export default {
   async scheduled(event, env, ctx) {
     const now = new Date(event.scheduledTime || Date.now());
     // reminders are checked at the top of each hour; evals take a few steps every minute while a run is open
+    // the owner's home goes on the hour; each friend's home with a phone gets a minute of its own after that
     if (now.getUTCMinutes() === 0) ctx.waitUntil(tick(env, now).catch((e) => console.error('reminders failed', String((e && e.message) || e))));
+    else ctx.waitUntil(tickHome(env, now).catch((e) => console.error('reminders failed', String((e && e.message) || e))));
     ctx.waitUntil(migrate(env).then(() => autoRuns(env)).then(() => stepRun(env)).catch((e) => console.error('eval step failed', String((e && e.message) || e))));
   },
 };

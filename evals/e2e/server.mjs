@@ -9,6 +9,9 @@
 //                   `see` for a photo, `fail: "quota"` to act as if the AI allowance ran out)
 //   GET  /__seen    everything the model was sent since the last /__script
 //   POST /__sql     { sql, args }  read the database
+// With E2E_SIGNUP=1 real sign-in is on, with stand-ins for Google's keys and the mail service (E2E_HOMES_MAX sets the cap):
+//   GET  /__token?email=…   a sign-in token as Google would give it, signed with the stand-in key
+//   GET  /__mail            every message the mail stand-in was asked to send
 import http from 'http';
 import fs from 'fs';
 import path from 'path';
@@ -54,12 +57,36 @@ const ASSETS = { fetch: async (req) => {
 } };
 const env = { APP_PIN: 'test1234', DB, AI, ASSETS, TEXT_MODEL: 'big', SMALL_MODEL: 'small', VISION_MODEL: 'vision', SPEECH_MODEL: 'speech', IMAGE_MODEL: 'image', DELEGATE: 'on', CF_VERSION: { id: 'e2e00000' } };
 
+// ---- real sign-in, when asked for: Google's keys and the mail service are stand-ins, so nothing leaves this machine ----
+const SIGNUP = !!process.env.E2E_SIGNUP, mail = [];
+let mint = null;
+if (SIGNUP) {
+  const { webcrypto } = await import('node:crypto');
+  const b64u = (x) => Buffer.from(x).toString('base64url');
+  const pair = await webcrypto.subtle.generateKey({ name: 'RSASSA-PKCS1-v1_5', modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: 'SHA-256' }, true, ['sign', 'verify']);
+  const jwk = { ...(await webcrypto.subtle.exportKey('jwk', pair.publicKey)), kid: 'e2e', alg: 'RS256', use: 'sig' };
+  Object.assign(env, { GOOGLE_CLIENT_ID: 'e2e.apps.googleusercontent.com', MAIL_KEY: 'e2e-mail-key', MAIL_FROM: 'Tote <tote@stocker.test>', HOMES_MAX: process.env.E2E_HOMES_MAX || '100', CONTACT: 'hello@stocker.test' });
+  mint = async (email) => {
+    const now = Math.floor(Date.now() / 1000), name = email.split('@')[0];
+    const data = b64u(JSON.stringify({ alg: 'RS256', kid: 'e2e', typ: 'JWT' })) + '.' + b64u(JSON.stringify({ iss: 'https://accounts.google.com', aud: env.GOOGLE_CLIENT_ID, sub: String(email.length) + '0042', email, email_verified: true, given_name: name[0].toUpperCase() + name.slice(1), iat: now - 5, exp: now + 3600 }));
+    return data + '.' + b64u(await webcrypto.subtle.sign('RSASSA-PKCS1-v1_5', pair.privateKey, new TextEncoder().encode(data)));
+  };
+  globalThis.fetch = async (input, init = {}) => {
+    const u = String(typeof input === 'string' ? input : input.url);
+    if (/googleapis\.com\/oauth2\/v3\/certs/.test(u)) return new Response(JSON.stringify({ keys: [jwk] }), { headers: { 'content-type': 'application/json' } });
+    if (/api\.resend\.com\/emails/.test(u)) { const b = JSON.parse(init.body); mail.push({ to: [].concat(b.to)[0], subject: b.subject, text: b.text }); return new Response('{"id":"e2e"}', { status: 200 }); }
+    return new Response('no network in the harness', { status: 599 });
+  };
+}
+
 const body = (req) => new Promise((ok) => { const c = []; req.on('data', (d) => c.push(d)); req.on('end', () => ok(Buffer.concat(c))); });
 http.createServer(async (req, res) => {
   const buf = await body(req), url = 'http://127.0.0.1:' + PORT + req.url;
   try {
     if (req.url === '/__script') { const j = JSON.parse(buf.toString() || '{}'); rules = j.rules || []; seen = []; res.end('{"ok":true}'); return; }
     if (req.url === '/__seen') { res.setHeader('content-type', 'application/json'); res.end(JSON.stringify(seen)); return; }
+    if (SIGNUP && req.url.startsWith('/__token')) { res.end(await mint(new URL(url).searchParams.get('email') || 'asha@example.com')); return; }
+    if (SIGNUP && req.url === '/__mail') { res.setHeader('content-type', 'application/json'); res.end(JSON.stringify(mail)); return; }
     if (req.url === '/__sql') { const j = JSON.parse(buf.toString()); res.setHeader('content-type', 'application/json'); res.end(JSON.stringify(db.prepare(j.sql).all(...(j.args || [])))); return; }
     const headers = new Headers(); for (const [k, v] of Object.entries(req.headers)) if (typeof v === 'string') headers.set(k, v);
     const r = await W.default.fetch(new Request(url, { method: req.method, headers, body: ['GET', 'HEAD'].includes(req.method) ? undefined : buf }), env);
