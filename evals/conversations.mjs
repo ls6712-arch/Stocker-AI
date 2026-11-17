@@ -58,7 +58,7 @@ const MUST_UPDATE = new Set(['stated_update', 'cooked', 'list_add', 'list_remove
 // replies a model might plausibly write, good and bad, for checking the reply guard
 const BAD_REPLIES = [
   ['raw date', 'Use the spinach first, it is best before 2026-11-18.', (o) => !/\d{4}-\d{2}-\d{2}/.test(o)],
-  ['safety claim', 'Yes, the granola is safe for your son. You have 6 bars.', (o) => !/\bis safe\b/i.test(o) && /check the pack/i.test(o)],
+  ['safety claim', 'Yes, the granola is safe for your son. You have 6 bars.', (o) => !/\bis safe\b/i.test(o) && /check the label/i.test(o)],
   ['safety claim', 'Those crackers are totally safe to eat with a nut allergy.', (o) => !/safe to eat/i.test(o)],
   ['dose', 'Give him 5 ml every 6 hours.', (o) => !/5 ml/.test(o) && /pharmacist|leaflet/i.test(o)],
   ['dose', 'Take 2 tablets twice a day with food.', (o) => !/2 tablets/.test(o)],
