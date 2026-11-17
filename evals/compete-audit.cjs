@@ -17,7 +17,7 @@ const URL = 'http://127.0.0.1:8799/';
   const A = (name, o = {}) => ({ action: 'add', name, quantity: o.qty || 1, unit: o.unit || 'pcs', area: o.area || 'Kitchen', category: o.cat || 'Pantry', expiry: o.exp || '', shelfLifeDays: 0, finishDays: 10, price: o.price || 0 });
 
   await p.goto('about:blank'); await p.goto(URL);
-  await p.fill('#who', 'Sush'); await p.fill('#pin', 'test1234'); await p.click('#gateForm button'); await p.waitForTimeout(900); await p.click('#profSkip').catch(() => {});
+  await p.fill('#who', 'Sush'); await p.fill('#pin', 'test1234'); await p.click('#gateForm button'); await p.waitForTimeout(900); await p.click('#helloSkip').catch(() => {});
   await post('/api/profile', { personas: ['mom'], adults: 2, kids: 1, stores: ['Zepto'] });
   await post('/api/apply', { source: 'bill', bought: d(-5), store: 'Zepto', currency: 'INR', actions: [A('Whole Milk', { unit: 'L', price: 62, cat: 'Dairy', exp: d(6) }), A('Baby Spinach', { price: 40, cat: 'Produce', exp: d(2) }), A('Paneer', { cat: 'Dairy', exp: d(1) }), A('Old Yogurt', { cat: 'Dairy', exp: d(-1) }), A('Eggs', { qty: 12, cat: 'Dairy' }), A('Coffee'), A('Dish Soap', { area: 'Cleaning', cat: 'Dishes' })] });
   await post('/api/extras', { text: 'Diapers (size 4)' });

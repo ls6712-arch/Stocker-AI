@@ -54,6 +54,7 @@ fs.mkdirSync(SHOTS, { recursive: true });
   await shot('01-first-open');
 
   // ---- 2. making it theirs: a child with a peanut allergy, through the profile sheet ----
+  if (await p.locator('#helloDlg[open]').count()) { await p.click('#helloSkip'); await p.waitForTimeout(450); }
   if (!(await p.locator('#profDlg[open]').count())) { await p.click('#menuBtn'); await wait(300); await p.click('#menuEdit'); await wait(400); }
   check('The first-run profile sheet opens', (await p.locator('#profDlg[open]').count()) === 1);
   await p.locator('#profHome button').first().click(); await wait(150);

@@ -19,7 +19,7 @@ const URL = 'http://127.0.0.1:8799/';
     p.on('response', (r) => { if (r.status() >= 500) bad.push(r.status() + ' ' + r.url()); });
     return p;
   };
-  const signIn = async (p, name, code) => { await p.goto(URL); await p.fill('#who', name); await p.fill('#pin', code); await p.click('#gateForm button'); await p.waitForTimeout(900); await p.click('#profSkip', { timeout: 1500 }).catch(() => {}); };
+  const signIn = async (p, name, code) => { await p.goto(URL); await p.fill('#who', name); await p.fill('#pin', code); await p.click('#gateForm button'); await p.waitForTimeout(900); await p.click('#helloSkip', { timeout: 1500 }).catch(() => {}); };
   const post = (p, path, body) => p.evaluate(async ([u, d]) => { const r = await fetch(u, { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: JSON.stringify(d) }); return { status: r.status, data: await r.json().catch(() => ({})) }; }, [path, body]);
   const add = (p, name) => post(p, '/api/apply', { source: 'hand', bought: new Date().toISOString().slice(0, 10), actions: [{ action: 'add', name, quantity: 1, unit: 'pcs', area: 'Kitchen', category: 'Pantry', expiry: '', shelfLifeDays: 300, finishDays: 30 }] });
   const park = (p) => p.goto('about:blank');

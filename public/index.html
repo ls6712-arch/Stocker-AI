@@ -154,7 +154,23 @@ html.big{zoom:1.16}
 .msg .fb{display:block;border:0;background:none;color:var(--muted);font-size:.7813rem;padding:6px 0 0;min-height:32px;text-decoration:underline}
 .chip.add{border-style:dashed;color:var(--accent);background:none}
 .addin{display:flex;gap:6px;flex:1 1 220px;min-width:0}.addin input{flex:1;min-width:0;min-height:40px;padding:6px 12px;border-radius:999px}
-#profDlg .tile,#profDlg .tile b{min-height:0}#profDlg .tile{padding:10px 12px;gap:2px;border-radius:14px}#profDlg .tile span{font-size:.75rem}
+#profDlg .tile,#profDlg .tile b,#helloDlg .tile,#helloDlg .tile b{min-height:0}#profDlg .tile,#helloDlg .tile{padding:10px 12px;gap:2px;border-radius:14px}#profDlg .tile span,#helloDlg .tile span{font-size:.75rem}
+/* the first run: three short steps, each answered by Tote, and a list of what is left to set */
+.hellotop{display:flex;align-items:center;justify-content:space-between;min-height:20px;margin-bottom:8px}
+.dots{display:flex;gap:6px}.dots i{width:26px;height:5px;border-radius:3px;background:var(--line);transition:background-color .2s}.dots i.on{background:var(--accent)}
+.totesay{display:flex;gap:10px;align-items:flex-start;background:var(--surface2);border-radius:18px 18px 18px 6px;padding:12px 14px;margin:10px 0 16px;min-height:5.6em;font-size:.9375rem}
+.totesay img{width:28px;height:28px;flex:none;border-radius:8px}
+#helloIn{display:flex;flex-direction:column;gap:10px;margin-bottom:16px}#helloIn h3{margin:4px 0 0}
+#helloIn .people{justify-content:space-around;padding:8px 0 4px}#helloIn .people label{align-items:center;font-size:.9375rem}
+#helloIn .qty{font-size:1.5rem;gap:10px}#helloIn .qty button{width:48px;height:48px}
+.hellogo{display:flex;gap:10px}.hellogo .primary{flex:1}.hellogo #helloBack{flex:none}
+#helloDlg .linkbtn{display:block;margin:2px auto 0}
+.sortbar{height:6px;border-radius:3px;background:var(--line);overflow:hidden;margin:10px 0 4px}.sortbar i{display:block;height:100%;background:var(--accent);transform-origin:0 50%;transform:scaleX(0);transition:transform .4s var(--spring,ease)}
+.sortrow{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--line);padding:10px 2px;min-height:56px}
+.sortrow .t{flex:1;min-width:0;display:flex;flex-direction:column}.sortrow b{font-weight:600}.sortrow small{color:var(--muted);font-size:.8125rem}
+.sortrow .tick{flex:none;width:24px;height:24px;border-radius:50%;border:1.5px solid var(--line);display:grid;place-items:center}
+.sortrow.done .tick{background:var(--accent);border-color:var(--accent)}.sortrow.done .tick::after{content:"";width:10px;height:5px;border-left:2px solid var(--bg);border-bottom:2px solid var(--bg);transform:translateY(-1px) rotate(-45deg)}
+.here{animation:here 1.4s ease-out}@keyframes here{from{background:color-mix(in srgb,var(--accent) 22%,transparent)}}
 .grp{font-size:.75rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0}
 .who{display:flex;flex-direction:column;gap:8px}
 .who button.person{display:flex;justify-content:space-between;align-items:center;gap:10px;text-align:left;border:1px solid var(--line);background:var(--surface2);border-radius:14px;padding:10px 12px;min-height:48px}
@@ -585,6 +601,7 @@ body{overflow-x:clip}
     <div class="grab"></div>
     <div class="homecard"><span class="avatar" aria-hidden="true" id="menuMe" style="display:grid;place-items:center;flex:none;width:52px;height:52px">S</span><span><b id="menuH" style="font-size:1.125rem">Your home</b><span class="sub" id="menuSub"></span></span><button type="button" class="mini" id="menuEdit">Edit</button></div>
     <div class="menu">
+      <button type="button" id="menuSort"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6.500l1.500 1.500L8 5M4 12.500l1.500 1.500L8 11M4 18.500l1.500 1.500L8 17M11 7h9M11 13h9M11 19h9"/></svg><span><b>Get everything sorted</b><small id="menuSortSub"></small></span></button>
       <button type="button" id="menuShare"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.300 2.700-6 6-6s6 2.700 6 6M16 5.200a3.200 3.200 0 0 1 0 5.600M17.500 14.300c2 .900 3.500 3 3.500 5.700"/></svg><span><b>Share with your household</b><small>Everyone sees the same list</small></span></button>
       <button type="button" id="bigText" aria-pressed="false"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 18 9 6l5 12M5.800 14h6.400M15 18l3-7.500 3 7.500M16 16h4"/></svg><span><b>Larger text</b><small id="bigSub">Off</small></span></button>
       <button type="button" id="menuRemind"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4zM10 20a2 2 0 0 0 4 0"/></svg><span><b>Reminders and what I learned</b><small id="menuRemSub"></small></span></button>
@@ -674,36 +691,62 @@ body{overflow-x:clip}
   </div>
 </dialog>
 
+<dialog class="sheet" id="helloDlg" aria-labelledby="helloH">
+  <div class="pad">
+    <div class="grab"></div>
+    <div class="hellotop"><span class="dots" id="helloDots" aria-hidden="true"><i></i><i></i><i></i></span><span class="sub" id="helloStep" role="status"></span></div>
+    <div id="helloBody">
+      <h2 id="helloH" tabindex="-1"></h2>
+      <p class="totesay"><img src="/icon.svg" alt="" width="28" height="28"><span id="helloSay" role="status"></span></p>
+      <div id="helloIn"></div>
+    </div>
+    <div class="hellogo"><button type="button" class="btn" id="helloBack" hidden>Back</button><button type="button" class="btn primary" id="helloNext">Next</button></div>
+    <button type="button" class="btn block" id="helloSort" hidden style="margin-top:8px">Get everything sorted</button>
+    <button type="button" class="linkbtn" id="helloSkip">Not now</button>
+  </div>
+</dialog>
+
+<dialog class="sheet" id="sortDlg" aria-labelledby="sortH">
+  <div class="pad">
+    <div class="grab"></div>
+    <h2 id="sortH">Get everything sorted</h2>
+    <p class="sub" id="sortSub" role="status" style="font-size:.9375rem"></p>
+    <div class="sortbar" aria-hidden="true"><i id="sortBar"></i></div>
+    <div id="sortList" style="margin-bottom:14px"></div>
+    <button type="button" class="btn block" data-close>Done for now</button>
+  </div>
+</dialog>
+
 <dialog class="sheet" id="profDlg" aria-labelledby="profH">
   <div class="pad">
     <div class="grab"></div>
-    <h2 id="profH">Make Stocker yours</h2>
+    <h2 id="profH">Everything about your home</h2>
     <p class="sub">Tell me who is at home and I will tailor estimates, dinner ideas and suggestions. You can change this any time.</p>
-    <h3>Which sound like you? <span class="sub" id="profPick" style="font-family:var(--body,inherit);font-weight:500">Pick up to three</span></h3>
+    <h3 id="secType">Which sound like you? <span class="sub" id="profPick" style="font-family:var(--body,inherit);font-weight:500">Pick up to three</span></h3>
     <p class="grp">Your home</p>
     <div class="tiles" id="profHome" role="group" aria-label="Your home"></div>
     <p class="grp">Your style</p>
     <div class="tiles" id="profStyle" role="group" aria-label="Your style"></div>
     <p class="sub">This picks your starter list, your kits and how fast I expect things to run out.</p>
-    <h3>Who lives here?</h3>
+    <h3 id="secPeople">Who lives here?</h3>
     <div class="people" id="profPeople"></div>
     <div class="who" id="profMembers"></div>
     <p class="sub">Add a person when someone eats differently, has an allergy, or is only here some of the time.</p>
     <div class="wrapchips" id="profPets" role="group" aria-label="Pets"></div>
-    <h3>Allergies at home</h3>
+    <h3 id="secAll">Allergies at home</h3>
     <div class="wrapchips" id="profAll" role="group" aria-label="Allergies"></div>
     <p class="sub">Allergies are a hard rule: I keep them out of dinner ideas and starter lists, and flag products that look risky. I work from product names, so I can miss things. Always check the label yourself.</p>
-    <h3>Health rules</h3>
+    <h3 id="secRules">Health rules</h3>
     <div class="wrapchips" id="profRules" role="group" aria-label="Health rules"></div>
-    <h3>House rules</h3>
+    <h3 id="secHouse">House rules</h3>
     <div class="wrapchips" id="profHouse" role="group" aria-label="House rules"></div>
     <p class="sub">What your home chooses to keep to. When you scan a pack, I read its label for these, including the names they hide under. I only report what the label says.</p>
-    <h3>How you eat</h3>
+    <h3 id="secDiet">How you eat</h3>
     <div class="wrapchips" id="profDiet" role="group" aria-label="Diet"></div>
     <details class="fold" id="profMore">
       <summary>More ways to tailor it</summary>
       <div class="in">
-        <h3>Things nobody eats</h3>
+        <h3 id="secCook">Things nobody eats</h3>
         <div class="wrapchips" id="profAvoid" role="group" aria-label="Things nobody eats"></div>
         <h3>What matters most</h3>
         <div class="wrapchips" id="profGoal" role="group" aria-label="What matters most"></div>
@@ -711,10 +754,10 @@ body{overflow-x:clip}
         <div class="wrapchips" id="profCui" role="group" aria-label="Favourite food"></div>
         <h3>Weeknight cooking time</h3>
         <div class="wrapchips" id="profCook" role="group" aria-label="Cooking time"></div>
-        <label for="profBuddy" class="field">Name your helper<input type="text" id="profBuddy" maxlength="16" placeholder="Tote"></label>
+        <label for="profBuddy" class="field" id="secHelper">Name your helper<input type="text" id="profBuddy" maxlength="16" placeholder="Tote"></label>
         <h3>Nights you eat out or order in each week</h3>
         <div class="people" id="profOut"></div>
-        <h3>Your shopping</h3>
+        <h3 id="secShop">Your shopping</h3>
         <div class="wrapchips" id="profDay" role="group" aria-label="Usual shopping day"></div>
         <p class="grp">Where you shop</p>
         <div class="wrapchips" id="profStores" role="group" aria-label="Where you shop"></div>
@@ -995,7 +1038,7 @@ body{overflow-x:clip}
       $('gBtn').textContent='';google.accounts.id.renderButton($('gBtn'),{type:'standard',theme:'outline',size:'large',shape:'pill',text:'continue_with',width:Math.max(200,Math.min(332,($('gate').clientWidth||380)-48))})}
     catch(e){$('gBtn').textContent='Could not show the Google button. Reload and try again.'}}
   async function signIn(path,body){
-    try{var d=await api(path,{method:'POST',body:JSON.stringify(body)});if(d.fresh){try{localStorage.removeItem('stocker.profSkip')}catch(e){}}gateSaid='';mailReset();await start();return true}
+    try{var d=await api(path,{method:'POST',body:JSON.stringify(body)});if(d.fresh){try{localStorage.removeItem('stocker.profSkip');localStorage.removeItem('stocker.sorted')}catch(e){}}gateSaid='';mailReset();await start();return true}
     catch(e){gateSay(SIGNMSG[e.code]||'Could not reach Stocker. Check your connection.');if(e.code==='wrong_code'&&!$('mailCodeRow').hidden)wrongIn($('mailCode'));return false}}
   /* a wrong code: red, and a shake (CSS leaves the shake out under reduce motion). A second wrong try shakes again */
   function wrongIn(inp){inp.setAttribute('aria-invalid','true');inp.classList.remove('shake');void inp.offsetWidth;inp.classList.add('shake')}
@@ -1025,7 +1068,7 @@ body{overflow-x:clip}
   $('menuDelete').onclick=function(){$('menuDlg').close();delArmed=0;$('delGo').textContent='Delete everything';$('delGo').disabled=false;$('delSay').textContent='';$('delDlg').showModal()};
   $('delGo').onclick=async function(){var b=$('delGo');
     if(Date.now()-delArmed>8000){delArmed=Date.now();b.textContent='Tap again to delete everything';$('delSay').textContent='Tap once more and it is all gone for good.';setTimeout(function(){if(b.isConnected&&!b.disabled&&Date.now()-delArmed>=8000){b.textContent='Delete everything';$('delSay').textContent=''}},8100);return}
-    b.disabled=true;try{await api('/api/home/delete',{method:'POST',body:JSON.stringify({confirm:'delete'})});try{localStorage.removeItem('stocker.profSkip')}catch(e2){}showGate('Your home is deleted. Nothing of it is kept.')}
+    b.disabled=true;try{await api('/api/home/delete',{method:'POST',body:JSON.stringify({confirm:'delete'})});try{localStorage.removeItem('stocker.profSkip');localStorage.removeItem('stocker.sorted')}catch(e2){}showGate('Your home is deleted. Nothing of it is kept.')}
     catch(e){b.disabled=false;if(e.code!=='locked')$('delSay').textContent=why(e,'Could not delete your home.')}};
 
   /* ---- the agent's rules ---- */
@@ -1603,8 +1646,8 @@ body{overflow-x:clip}
   $('chatSnap').onclick=function(){$('chatDlg').close();$('capDlg').showModal()};
   $('chatTalk').onclick=function(){startRec()};
   $('chatCode').onclick=function(){$('chatDlg').close();$('capCode').click()};
-  var draft=null,mem=null,memAt=-1,ui={more:{},adding:''};
-  function redraw(){drawProfile();if(mem)drawMember()}
+  var draft=null,mem=null,memAt=-1,ui={more:{},adding:''},helloAt=-1,helloEvery=false,helloFull=false,sortBack='';
+  function redraw(){if(helloAt>-1)drawHello();else drawProfile();if(mem)drawMember()}
   /* a chip group: suggested options, anything the household added, and a plus chip to add their own */
   function chipBox(box,all,obj,key,o){o=o||{};box.textContent='';var id=box.id,sel=obj[key],low=function(x){return x.toLowerCase()};
     var shown=o.show&&!ui.more[id]?all.filter(function(n,i){return i<o.show||sel.indexOf(n)>-1}):all;
@@ -1649,7 +1692,7 @@ body{overflow-x:clip}
     chipBox($('profStores'),[],draft,'stores',{add:'Add a store',ph:'Costco'});
     var po=$('profOut');po.textContent='';var oq=el('span','qty'),om=el('button','','\u2212'),op=el('button','','+');om.type=op.type='button';om.setAttribute('aria-label','Fewer nights out');op.setAttribute('aria-label','More nights out');
     om.onclick=function(){draft.eatOut=Math.max(0,draft.eatOut-1);drawProfile()};op.onclick=function(){draft.eatOut=Math.min(7,draft.eatOut+1);drawProfile()};oq.append(om,el('span','',String(draft.eatOut)),op);po.append(oq);
-    $('profSave').disabled=!draft.personas.length;
+    $('profSave').disabled=false;
   }
   function drawMember(){
     oneOf($('memKind'),KINDS,mem,'kind');
@@ -1666,20 +1709,103 @@ body{overflow-x:clip}
   $('memSave').onclick=function(){var n=$('memName').value.replace(/\s+/g,' ').trim();if(!n){$('memName').setCustomValidity('Give them a name first.');$('memName').reportValidity();return}
     mem.name=n;mem.when=$('memWhen').value.replace(/\s+/g,' ').trim();if(memAt>-1)draft.members[memAt]=mem;else draft.members.push(mem);$('memDlg').close()};
   $('memDel').onclick=function(){if(memAt>-1)draft.members.splice(memAt,1);$('memDlg').close()};
-  function openProfile(){document.querySelectorAll('dialog[open]').forEach(function(d){d.close()});var p=profile,cp=function(a){return (a||[]).slice()};ui={more:{},adding:''};
-    draft=p?{had:true,counted:true,personas:cp(p.personas||[p.persona]),adults:p.adults,kids:p.kids,members:(p.members||[]).map(function(m){return {name:m.name,kind:m.kind,when:m.when,away:!!m.away,diet:cp(m.diet),allergies:cp(m.allergies),rules:cp(m.rules),avoid:cp(m.avoid),house:cp(m.house)}}),
+  function newDraft(p){var cp=function(a){return (a||[]).slice()};
+    return p?{had:true,counted:true,personas:cp(p.personas||[p.persona]),adults:p.adults,kids:p.kids,members:(p.members||[]).map(function(m){return {name:m.name,kind:m.kind,when:m.when,away:!!m.away,diet:cp(m.diet),allergies:cp(m.allergies),rules:cp(m.rules),avoid:cp(m.avoid),house:cp(m.house)}}),
         pets:cp(p.pets),diet:cp(p.diet),allergies:cp(p.allergies),rules:cp(p.rules),avoid:cp(p.avoid),house:cp(p.house),cuisines:cp(p.cuisines),goal:p.goal||'',eatOut:p.eatOut||0,cook:p.cook||'any',shopDay:p.shopDay||'',stores:cp(p.stores)}:
-      {personas:[],adults:2,kids:0,members:[],pets:[],diet:[],allergies:[],rules:[],avoid:[],house:[],cuisines:[],goal:'',eatOut:0,cook:'any',shopDay:'',stores:[]};
+      {personas:[],adults:2,kids:0,members:[],pets:[],diet:[],allergies:[],rules:[],avoid:[],house:[],cuisines:[],goal:'',eatOut:0,cook:'any',shopDay:'',stores:[]}}
+  function openProfile(sec,key){sortBack='';document.querySelectorAll('dialog[open]').forEach(function(d){d.close()});var p=profile;ui={more:{},adding:''};draft=newDraft(p);sec=typeof sec==='string'?sec:'';
     $('profBuddy').value=p&&p.buddy||'';$('profBudget').value=p&&p.budget?p.budget:'';$('profAbout').value=p&&p.about||'';
     $('profMore').open=!!(p&&(p.avoid&&p.avoid.length||p.goal||p.eatOut||p.buddy||p.cuisines&&p.cuisines.length||p.cook!=='any'||p.shopDay||p.stores&&p.stores.length||p.budget||p.about));
-    drawProfile();$('profDlg').showModal();$('profH').tabIndex=-1;$('profH').focus();$('profDlg').scrollTop=0}
-  $('profSkip').onclick=function(){try{localStorage.setItem('stocker.profSkip','1')}catch(e){}$('profDlg').close()};
+    if(/^sec(Shop|Cook|Helper)$/.test(sec))$('profMore').open=true;
+    drawProfile();$('profDlg').showModal();$('profH').tabIndex=-1;$('profH').focus();$('profDlg').scrollTop=0;
+    /* opened from the list: straight to that section, and back to the list afterwards */
+    if(sec&&$(sec)){sortBack=key||'';var t=$(sec);t.scrollIntoView({block:'start'});t.classList.remove('here');void t.offsetWidth;t.classList.add('here')}}
+  $('profDlg').addEventListener('close',function(){if(sortBack){sortBack='';setTimeout(openSort,0)}});
+
+  /* ---- the first run: three short steps in Tote's voice, then a guided list for the rest ---- */
+  var NUM=['no','one','two','three','four','five','six','seven','eight','nine','ten'];
+  function cnt(n,one,many){return NUM[n]+' '+(n===1?one:many)}
+  function capFirst(t){return t.charAt(0).toUpperCase()+t.slice(1)}
+  function listOf(a){return a.length<2?a.join(''):a.slice(0,-1).join(', ')+' and '+a[a.length-1]}
+  /* nothing picked: the plainest kind of home that fits who lives there */
+  function autoType(d){return d.kids?(d.adults+d.kids>=5?'big':'family4'):d.adults===1?'solo':d.adults===2?'couple':'other'}
+  function fitTypes(d){var a=d.adults,k=d.kids,h=k?(a===1?['momsolo','dad','newparents']:a+k>=5?['big','mom','dadbusy']:k===2?['family4','mom','dadbusy']:['newparents','mom','dadbusy']):a===1?['solo','student','pro']:a===2?['couple','empty','carer']:['roommates','big','carer'];
+    return h.concat(k?['pro','host','petparent']:a===1?['gym','host','petparent']:['pro','host','petparent']).concat(d.personas).filter(function(x,i,l){return l.indexOf(x)===i})}
+  function helloLine(){var d=draft,a=d.adults,k=d.kids;
+    if(helloAt===0)return k?capFirst(cnt(a,'adult','adults'))+' and '+cnt(k,'child','children')+'. '+(a+k>=6?'A full house. I will keep a close eye on the staples.':'I will plan for a busy table.'):a===1?'Just you. I will keep the portions small.':a===2?'Two of you. Easy to plan for.':capFirst(cnt(a,'adult','adults'))+'. I will expect things to go quickly.';
+    if(helloAt===1){var al=d.allergies.map(function(x){return x.toLowerCase()});
+      if(al.length)return 'No '+listOf(al)+'. I will keep '+(al.length>1?'them':'it')+' out of dinner ideas and flag what looks risky. I can miss things, so always check the label.';
+      return d.diet.length?listOf(d.diet)+'. I will suggest dinners that fit.':'Tap anything that applies. If nothing does, carry on.'}
+    if(helloAt===2)return helloFull?'Three picked. Tap one to swap it.':d.personas.length?listOf(d.personas.map(function(x){return PERSONA[x][0]}))+'. I will shape your starter list around that.':'Pick up to three, or skip it and I will go by who is at home.';
+    return 'I will keep watch from here. Snap a receipt or tell me what you bought, and I will do the rest.'}
+  function drawHello(dir){var s=helloAt,box=$('helloIn');box.textContent='';
+    $('helloH').textContent=['Who is at home?','Anything off the table?','Which sounds like you?','You are all set'+(me?', '+me:'')+'.'][s];
+    $('helloStep').textContent=s<3?(s+1)+' of 3':'';$('helloDots').style.visibility=s<3?'':'hidden';
+    [].forEach.call($('helloDots').children,function(i,n){i.classList.toggle('on',n<=s)});
+    if(s===0){var pe=el('div','people');[['adults','Adults',1],['kids','Children',0]].forEach(function(f){var l=el('label','',f[1]),q=el('span','qty'),m=el('button','','\u2212'),pl=el('button','','+');
+      m.type=pl.type='button';m.setAttribute('aria-label','Fewer '+f[1].toLowerCase());pl.setAttribute('aria-label','More '+f[1].toLowerCase());
+      m.onclick=function(){draft[f[0]]=Math.max(f[2],draft[f[0]]-1);drawHello()};pl.onclick=function(){draft[f[0]]=Math.min(10,draft[f[0]]+1);drawHello()};
+      q.append(m,el('span','',String(draft[f[0]])),pl);l.append(q);pe.append(l)});box.append(pe)}
+    if(s===1){var a=el('div','wrapchips'),di=el('div','wrapchips');a.id='helloAll';di.id='helloDiet';a.setAttribute('role','group');a.setAttribute('aria-label','Allergies');di.setAttribute('role','group');di.setAttribute('aria-label','How you eat');
+      box.append(el('h3','','Allergies at home'),a,el('h3','','How you eat'),di);
+      chipBox(a,ALLERGENS,draft,'allergies',{show:9,fixed:true});chipBox(di,DIETS,draft,'diet',{show:5,fixed:true})}
+    if(s===2){var tl=el('div','tiles');tl.setAttribute('role','group');tl.setAttribute('aria-label','Kinds of home');
+      (helloEvery?Object.keys(PERSONA):fitTypes(draft).slice(0,Math.max(6,draft.personas.length))).forEach(function(k){var P=PERSONA[k],b=el('button','tile'),on=draft.personas.indexOf(k)>-1;b.type='button';b.setAttribute('aria-pressed',on?'true':'false');b.append(el('b','',P[0]),el('span','',P[1]));
+        b.onclick=function(){helloFull=false;
+          if(on){draft.personas=draft.personas.filter(function(x){return x!==k});P[4].forEach(function(d){if(!draft.personas.some(function(x){return PERSONA[x][4].indexOf(d)>-1}))draft.diet=draft.diet.filter(function(y){return y!==d})})}
+          else if(draft.personas.length>=3)helloFull=true;
+          else{draft.personas.push(k);P[4].forEach(function(d){if(draft.diet.indexOf(d)<0)draft.diet.push(d)})}
+          drawHello()};tl.append(b)});box.append(tl);
+      if(!helloEvery){var ev=el('button','chip add','See every kind of home');ev.type='button';ev.id='helloAllTypes';ev.style.alignSelf='flex-start';ev.onclick=function(){helloEvery=true;drawHello()};box.append(ev)}}
+    $('helloSay').textContent=helloLine();
+    $('helloBack').hidden=s<1||s>2;$('helloSkip').hidden=s>2;$('helloSort').hidden=s<3;$('helloNext').textContent=s<2?'Next':s===2?'Done':'Start using Stocker';
+    if(dir){var body=$('helloBody');body.classList.remove('step-f','step-b');void body.offsetWidth;body.classList.add(dir==='b'?'step-b':'step-f');$('helloDlg').scrollTop=0;$('helloH').focus()}}
+  function openHello(){document.querySelectorAll('dialog[open]').forEach(function(d){d.close()});ui={more:{},adding:''};draft=newDraft(null);draft.counted=true;helloAt=0;helloEvery=false;helloFull=false;drawHello();$('helloDlg').showModal();$('helloH').focus()}
+  $('helloDlg').addEventListener('close',function(){helloAt=-1});
+  $('helloBack').onclick=function(){if(helloAt>0&&helloAt<3){helloAt--;drawHello('b')}};
+  $('helloSkip').onclick=function(){try{localStorage.setItem('stocker.profSkip','1')}catch(e){}$('helloDlg').close()};
+  $('helloSort').onclick=function(){openSort()};
+  $('helloNext').onclick=async function(){var b=$('helloNext');
+    if(helloAt<2){helloAt++;drawHello('f');return}
+    if(helloAt>2){$('helloDlg').close();return}
+    var body=JSON.parse(JSON.stringify(draft)),picked=draft.personas.length>0;if(!picked)body.personas=[autoType(draft)];body.budget=0;body.about='';body.buddy='';
+    b.disabled=true;
+    try{var r=await api('/api/profile',{method:'POST',body:JSON.stringify(body)});profile=r.profile;try{localStorage.removeItem('stocker.starterHide')}catch(e2){}
+      sortMark(['allergies','diet'].concat(picked?['type']:[]));helloAt=3;drawHello('f');render();say('Nice to meet you'+(me?', '+me:'')+'. I will keep an eye on things from here.','party')}
+    catch(e){if(e.code!=='locked')$('helloSay').textContent=why(e,'I could not save that. Try again.')}
+    finally{b.disabled=false}};
+
+  /* "Get everything sorted": one row for each thing a home can set. A row is ticked when the home has something there, or when
+     that section was opened from here and saved. Which rows were answered is remembered on this phone only. */
+  var SORT=[['people','Set your people','Names, and anyone who eats differently','secPeople',function(p){return p.members&&p.members.length}],
+    ['pets','Set your pets','So their food is watched too','profPets',function(p){return p.pets&&p.pets.length}],
+    ['allergies','Set your allergies','A hard rule in dinner ideas and on every receipt','secAll',function(p){return p.allergies&&p.allergies.length}],
+    ['rules','Set your health rules','Celiac, low salt, diabetic and more','secRules',function(p){return p.rules&&p.rules.length}],
+    ['house','Set your House rules','What your home chooses to keep to','secHouse',function(p){return p.house&&p.house.length}],
+    ['diet','Set how you eat','Vegetarian, halal, high protein and more','secDiet',function(p){return p.diet&&p.diet.length}],
+    ['type','Set your kind of home','Picks your starter list and your kits','secType',null],
+    ['shop','Set your shopping','Your day, your stores, your budget','secShop',function(p){return p.shopDay||p.stores&&p.stores.length||p.budget}],
+    ['cook','Set your cooking','Food you like, weeknight time, things nobody eats','secCook',function(p){return p.avoid&&p.avoid.length||p.cuisines&&p.cuisines.length||p.goal||p.eatOut||p.cook&&p.cook!=='any'}],
+    ['helper','Name your helper','Tote answers to any name you like','secHelper',function(p){return p.buddy}],
+    ['remind','Turn on reminders','One a day at most, the day before something runs out','',function(){return pushOn}]];
+  function sortGot(){try{return JSON.parse(localStorage.getItem('stocker.sorted')||'{}')||{}}catch(e){return {}}}
+  function sortMark(keys){var g=sortGot();keys.forEach(function(k){g[k]=1});try{localStorage.setItem('stocker.sorted',JSON.stringify(g))}catch(e){}}
+  function sortRows(){var g=sortGot();return SORT.map(function(r){return {key:r[0],title:r[1],hint:r[2],sec:r[3],done:!!(g[r[0]]||r[4]&&(r[0]==='remind'||profile)&&r[4](profile||{}))}})}
+  function sortLine(){var rows=sortRows(),n=rows.filter(function(r){return r.done}).length;return {n:n,of:rows.length,text:n+' of '+rows.length+' sorted'}}
+  function drawSort(){var rows=sortRows(),c=sortLine(),box=$('sortList');box.textContent='';
+    $('sortSub').textContent=c.text+(c.n===c.of?'. Your home is all set.':'. Each one takes a few taps, in any order.');$('sortBar').style.transform='scaleX('+(c.n/c.of).toFixed(3)+')';
+    rows.forEach(function(r){var b=el('button','sortrow'+(r.done?' done':'')),t=el('span','t'),k=el('span','tick');b.type='button';b.dataset.key=r.key;k.setAttribute('aria-hidden','true');
+      t.append(el('b','',r.title),el('small','',r.hint));b.append(k,t);b.setAttribute('aria-label',r.title+(r.done?', sorted':', not set yet'));
+      b.onclick=function(){if(r.key==='remind'){$('sortDlg').close();go('log')}else openProfile(r.sec,r.key)};box.append(b)})}
+  function openSort(){document.querySelectorAll('dialog[open]').forEach(function(d){d.close()});drawSort();$('sortDlg').showModal()}
+  $('menuSort').onclick=openSort;
+  $('profSkip').onclick=function(){$('profDlg').close()};
   $('profBudget').oninput=function(){$('profBudget').setCustomValidity('')};
-  $('profSave').onclick=async function(){if(!draft.personas.length)return;
+  $('profSave').onclick=async function(){if(!draft.personas.length)draft.personas=[autoType(draft)]; /* nothing picked: go by who is at home */
     var bud=$('profBudget').value.trim();if(bud&&!(Number(bud)>=0)){$('profMore').open=true;$('profBudget').setCustomValidity('A budget cannot be below zero. Leave it empty for no budget.');$('profBudget').reportValidity();return}
     $('profSave').disabled=true;
     draft.budget=Number($('profBudget').value)||0;draft.about=$('profAbout').value;draft.buddy=$('profBuddy').value;
-    try{var r=await api('/api/profile',{method:'POST',body:JSON.stringify(draft)});profile=r.profile;try{localStorage.removeItem('stocker.starterHide')}catch(e){}var firstTime=!draft.had;$('profDlg').close();render();if(firstTime)say('Nice to meet you'+(me?', '+me:'')+'. I will keep an eye on things from here.','party');toast('Saved. Stocker is set up for '+(pers().length===1&&pers()[0]!=='other'?'a '+PERSONA[pers()[0]][0].toLowerCase():'your home')+'.')}
+    try{var r=await api('/api/profile',{method:'POST',body:JSON.stringify(draft)});profile=r.profile;try{localStorage.removeItem('stocker.starterHide')}catch(e){}var firstTime=!draft.had;if(sortBack)sortMark([sortBack]);$('profDlg').close();render();if(firstTime)say('Nice to meet you'+(me?', '+me:'')+'. I will keep an eye on things from here.','party');toast('Saved. Stocker is set up for '+(pers().length===1&&pers()[0]!=='other'?'a '+PERSONA[pers()[0]][0].toLowerCase():'your home')+'.')}
     catch(e){if(e.code!=='locked')toast(why(e,'Could not save that.'))}finally{$('profSave').disabled=false}};
   $('shareProf').onclick=openProfile;
   function setBig(on){document.documentElement.classList.toggle('big',on);$('bigText').setAttribute('aria-pressed',on?'true':'false');$('bigSub').textContent=on?'On':'Off'}
@@ -1687,7 +1813,7 @@ body{overflow-x:clip}
   $('bigText').onclick=function(){var on=!document.documentElement.classList.contains('big');setBig(on);try{localStorage.setItem('stocker.big',on?'1':'0')}catch(e){}};
   function initial(){return (me||'?').trim().charAt(0).toUpperCase()||'?'}
   $('menuBtn').onclick=function(){$('menuMe').textContent=initial();$('menuH').textContent=me?me+'’s home':'Your home';$('menuSub').textContent=profileLine();
-    $('menuRemSub').textContent=pushOn?'Reminders are on':'Reminders are off';$('menuHomes').hidden=!owner;$('menuScore').hidden=!owner;$('menuDelete').hidden=owner;$('menuOutAll').hidden=!signup;$('menuShare').hidden=signup;$('lockBtn').querySelector('b').textContent=signup?'Sign out':'Lock Stocker';$('lockSub').textContent=signup?'On this phone':'Ask for your code again';$('menuDlg').showModal()};
+    $('menuRemSub').textContent=pushOn?'Reminders are on':'Reminders are off';$('menuHomes').hidden=!owner;$('menuScore').hidden=!owner;$('menuDelete').hidden=owner;var sl=sortLine();$('menuSortSub').textContent=sl.n===sl.of?'Everything is sorted':sl.text;$('menuOutAll').hidden=!signup;$('menuShare').hidden=signup;$('lockBtn').querySelector('b').textContent=signup?'Sign out':'Lock Stocker';$('lockSub').textContent=signup?'On this phone':'Ask for your code again';$('menuDlg').showModal()};
   $('menuEdit').onclick=openProfile;
   $('menuRemind').onclick=function(){$('menuDlg').close();go('log')};
   $('menuScore').onclick=function(){location.href='/scorecard.html'};
@@ -2019,7 +2145,7 @@ body{overflow-x:clip}
   async function start(){
     try{await refresh();$('gate').hidden=true;$('app').hidden=false;$('tabbar').hidden=false;go((location.hash||'').slice(1)||tab,'start');pushSync();
       if(/[?&]n=1\b/.test(location.search)){try{history.replaceState(null,'',location.pathname+location.hash)}catch(e2){}openNudges()}
-      var skip=false;try{skip=localStorage.getItem('stocker.profSkip')==='1'}catch(e){}if(!profile&&!skip)openProfile()}
+      var skip=false;try{skip=localStorage.getItem('stocker.profSkip')==='1'}catch(e){}if(!profile&&!skip)openHello()}
     catch(e){if(e.code==='setup')showGate('There is no passcode yet. Set one in the Worker settings as a secret named APP_PIN.');
       else if(e.code==='locked')showGate();else showGate('Could not reach Stocker. Check your connection and reload.')}
   }
