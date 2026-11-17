@@ -184,7 +184,8 @@ function same(a, b) {
 // Private details are taken out before any model call and before anything is kept (the record of turns, notes, the profile).
 // Each rule is narrow on purpose: a quantity, a best-by date, a receipt line and a product name ("Rocky Road", "Dr Pepper",
 // "12 ct") must come through exactly as typed. evals/guard.mjs holds both directions.
-const ADDR_STOP = "(?=\\s+(?:and|also|then|but|so|plus)\\s+(?:add|we|i|put|bought|got|need|get|please|also|can|could|the)\\b|\\s*,\\s*(?:add|also|we|i|bought|put|please|and)\\b|[.!?\\n]|$)";
+// where an address ends: a full stop, or "and", "also", "then"... (an address never needs them), or a comma before a request
+const ADDR_STOP = "(?=\\s+(?:and|also|then|but|so|plus|&)\\s+\\S|\\s*,\\s*(?:add|also|we|i|bought|put|please|and|grab|get|pick|buy|order|bring|need|can|could|send|thanks|ok)\\b|[.!?\\n]|$)";
 const ADDR_TAIL = "(?:\\s*,?\\s*(?:apt|apartment|unit|suite|ste|flat|floor|#)\\.?\\s*#?\\s*[\\w-]+)";
 const NOT_STREET = "(?!(?:g|gm|kg|ml|l|lb|lbs|oz|pcs|packs?|x|ct|cans?|bottles?|boxes?|bags?|jars?|tubs?|cartons?|dozen|of|sesame)\\b)";
 const PRIVATE = [
@@ -383,7 +384,7 @@ async function picture(env, name) {
       r = null;
     }
   }
-  if (!r || !r.image) { await env.DB.prepare('INSERT OR REPLACE INTO pics (name_key, data, made) VALUES (?, ?, ?)').bind(key, new Uint8Array(0).buffer, new Date().toISOString()).run(); return null; }
+  if (!r || !r.image) { await env.DB.prepare('INSERT OR REPLACE INTO pics (name_key, data, made) VALUES (?, ?, ?)').bind(key, new Uint8Array(1).buffer, new Date().toISOString()).run(); return null; } // one byte, not none: an empty blob can be stored as NULL, which the table refuses, and the picture would be tried again on every view
   const bytes = Uint8Array.from(atob(r.image), (c) => c.charCodeAt(0));
   if (bytes.length < 2_000_000) await env.DB.prepare('INSERT OR REPLACE INTO pics (name_key, data, made) VALUES (?, ?, ?)').bind(key, bytes.buffer, new Date().toISOString()).run();
   return bytes;

@@ -127,6 +127,18 @@ const KEPT = HELD ? [
   'bought 12 main street bagels', 'the code on the yogurt is 4821', '500 g flour and 12 eggs', 'chicken best by 11/28', 'used 1/2 cup rice',
 ];
 for (const text of KEPT) check('opposite: "' + text + '" is left exactly as typed', A.scrub(text) === text, A.scrub(text));
+// the rest of the message after an address is still read (the end-to-end walk of 17 Nov found "and pick up some rice" swallowed)
+const AFTER = HELD ? [
+  ['house no 7, Green Park and get 2 kg atta', /house no 7|Green Park/, /get 2 kg atta/],
+  ['my address is 40 Pine Road, also we are out of eggs', /40 Pine/, /we are out of eggs/],
+  ['ship to apt 3, 9 Hill Street then add coffee', /apt 3|9 Hill/, /then add coffee/],
+] : [
+  ['flat 4, Rose Court and pick up some rice please', /flat 4|Rose Court/, /pick up some rice please/],
+  ['deliver to 12 Oak Street, Apt 4B, Jersey City NJ 07302 and grab some oat milk', /12 Oak|07302/, /grab some oat milk/],
+  ['we live at 5 Birch Lane so get some bananas', /5 Birch/, /get some bananas/],
+  ['my address is 4 Elm Road, grab bread', /4 Elm/, /grab bread/],
+];
+for (const [text, gone, kept] of AFTER) { const o = A.scrub(text); check('after an address, the request is kept: "' + text + '"', !gone.test(o) && kept.test(o), o); }
 
 // ---- 3. an amount has a ceiling, wherever it comes from ----
 if (!HELD) {

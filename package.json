@@ -17,6 +17,7 @@
     "test:allergy": "node --no-warnings evals/allergy.mjs",
     "test:guard": "node --no-warnings evals/guard.mjs",
     "test:guard:fresh": "node --no-warnings evals/guard.mjs --heldout",
+    "test:e2e": "node --no-warnings evals/e2e/server.mjs 8811 & sleep 2; node evals/e2e/journey.cjs; s=$?; kill %1; exit $s",
     "test:finish": "node evals/finish-audit.cjs",
     "glossary": "node scripts/glossary.mjs",
     "test:world": "node --no-warnings evals/world.mjs --set=heldout2",
