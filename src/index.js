@@ -220,15 +220,63 @@ async function sha(s) {
 }
 // The sign-in cookie is derived from the passcode and a random value kept only in the database,
 // so a copied cookie cannot be used to work the passcode out.
-async function sessionToken(env) {
-  let row = await env.DB.prepare("SELECT v FROM settings WHERE k = 'salt'").first();
+async function saltOf(env) {
+  const db = rootDB(env);
+  let row = await db.prepare("SELECT v FROM settings WHERE k = 'salt'").first();
   if (!row) {
     const salt = [...crypto.getRandomValues(new Uint8Array(32))].map((b) => b.toString(16).padStart(2, '0')).join('');
-    await env.DB.prepare("INSERT OR IGNORE INTO settings (k, v) VALUES ('salt', ?)").bind(salt).run();
-    row = await env.DB.prepare("SELECT v FROM settings WHERE k = 'salt'").first();
+    await db.prepare("INSERT OR IGNORE INTO settings (k, v) VALUES ('salt', ?)").bind(salt).run();
+    row = await db.prepare("SELECT v FROM settings WHERE k = 'salt'").first();
   }
-  return sha('stocker:v2:' + row.v + ':' + env.APP_PIN);
+  return row.v;
 }
+const sessionToken = async (env) => sha('stocker:v2:' + (await saltOf(env)) + ':' + env.APP_PIN);
+
+// ---------- separate homes ----------
+// The owner's home uses the tables as they are. Every other home has the same tables under its own prefix, and everything it
+// does goes through a database handle that points each query at that prefix. Code written for one home therefore cannot reach
+// another: there is no query a forgotten "WHERE home = ?" could leak through. The list of homes and codes is the owner's alone.
+const HOME_TABLES = ['items', 'purchases', 'log', 'extras', 'pics', 'spend', 'settings', 'feedback', 'push_subs', 'reminders', 'turns', 'cases', 'eval_runs', 'eval_trials', 'facts', 'memo', 'prices', 'saves'];
+const SCOPE_RE = new RegExp('\\b(FROM|INTO|UPDATE|JOIN|TABLE(?:\\s+IF\\s+NOT\\s+EXISTS)?|ON)(\\s+)(' + HOME_TABLES.join('|') + ')\\b', 'gi'); // any letter case: a query can never slip past by how it is typed
+const homePrefix = (id) => { if (!/^[a-z0-9]{6,16}$/.test(String(id))) throw new Error('bad home'); return 'h_' + id + '_'; };
+function scopeSql(sql, id) {
+  const pre = homePrefix(id);
+  if (/\bhomes\b|sqlite_|\bh_[a-z0-9]+_/i.test(sql)) throw new Error('not for a home');
+  return sql.replace(/\b(INDEX(?:\s+IF\s+NOT\s+EXISTS)?\s+)(\w+)(?=\s+ON\b)/gi, '$1' + pre + '$2').replace(SCOPE_RE, '$1$2' + pre + '$3');
+}
+const homeDB = (db, id) => ({ prepare: (sql) => db.prepare(scopeSql(sql, id)), batch: (list) => db.batch(list) });
+const forHome = (env, id) => (id ? { ...env, DB: homeDB(env.DB, id), ROOT: env.DB, HOME: id } : env);
+// what is shared by every home lives in the owner's database: the sign-in secret, the push keys and "the AI allowance is used up"
+const rootDB = (env) => env.ROOT || env.DB;
+// A personal code: 8 characters from an alphabet with no look-alikes (no 0, O, 1, I or L), about 40 bits. Only its hash is kept.
+const CODE_ABC = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+function randomText(n, abc) {
+  let out = '';
+  while (out.length < n) for (const b of crypto.getRandomValues(new Uint8Array(16))) if (b < 248 && out.length < n) out += abc[b % 31];
+  return out;
+}
+const newCode = () => { const c = randomText(8, CODE_ABC); return c.slice(0, 4) + '-' + c.slice(4); };
+const cleanCode = (t) => String(t || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12);
+const codeKey = async (env, code) => sha('stocker:code:v1:' + (await saltOf(env)) + ':' + cleanCode(code));
+const homeToken = async (env, h) => 'h.' + h.id + '.' + (await sha('stocker:v2:' + (await saltOf(env)) + ':home:' + h.id + ':' + h.code_hash));
+// who is signed in: the owner ({ id: '' }), a friend's home, or nobody
+async function homeOf(request, env) {
+  const pk = cookie(request, 'pk');
+  if (!pk) return null;
+  if (same(pk, await sessionToken(env))) return { id: '' };
+  const m = /^h\.([a-z0-9]{6,16})\.[0-9a-f]{64}$/.exec(pk);
+  if (!m) return null;
+  const h = await env.DB.prepare('SELECT id, name, code_hash, off, seen FROM homes WHERE id = ?').bind(m[1]).first().catch(() => null);
+  return h && !h.off && same(pk, await homeToken(env, h)) ? h : null;
+}
+const homeList = async (env) => (await rootDB(env).prepare('SELECT id, name, made, seen, off, phones FROM homes ORDER BY made').all().catch(() => ({ results: [] }))).results;
+// one query over the same table in every home, for the owner's weekly numbers and review: "home" says whose row it is
+// (Cloudflare's database joins at most five SELECTs with UNION ALL in one go, so larger sets are joined in groups of five.)
+function unionAll(parts) {
+  while (parts.length > 5) { const next = []; for (let i = 0; i < parts.length; i += 5) next.push('SELECT * FROM (' + parts.slice(i, i + 5).join(' UNION ALL ') + ')'); parts = next; }
+  return parts.join(' UNION ALL ');
+}
+const everyHome = (homes, table, cols, where) => unionAll([''].concat(homes.map((h) => h.id)).map((id) => "SELECT '" + (id && homePrefix(id) && id) + "' AS home, " + cols + ' FROM ' + (id ? homePrefix(id) : '') + table + (where ? ' WHERE ' + where : '')));
 function cookie(request, name) {
   const m = (request.headers.get('cookie') || '').match(new RegExp('(?:^|; )' + name + '=([^;]+)'));
   return m ? m[1] : null;
@@ -379,7 +427,7 @@ async function picture(env, name) {
     try { r = await env.AI.run(env.IMAGE_MODEL || '@cf/black-forest-labs/flux-1-schnell', { prompt, steps: 4 }); if (r && r.image) break; }
     catch (e) {
       const msg = String((e && e.message) || e);
-      if (/4006|daily free allocation|neurons/i.test(msg)) { await env.DB.prepare("INSERT INTO settings (k, v) VALUES ('aiq', ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v").bind(utcDay()).run().catch(() => {}); return null; }
+      if (/4006|daily free allocation|neurons/i.test(msg)) { await markQuota(env); return null; }
       if (!/8007|NSFW/i.test(msg)) throw e;
       r = null;
     }
@@ -597,16 +645,16 @@ const LIMITS =
 
 // ---------- guardrails ----------
 // Counters live in the settings table, one row per time window, so limits hold across requests.
-async function allow(env, name, mins, limit) {
-  const key = 'rl:' + name + ':' + Math.floor(Date.now() / (mins * 60000));
+async function allow(env, name, mins, limit, who = '') {
+  const slot = 'rl:' + name + ':' + Math.floor(Date.now() / (mins * 60000)), key = slot + (who ? ':' + who : '');
   await env.DB.prepare("INSERT INTO settings (k, v) VALUES (?, '1') ON CONFLICT(k) DO UPDATE SET v = CAST(CAST(v AS INTEGER) + 1 AS TEXT)").bind(key).run();
   const row = await env.DB.prepare('SELECT v FROM settings WHERE k = ?').bind(key).first();
-  if (Math.random() < 0.05) await env.DB.prepare("DELETE FROM settings WHERE k LIKE ? AND k <> ?").bind('rl:' + name + ':%', key).run();
+  if (Math.random() < 0.05) await env.DB.prepare("DELETE FROM settings WHERE k LIKE ? AND k NOT LIKE ?").bind('rl:' + name + ':%', slot + '%').run();
   return Number(row && row.v) <= limit;
 }
 // every model call passes through here: a burst limit and a daily ceiling, so a loop or a stranger cannot run up a bill
 const utcDay = () => new Date().toISOString().slice(0, 10);
-const quotaOut = async (env) => { const r = await env.DB.prepare("SELECT v FROM settings WHERE k = 'aiq'").first(); return !!r && r.v === utcDay(); };
+const quotaOut = async (env) => { const r = await rootDB(env).prepare("SELECT v FROM settings WHERE k = 'aiq'").first(); return !!r && r.v === utcDay(); };
 const aiBudget = async (env) => !(await quotaOut(env)) && (await allow(env, 'ai', 10, 40)) && (await allow(env, 'aiday', 1440, 400));
 // turn a model failure into the right answer for the app; the daily allowance running out is remembered until the day ends (UTC)
 async function aiFail(env, e, what) {
@@ -620,7 +668,7 @@ async function aiFail(env, e, what) {
   return json({ error: 'ai_failed' }, 502);
 }
 const isQuota = (e) => /4006|daily free allocation|neurons/i.test(String((e && e.message) || e));
-const markQuota = (env) => env.DB.prepare("INSERT INTO settings (k, v) VALUES ('aiq', ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v").bind(utcDay()).run().catch(() => {});
+const markQuota = (env) => rootDB(env).prepare("INSERT INTO settings (k, v) VALUES ('aiq', ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v").bind(utcDay()).run().catch(() => {});
 // counts the model calls and tokens one request spends, for the weekly numbers
 function meter(env) {
   const m = { calls: 0, small: 0, tokens: 0, cost: 0 };
@@ -2485,34 +2533,62 @@ async function mcp(request, env) {
 }
 
 // ---------- storage that newer versions need ----------
-// Run once per start-up: adds what is missing and never touches what is there.
-const SCHEMA = 8;
-let ready = null;
+// Run once per start-up and per home: adds what is missing and never touches what is there. A new home starts with no tables
+// at all, so the first step makes every table from the same list schema.sql is written from.
+const SCHEMA = 9;
+const HOMES_MAX = 25; // friends' homes, while this is a test among friends
+const BASE_SCHEMA = [
+  "CREATE TABLE IF NOT EXISTS items (id TEXT PRIMARY KEY, name TEXT NOT NULL, name_key TEXT NOT NULL, qty REAL NOT NULL DEFAULT 1, unit TEXT NOT NULL DEFAULT 'pcs', category TEXT, bought TEXT, added TEXT NOT NULL, store TEXT, expiry TEXT, expiry_est INTEGER NOT NULL DEFAULT 0, finish_days INTEGER NOT NULL DEFAULT 14, learned INTEGER NOT NULL DEFAULT 0, source TEXT, area TEXT, essential INTEGER NOT NULL DEFAULT 0, low INTEGER NOT NULL DEFAULT 0, warn TEXT, note TEXT, owner TEXT, frozen INTEGER NOT NULL DEFAULT 0, unsure INTEGER NOT NULL DEFAULT 0, nolist INTEGER NOT NULL DEFAULT 0)",
+  "CREATE UNIQUE INDEX IF NOT EXISTS items_name_key ON items(name_key)",
+  "CREATE TABLE IF NOT EXISTS purchases (name_key TEXT NOT NULL, bought TEXT NOT NULL, qty REAL, unit TEXT, ran_out TEXT, PRIMARY KEY (name_key, bought))",
+  "CREATE TABLE IF NOT EXISTS log (id INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT NOT NULL, source TEXT NOT NULL, summary TEXT NOT NULL, who TEXT)",
+  "CREATE TABLE IF NOT EXISTS extras (id TEXT PRIMARY KEY, text TEXT NOT NULL, who TEXT, added TEXT NOT NULL)",
+  "CREATE TABLE IF NOT EXISTS pics (name_key TEXT PRIMARY KEY, data BLOB NOT NULL, made TEXT NOT NULL)",
+  "CREATE TABLE IF NOT EXISTS spend (id INTEGER PRIMARY KEY AUTOINCREMENT, item_id TEXT, day TEXT NOT NULL, area TEXT, amount REAL NOT NULL, currency TEXT)",
+  "CREATE TABLE IF NOT EXISTS settings (k TEXT PRIMARY KEY, v TEXT NOT NULL)",
+  "CREATE TABLE IF NOT EXISTS feedback (id INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT NOT NULL, kind TEXT NOT NULL, said TEXT, reply TEXT, route TEXT, detail TEXT)",
+  "CREATE TABLE IF NOT EXISTS push_subs (endpoint TEXT PRIMARY KEY, p256dh TEXT NOT NULL, auth TEXT NOT NULL, who TEXT, tz TEXT NOT NULL DEFAULT 'UTC', added TEXT NOT NULL, last_day TEXT, fails INTEGER NOT NULL DEFAULT 0)",
+  "CREATE TABLE IF NOT EXISTS reminders (name_key TEXT PRIMARY KEY, sent INTEGER NOT NULL DEFAULT 0, streak INTEGER NOT NULL DEFAULT 0, muted INTEGER NOT NULL DEFAULT 0, answered INTEGER NOT NULL DEFAULT 1, last_day TEXT)",
+  "CREATE TABLE IF NOT EXISTS turns (id INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT NOT NULL, said TEXT, route TEXT, intent TEXT, did TEXT, reply TEXT, outcome TEXT, wanted TEXT, label TEXT, ms INTEGER)",
+  "CREATE TABLE IF NOT EXISTS cases (id INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT NOT NULL, said TEXT NOT NULL UNIQUE, expect TEXT NOT NULL, name TEXT)",
+  "CREATE TABLE IF NOT EXISTS eval_runs (id INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT NOT NULL, done TEXT, status TEXT NOT NULL, why TEXT, trials INTEGER NOT NULL DEFAULT 1, version TEXT, models TEXT, day TEXT, cases TEXT, total INTEGER NOT NULL DEFAULT 0, next INTEGER NOT NULL DEFAULT 0, calls INTEGER NOT NULL DEFAULT 0, err TEXT, wait TEXT, summary TEXT)",
+  "CREATE TABLE IF NOT EXISTS eval_trials (run INTEGER NOT NULL, case_id TEXT NOT NULL, trial INTEGER NOT NULL, suite TEXT NOT NULL, grp TEXT, pass INTEGER NOT NULL, score REAL NOT NULL, voice INTEGER NOT NULL DEFAULT 1, failed TEXT, said TEXT, did TEXT, reply TEXT, ms INTEGER, calls INTEGER, tokens INTEGER, cost REAL, verdict TEXT, PRIMARY KEY (run, case_id, trial))",
+  "CREATE TABLE IF NOT EXISTS facts (name_key TEXT PRIMARY KEY, name TEXT NOT NULL, unit TEXT, area TEXT, category TEXT, shelf_days INTEGER, finish_days INTEGER, seen INTEGER NOT NULL DEFAULT 1, at TEXT NOT NULL)",
+  "CREATE TABLE IF NOT EXISTS memo (k TEXT PRIMARY KEY, actions TEXT NOT NULL, hits INTEGER NOT NULL DEFAULT 0, at TEXT NOT NULL, used TEXT, bad INTEGER NOT NULL DEFAULT 0)",
+  "CREATE TABLE IF NOT EXISTS prices (id INTEGER PRIMARY KEY AUTOINCREMENT, name_key TEXT NOT NULL, day TEXT NOT NULL, unit_price REAL NOT NULL, unit TEXT NOT NULL, qty REAL, amount REAL NOT NULL, currency TEXT, store TEXT)",
+  "CREATE INDEX IF NOT EXISTS prices_key ON prices(name_key, day)",
+  "CREATE TABLE IF NOT EXISTS saves (id INTEGER PRIMARY KEY AUTOINCREMENT, name_key TEXT NOT NULL, name TEXT NOT NULL, day TEXT NOT NULL, left_days INTEGER, amount REAL, currency TEXT)",
+];
+const readyFor = new Map();
 function migrate(env) {
-  if (!ready) ready = (async () => {
+  const key = env.HOME || '';
+  if (!readyFor.has(key)) readyFor.set(key, (async () => {
     const v = await env.DB.prepare("SELECT v FROM settings WHERE k = 'schema'").first().catch(() => null);
     if (v && Number(v.v) >= SCHEMA) return;
-    for (const col of ['qty REAL', 'unit TEXT', 'ran_out TEXT']) await env.DB.prepare('ALTER TABLE purchases ADD COLUMN ' + col).run().catch(() => {});
-    for (const sql of [
-      "CREATE TABLE IF NOT EXISTS push_subs (endpoint TEXT PRIMARY KEY, p256dh TEXT NOT NULL, auth TEXT NOT NULL, who TEXT, tz TEXT NOT NULL DEFAULT 'UTC', added TEXT NOT NULL, last_day TEXT, fails INTEGER NOT NULL DEFAULT 0)",
-      'CREATE TABLE IF NOT EXISTS reminders (name_key TEXT PRIMARY KEY, sent INTEGER NOT NULL DEFAULT 0, streak INTEGER NOT NULL DEFAULT 0, muted INTEGER NOT NULL DEFAULT 0, answered INTEGER NOT NULL DEFAULT 1, last_day TEXT)',
-      'CREATE TABLE IF NOT EXISTS turns (id INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT NOT NULL, said TEXT, route TEXT, intent TEXT, did TEXT, reply TEXT, outcome TEXT, wanted TEXT, label TEXT)',
-      'CREATE TABLE IF NOT EXISTS cases (id INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT NOT NULL, said TEXT NOT NULL UNIQUE, expect TEXT NOT NULL, name TEXT)',
-      'CREATE TABLE IF NOT EXISTS eval_runs (id INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT NOT NULL, done TEXT, status TEXT NOT NULL, why TEXT, trials INTEGER NOT NULL DEFAULT 1, version TEXT, models TEXT, day TEXT, cases TEXT, total INTEGER NOT NULL DEFAULT 0, next INTEGER NOT NULL DEFAULT 0, calls INTEGER NOT NULL DEFAULT 0, err TEXT, wait TEXT, summary TEXT)',
-      'CREATE TABLE IF NOT EXISTS eval_trials (run INTEGER NOT NULL, case_id TEXT NOT NULL, trial INTEGER NOT NULL, suite TEXT NOT NULL, grp TEXT, pass INTEGER NOT NULL, score REAL NOT NULL, voice INTEGER NOT NULL DEFAULT 1, failed TEXT, said TEXT, did TEXT, reply TEXT, ms INTEGER, calls INTEGER, verdict TEXT, PRIMARY KEY (run, case_id, trial))',
-    ]) await env.DB.prepare(sql).run();
-    await env.DB.prepare('ALTER TABLE items ADD COLUMN nolist INTEGER NOT NULL DEFAULT 0').run().catch(() => {});
-    await env.DB.prepare('ALTER TABLE turns ADD COLUMN ms INTEGER').run().catch(() => {});
-    await env.DB.prepare('ALTER TABLE eval_trials ADD COLUMN tokens INTEGER').run().catch(() => {});
-    await env.DB.prepare('ALTER TABLE eval_trials ADD COLUMN cost REAL').run().catch(() => {});
-    await env.DB.prepare('CREATE TABLE IF NOT EXISTS facts (name_key TEXT PRIMARY KEY, name TEXT NOT NULL, unit TEXT, area TEXT, category TEXT, shelf_days INTEGER, finish_days INTEGER, seen INTEGER NOT NULL DEFAULT 1, at TEXT NOT NULL)').run();
-    await env.DB.prepare('CREATE TABLE IF NOT EXISTS memo (k TEXT PRIMARY KEY, actions TEXT NOT NULL, hits INTEGER NOT NULL DEFAULT 0, at TEXT NOT NULL, used TEXT, bad INTEGER NOT NULL DEFAULT 0)').run();
-    await env.DB.prepare('CREATE TABLE IF NOT EXISTS prices (id INTEGER PRIMARY KEY AUTOINCREMENT, name_key TEXT NOT NULL, day TEXT NOT NULL, unit_price REAL NOT NULL, unit TEXT NOT NULL, qty REAL, amount REAL NOT NULL, currency TEXT, store TEXT)').run();
-    await env.DB.prepare('CREATE INDEX IF NOT EXISTS prices_key ON prices(name_key, day)').run();
-    await env.DB.prepare('CREATE TABLE IF NOT EXISTS saves (id INTEGER PRIMARY KEY AUTOINCREMENT, name_key TEXT NOT NULL, name TEXT NOT NULL, day TEXT NOT NULL, left_days INTEGER, amount REAL, currency TEXT)').run();
+    // one trip to the database for every table (Cloudflare allows a limited number of trips per request)
+    await env.DB.batch(BASE_SCHEMA.map((sql) => env.DB.prepare(sql)));
+    if (!env.HOME) await env.DB.prepare('CREATE TABLE IF NOT EXISTS homes (id TEXT PRIMARY KEY, name TEXT NOT NULL, code_hash TEXT NOT NULL UNIQUE, made TEXT NOT NULL, seen TEXT, off INTEGER NOT NULL DEFAULT 0, phones INTEGER NOT NULL DEFAULT 0)').run();
+    // what follows brings an older database up to date; one already at 7, or a friend's brand-new home, has it all
+    if (!env.HOME && !(v && Number(v.v) >= 7)) {
+      for (const col of ['qty REAL', 'unit TEXT', 'ran_out TEXT']) await env.DB.prepare('ALTER TABLE purchases ADD COLUMN ' + col).run().catch(() => {});
+      for (const sql of [
+        "CREATE TABLE IF NOT EXISTS push_subs (endpoint TEXT PRIMARY KEY, p256dh TEXT NOT NULL, auth TEXT NOT NULL, who TEXT, tz TEXT NOT NULL DEFAULT 'UTC', added TEXT NOT NULL, last_day TEXT, fails INTEGER NOT NULL DEFAULT 0)",
+        'CREATE TABLE IF NOT EXISTS reminders (name_key TEXT PRIMARY KEY, sent INTEGER NOT NULL DEFAULT 0, streak INTEGER NOT NULL DEFAULT 0, muted INTEGER NOT NULL DEFAULT 0, answered INTEGER NOT NULL DEFAULT 1, last_day TEXT)',
+        'CREATE TABLE IF NOT EXISTS turns (id INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT NOT NULL, said TEXT, route TEXT, intent TEXT, did TEXT, reply TEXT, outcome TEXT, wanted TEXT, label TEXT)',
+        'CREATE TABLE IF NOT EXISTS cases (id INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT NOT NULL, said TEXT NOT NULL UNIQUE, expect TEXT NOT NULL, name TEXT)',
+        'CREATE TABLE IF NOT EXISTS eval_runs (id INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT NOT NULL, done TEXT, status TEXT NOT NULL, why TEXT, trials INTEGER NOT NULL DEFAULT 1, version TEXT, models TEXT, day TEXT, cases TEXT, total INTEGER NOT NULL DEFAULT 0, next INTEGER NOT NULL DEFAULT 0, calls INTEGER NOT NULL DEFAULT 0, err TEXT, wait TEXT, summary TEXT)',
+        'CREATE TABLE IF NOT EXISTS eval_trials (run INTEGER NOT NULL, case_id TEXT NOT NULL, trial INTEGER NOT NULL, suite TEXT NOT NULL, grp TEXT, pass INTEGER NOT NULL, score REAL NOT NULL, voice INTEGER NOT NULL DEFAULT 1, failed TEXT, said TEXT, did TEXT, reply TEXT, ms INTEGER, calls INTEGER, verdict TEXT, PRIMARY KEY (run, case_id, trial))',
+      ]) await env.DB.prepare(sql).run();
+      await env.DB.prepare('ALTER TABLE items ADD COLUMN nolist INTEGER NOT NULL DEFAULT 0').run().catch(() => {});
+      await env.DB.prepare('ALTER TABLE turns ADD COLUMN ms INTEGER').run().catch(() => {});
+      await env.DB.prepare('ALTER TABLE eval_trials ADD COLUMN tokens INTEGER').run().catch(() => {});
+      await env.DB.prepare('ALTER TABLE eval_trials ADD COLUMN cost REAL').run().catch(() => {});
+      await env.DB.prepare('CREATE TABLE IF NOT EXISTS facts (name_key TEXT PRIMARY KEY, name TEXT NOT NULL, unit TEXT, area TEXT, category TEXT, shelf_days INTEGER, finish_days INTEGER, seen INTEGER NOT NULL DEFAULT 1, at TEXT NOT NULL)').run();
+      await env.DB.prepare('CREATE TABLE IF NOT EXISTS memo (k TEXT PRIMARY KEY, actions TEXT NOT NULL, hits INTEGER NOT NULL DEFAULT 0, at TEXT NOT NULL, used TEXT, bad INTEGER NOT NULL DEFAULT 0)').run();
+    }
     await env.DB.prepare("INSERT INTO settings (k, v) VALUES ('schema', ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v").bind(String(SCHEMA)).run();
-  })().catch((e) => { ready = null; console.error('migrate failed', String((e && e.message) || e)); });
-  return ready;
+  })().catch((e) => { readyFor.delete(key); console.error('migrate failed', String((e && e.message) || e)); }));
+  return readyFor.get(key);
 }
 
 // ---------- reminders on the phone (Web Push) ----------
@@ -2525,12 +2601,13 @@ const bytes = (t) => new TextEncoder().encode(t);
 const cat = (...parts) => { const out = new Uint8Array(parts.reduce((n, p) => n + p.length, 0)); let at = 0; for (const p of parts) { out.set(p, at); at += p.length; } return out; };
 // The key that proves a reminder comes from this Stocker. Made here on first use and kept only in the database; it can do nothing except send to phones that subscribed.
 async function vapid(env) {
-  let row = await env.DB.prepare("SELECT v FROM settings WHERE k = 'vapid'").first();
+  const db = rootDB(env);
+  let row = await db.prepare("SELECT v FROM settings WHERE k = 'vapid'").first();
   if (!row) {
     const pair = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign', 'verify']);
     const made = JSON.stringify({ jwk: await crypto.subtle.exportKey('jwk', pair.privateKey), pub: b64u(await crypto.subtle.exportKey('raw', pair.publicKey)) });
-    await env.DB.prepare("INSERT OR IGNORE INTO settings (k, v) VALUES ('vapid', ?)").bind(made).run();
-    row = await env.DB.prepare("SELECT v FROM settings WHERE k = 'vapid'").first();
+    await db.prepare("INSERT OR IGNORE INTO settings (k, v) VALUES ('vapid', ?)").bind(made).run();
+    row = await db.prepare("SELECT v FROM settings WHERE k = 'vapid'").first();
   }
   return JSON.parse(row.v);
 }
@@ -2670,6 +2747,13 @@ async function tick(env, now) {
   return { sent };
 }
 
+// Friends' homes: the one whose turn this minute is. Only homes that are on and have a phone are visited at all.
+async function tickHome(env, now) {
+  await migrate(env);
+  const due = (await env.DB.prepare('SELECT id FROM homes WHERE off = 0 AND phones > 0 ORDER BY id LIMIT 1 OFFSET ?').bind(now.getUTCMinutes() - 1).first().catch(() => null));
+  return due ? tick(forHome(env, due.id), now) : { sent: 0 };
+}
+
 // ---------- learning from real conversations ----------
 // Every turn is kept with private details removed, so a weekly look shows where I went wrong. Nothing here changes how I behave:
 // a person decides what each miss should have been, and that becomes a test I must pass from then on.
@@ -2691,6 +2775,7 @@ async function noteTurn(env, t) {
   } catch (e) { console.error('turn not kept', String((e && e.message) || e)); }
 }
 const MISSES = ['down', 'undo', 'rejected', 'corrected', 'repeated', 'missed'];
+const TURN_COLS = 'id, at, said, route, intent, did, reply, outcome, wanted, label, ms';
 const MISS_KINDS = {
   guess: ['Guessed the wrong ingredients', 'The dish guess. Teach the household dish, or tighten what a dish may assume.', 'nothing'],
   missed: ['Could not find the thing they named', 'Name matching. They probably call it something else than the name it is stored under.', 'update'],
@@ -2701,7 +2786,9 @@ const MISS_KINDS = {
 };
 const missKind = (r) => (r.outcome === 'rejected' ? 'guess' : r.outcome === 'missed' ? 'missed' : r.outcome === 'repeated' ? 'repeat' : r.route === 'refuse' || r.route === 'wipe' ? 'refused' : r.route === 'update' ? 'wrong' : 'quiet');
 async function review(env, today) {
-  const rows = (await env.DB.prepare('SELECT * FROM turns WHERE at >= ? ORDER BY id DESC LIMIT 1500').bind(addDays(today, -27)).all()).results;
+  // misses from every home that is testing, each marked with whose home it came from
+  const homes = await homeList(env), nameOf = Object.fromEntries(homes.map((h) => [h.id, h.name]));
+  const rows = (await env.DB.prepare('SELECT * FROM (' + everyHome(homes, 'turns', TURN_COLS, 'at >= ?1') + ') ORDER BY at DESC LIMIT 1500').bind(addDays(today, -27)).all()).results;
   const weeks = [0, 1, 2, 3].map((w) => {
     const from = addDays(today, -7 * w - 6), to = addDays(today, -7 * w), mine = rows.filter((r) => r.at.slice(0, 10) >= from && r.at.slice(0, 10) <= to);
     return { from, to, turns: mine.length, missed: mine.filter((r) => MISSES.includes(r.outcome)).length };
@@ -2711,7 +2798,7 @@ async function review(env, today) {
     const k = missKind(r), g = groups[k] || (groups[k] = { kind: k, title: MISS_KINDS[k][0], fix: MISS_KINDS[k][1], suggest: MISS_KINDS[k][2], count: 0, examples: [] });
     g.count++;
     const twin = g.examples.find((e) => e.said.toLowerCase() === r.said.toLowerCase());
-    if (twin) twin.times++; else if (g.examples.length < 12) g.examples.push({ id: r.id, at: r.at, said: r.said, reply: r.reply, did: r.did, outcome: r.outcome, wanted: r.wanted || '', route: r.route, times: 1 });
+    if (twin) twin.times++; else if (g.examples.length < 12) g.examples.push({ id: r.id, home: r.home || '', from: r.home ? nameOf[r.home] || 'a friend' : '', at: r.at, said: r.said, reply: r.reply, did: r.did, outcome: r.outcome, wanted: r.wanted || '', route: r.route, times: 1 });
   }
   const cases = (await env.DB.prepare('SELECT id, at, said, expect, name FROM cases ORDER BY id DESC LIMIT 200').all()).results;
   return { weeks, groups: Object.values(groups).sort((a, b) => b.count - a.count), cases };
@@ -2988,9 +3075,11 @@ async function bump(env, name, by = 1) {
 }
 async function health(env, today) {
   const weeks = Array.from({ length: 8 }, (_, i) => addDays(weekOf(today), -7 * i));
-  const turns = (await env.DB.prepare('SELECT at, route, outcome, ms FROM turns WHERE at >= ? ORDER BY id DESC LIMIT 1500').bind(weeks[7]).all()).results;
-  const stats = (await env.DB.prepare("SELECT k, v FROM settings WHERE k LIKE 'stat:%' AND substr(k, -10) >= ?").bind(weeks[7]).all()).results;
-  const stat = (name, w) => Number((stats.find((s) => s.k === 'stat:' + name + ':' + w) || {}).v || 0);
+  // the owner's numbers count every home that is testing; a friend's home never gets here
+  const homes = env.HOME ? [] : await homeList(env);
+  const turns = (await env.DB.prepare('SELECT * FROM (' + everyHome(homes, 'turns', 'at, route, outcome, ms', 'at >= ?1') + ') ORDER BY at DESC LIMIT 3000').bind(weeks[7]).all()).results;
+  const stats = (await env.DB.prepare(everyHome(homes, 'settings', 'k, v', "k LIKE 'stat:%' AND substr(k, -10) >= ?1")).bind(weeks[7]).all()).results;
+  const stat = (name, w) => stats.filter((s) => s.k === 'stat:' + name + ':' + w).reduce((t, s) => t + Number(s.v || 0), 0);
   const pct = (a, b) => (b ? Math.round((a / b) * 1000) / 10 : null);
   return weeks.map((w) => {
     const mine = turns.filter((t) => weekOf(t.at.slice(0, 10)) === w), n = mine.length, o = (k) => mine.filter((t) => t.outcome === k).length;
@@ -3050,20 +3139,69 @@ async function api(request, env, url) {
 
   if (path === '/api/login' && method === 'POST') {
     const body = await request.json().catch(() => ({}));
-    if (!(await allow(env, 'login', 10, 12))) return json({ error: 'too_many' }, 429);
-    if (!same(body.pin, env.APP_PIN)) {
+    // wrong tries are counted per phone or network, so one person guessing cannot lock everyone else out
+    const from = (await sha('from:' + (request.headers.get('cf-connecting-ip') || 'none'))).slice(0, 16);
+    if (!(await allow(env, 'login', 10, 12, from)) || !(await allow(env, 'loginall', 10, 300))) return json({ error: 'too_many' }, 429);
+    // the owner's passcode opens the owner's home; a friend's personal code opens that friend's home and nothing else
+    let token = '';
+    if (same(body.pin, env.APP_PIN)) token = await sessionToken(env);
+    else if (cleanCode(body.pin).length === 8) {
+      const friend = await env.DB.prepare('SELECT id, code_hash, off FROM homes WHERE code_hash = ?').bind(await codeKey(env, body.pin)).first().catch(() => null);
+      if (friend && !friend.off) token = await homeToken(env, friend);
+    }
+    if (!token) {
       await new Promise((r) => setTimeout(r, 600));
       return json({ error: 'wrong_pin' }, 401);
     }
     const h = new Headers({ 'content-type': 'application/json', 'cache-control': 'no-store' });
     const opts = '; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=2592000';
-    h.append('set-cookie', 'pk=' + (await sessionToken(env)) + opts);
+    h.append('set-cookie', 'pk=' + token + opts);
     h.append('set-cookie', 'who=' + encodeURIComponent(cleanName(body.name)) + opts);
     return new Response(JSON.stringify({ ok: true }), { status: 200, headers: h });
   }
   if (path === '/api/mcp') return mcp(request, env);
-  if (!same(cookie(request, 'pk'), await sessionToken(env))) return json({ error: 'locked' }, 401);
+  const home = await homeOf(request, env);
+  if (!home) return json({ error: 'locked' }, 401);
   if (path === '/api/logout' && method === 'POST') return json({ ok: true }, 200, { 'set-cookie': 'pk=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0' });
+  const owner = !home.id;
+  if (!owner) {
+    // the scorecard, the review of misses and the list of homes are the owner's alone
+    if (/^\/api\/(homes|scorecard|review)(\/|$)/.test(path) || (path === '/api/feedback' && method === 'GET')) return json({ error: 'owner_only' }, 403);
+    if (home.seen !== utcDay()) await env.DB.prepare('UPDATE homes SET seen = ? WHERE id = ?').bind(utcDay(), home.id).run().catch(() => {});
+    env = forHome(env, home.id); // from here on, every query is this home's own
+    await migrate(env);
+  }
+
+  // ---- friends testing: the owner makes a personal code for each friend, and each code opens a home of its own ----
+  if (path === '/api/homes' && method === 'GET') {
+    const homes = await homeList(env), since = addDays(utcDay(), -6);
+    const use = homes.length ? (await env.DB.prepare(unionAll(homes.map((h) => "SELECT '" + h.id + "' AS home, (SELECT COUNT(*) FROM " + homePrefix(h.id) + 'items) AS items, (SELECT COUNT(*) FROM ' + homePrefix(h.id) + 'turns WHERE at >= ?1) AS turns'))).bind(since).all().catch(() => ({ results: [] }))).results : [];
+    return json({ homes: homes.map((h) => { const u = use.find((x) => x.home === h.id) || {}; return { id: h.id, name: h.name, made: h.made, seen: h.seen || '', off: !!h.off, items: u.items || 0, turns: u.turns || 0 }; }), link: url.origin });
+  }
+  if (path === '/api/homes' && method === 'POST') {
+    const body = (await request.json().catch(() => null)) || {}, name = cleanName(body.name);
+    if (!name) return json({ error: 'empty' }, 400);
+    if ((await homeList(env)).length >= HOMES_MAX) return json({ error: 'full' }, 400);
+    const id = randomText(10, CODE_ABC).toLowerCase(), code = newCode();
+    await migrate(forHome(env, id)); // its tables exist before its code does
+    await env.DB.prepare('INSERT INTO homes (id, name, code_hash, made) VALUES (?, ?, ?, ?)').bind(id, name, await codeKey(env, code), new Date().toISOString()).run();
+    return json({ ok: true, id, name, code, link: url.origin }); // the code is shown this once and never kept
+  }
+  if (path === '/api/homes/code' && method === 'POST') {
+    const body = (await request.json().catch(() => null)) || {};
+    const h = await env.DB.prepare('SELECT id, name FROM homes WHERE id = ?').bind(String(body.id || '')).first();
+    if (!h) return json({ error: 'not_found' }, 404);
+    const code = newCode();
+    await env.DB.prepare('UPDATE homes SET code_hash = ? WHERE id = ?').bind(await codeKey(env, code), h.id).run(); // phones signed in with the old code are locked too
+    return json({ ok: true, id: h.id, name: h.name, code, link: url.origin });
+  }
+  if (path === '/api/homes/off' && method === 'POST') {
+    const body = (await request.json().catch(() => null)) || {};
+    const h = await env.DB.prepare('SELECT id FROM homes WHERE id = ?').bind(String(body.id || '')).first();
+    if (!h) return json({ error: 'not_found' }, 404);
+    await env.DB.prepare('UPDATE homes SET off = ? WHERE id = ?').bind(body.off ? 1 : 0, h.id).run(); // nothing is deleted; turned back on, it is all still there
+    return json({ ok: true, id: h.id, off: !!body.off });
+  }
 
   let me = '';
   try { me = cleanName(decodeURIComponent(cookie(request, 'who') || '')); } catch (e) {}
@@ -3112,7 +3250,11 @@ async function api(request, env, url) {
     // how often this home shops, so the list can look ahead to the next shop; the app must still open if this cannot be read
     let shop = { days: 1, known: false };
     try { shop = shopGapFrom((await env.DB.prepare('SELECT DISTINCT bought FROM purchases WHERE bought <= ? ORDER BY bought DESC LIMIT 9').bind(today).all()).results.map((r) => r.bought)); } catch (e) { console.error('shop gap not read', String((e && e.message) || e)); }
-    return json({ items, log, extras, me, spend, waste: (binned && binned.n) || 0, profile, learnt, review: misses, shelf, saved, shops, handoff, shop });
+    if (owner) {
+      const homes = await homeList(env);
+      if (homes.length) misses = ((await env.DB.prepare('SELECT COUNT(DISTINCT lower(said)) AS n FROM (' + everyHome(homes, 'turns', 'said, label, outcome, at', '') + ") WHERE label IS NULL AND outcome IN ('down','undo','rejected','corrected','repeated','missed') AND at >= ?1").bind(addDays(today, -27)).first().catch(() => null)) || { n: misses }).n;
+    }
+    return json({ items, log, extras, me, spend, waste: (binned && binned.n) || 0, profile, learnt, review: owner ? misses : 0, owner, shelf, saved, shops, handoff, shop });
   }
   // The list was handed to a store (the person tapped a store's link). Only the store's name and the day are kept, so Today can ask
   // for the order screen when it arrives. Nothing is sent anywhere by this.
@@ -3212,6 +3354,7 @@ async function api(request, env, url) {
     await env.DB.prepare('INSERT INTO push_subs (endpoint, p256dh, auth, who, tz, added) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(endpoint) DO UPDATE SET p256dh = excluded.p256dh, auth = excluded.auth, who = excluded.who, tz = excluded.tz, fails = 0')
       .bind(sub.endpoint, sub.p256dh, sub.auth, me || null, okZone(body.tz), new Date().toISOString()).run();
     await env.DB.prepare("INSERT INTO settings (k, v) VALUES ('origin', ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v").bind(url.origin).run();
+    if (env.HOME) await rootDB(env).prepare('UPDATE homes SET phones = 1 WHERE id = ?').bind(env.HOME).run().catch(() => {});
     const hello = body.quiet ? 0 : await pushSend(env, sub, { title: 'Reminders are on', body: 'Once a day at most, when something runs low.', url: '/', ids: [], actions: [] }, url.origin).catch(() => 0);
     return json({ ok: true, hello: hello >= 200 && hello < 300 });
   }
@@ -3281,9 +3424,10 @@ async function api(request, env, url) {
   if (path === '/api/review' && method === 'POST') {
     const body = (await request.json().catch(() => null)) || {};
     const label = ['nothing', 'update', 'list', 'ok'].includes(body.label) ? body.label : '';
-    const t = await env.DB.prepare('SELECT said FROM turns WHERE id = ?').bind(Math.round(num(body.id, 0))).first();
+    const homes = await homeList(env), fromHome = homes.find((h) => h.id === body.home);
+    const t = await (fromHome ? forHome(env, fromHome.id) : env).DB.prepare('SELECT said FROM turns WHERE id = ?').bind(Math.round(num(body.id, 0))).first();
     if (!label || !t || !t.said) return json({ error: 'empty' }, 400);
-    await env.DB.prepare('UPDATE turns SET label = ? WHERE lower(said) = lower(?)').bind(label, t.said).run();
+    await env.DB.batch([env].concat(homes.map((h) => forHome(env, h.id))).map((e) => e.DB.prepare('UPDATE turns SET label = ? WHERE lower(said) = lower(?)').bind(label, t.said)));
     if (label === 'ok') await env.DB.prepare('DELETE FROM cases WHERE said = ?').bind(t.said).run();
     else await env.DB.prepare('INSERT INTO cases (at, said, expect, name) VALUES (?, ?, ?, ?) ON CONFLICT(said) DO UPDATE SET expect = excluded.expect, name = excluded.name').bind(new Date().toISOString(), t.said, label, word(body.name, 40) || null).run();
     return json({ ok: true });
@@ -3292,7 +3436,7 @@ async function api(request, env, url) {
     const c = await env.DB.prepare('SELECT said FROM cases WHERE id = ?').bind(Math.round(num(url.searchParams.get('case'), 0))).first();
     if (c) {
       await env.DB.prepare('DELETE FROM cases WHERE said = ?').bind(c.said).run();
-      await env.DB.prepare('UPDATE turns SET label = NULL WHERE lower(said) = lower(?)').bind(c.said).run();
+      await env.DB.batch([env].concat((await homeList(env)).map((h) => forHome(env, h.id))).map((e) => e.DB.prepare('UPDATE turns SET label = NULL WHERE lower(said) = lower(?)').bind(c.said)));
     }
     return json({ ok: true });
   }
@@ -3572,7 +3716,9 @@ export default {
   async scheduled(event, env, ctx) {
     const now = new Date(event.scheduledTime || Date.now());
     // reminders are checked at the top of each hour; evals take a few steps every minute while a run is open
+    // the owner's home goes on the hour; each friend's home with a phone gets a minute of its own after that
     if (now.getUTCMinutes() === 0) ctx.waitUntil(tick(env, now).catch((e) => console.error('reminders failed', String((e && e.message) || e))));
+    else ctx.waitUntil(tickHome(env, now).catch((e) => console.error('reminders failed', String((e && e.message) || e))));
     ctx.waitUntil(migrate(env).then(() => autoRuns(env)).then(() => stepRun(env)).catch((e) => console.error('eval step failed', String((e && e.message) || e))));
   },
 };

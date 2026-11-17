@@ -363,11 +363,11 @@ button:active:not(:disabled),a.btn:active,label.btn:active,label.tile:active{tra
 <div class="gate" id="gate" hidden>
   <div class="logo"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 9h10l-1 11H8zM9.500 9c0-3 1-5 2.500-5s2.500 2 2.500 5M10 14l1.500 1.500L14 13"/></svg></div>
   <h1>Stocker AI</h1>
-  <p class="sub" id="gateMsg" style="font-size:.9375rem">Enter your passcode to open Stocker.</p>
+  <p class="sub" id="gateMsg" style="font-size:.9375rem">Enter your code to open Stocker.</p>
   <form id="gateForm" style="display:flex;flex-direction:column;gap:12px">
     <label for="who" class="sub">Your name</label>
     <input type="text" id="who" maxlength="20" autocomplete="given-name" required>
-    <label for="pin" class="sub">Passcode</label>
+    <label for="pin" class="sub">Your code</label>
     <input type="password" id="pin" autocomplete="current-password" required>
     <button type="submit" class="btn primary block">Open</button>
   </form>
@@ -498,11 +498,32 @@ button:active:not(:disabled),a.btn:active,label.btn:active,label.tile:active{tra
   <div class="pad">
     <div class="grab"></div>
     <h2 id="shareH">Share with your household</h2>
-    <p class="sub" style="font-size:.9375rem">Send this link to anyone at home, and tell them the passcode. Each person types their own name, so the activity shows who did what. Everyone sees the same list.</p>
+    <p class="sub" id="shareHow" style="font-size:.9375rem">Send this link to anyone at home, and tell them the passcode. Each person types their own name, so the activity shows who did what. Everyone sees the same list.</p>
     <p class="heard" id="shareLink" style="font-style:normal;user-select:all;overflow-wrap:anywhere"></p>
     <button type="button" class="btn primary block" id="shareCopy">Copy link</button>
     <p class="sub" id="shareMe"></p>
     <button type="button" class="btn block" id="shareProf">Change your home profile</button>
+    <button type="button" class="btn block" data-close>Close</button>
+  </div>
+</dialog>
+
+<dialog class="sheet" id="homesDlg" aria-labelledby="homesH">
+  <div class="pad">
+    <div class="grab"></div>
+    <h2 id="homesH">Friends testing</h2>
+    <p class="sub" style="font-size:.9375rem">Each friend gets a personal code. It opens a home of their own, so nobody sees your things or each other&rsquo;s.</p>
+    <form id="homesForm" style="display:flex;flex-direction:column;gap:8px">
+      <label for="homesName" class="sub">Friend&rsquo;s name</label>
+      <input type="text" id="homesName" maxlength="20" autocomplete="off" required>
+      <button type="submit" class="btn primary block" id="homesMake">Make a code</button>
+    </form>
+    <div id="homesNew" style="display:none;flex-direction:column;gap:8px;margin-top:12px">
+      <p class="sub" id="homesNewMsg" style="font-size:.9375rem" role="status"></p>
+      <p class="heard" id="homesInvite" style="font-style:normal;user-select:all;white-space:pre-wrap;overflow-wrap:anywhere"></p>
+      <button type="button" class="btn primary block" id="homesCopy">Copy the invitation</button>
+    </div>
+    <p class="sub" id="homesSay" role="status" style="font-size:.9375rem;margin:14px 0 0;min-height:1.4em"></p>
+    <div id="homesList" style="display:flex;flex-direction:column;gap:14px;margin:8px 0 16px"></div>
     <button type="button" class="btn block" data-close>Close</button>
   </div>
 </dialog>
@@ -515,8 +536,9 @@ button:active:not(:disabled),a.btn:active,label.btn:active,label.tile:active{tra
       <button type="button" id="menuShare"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.300 2.700-6 6-6s6 2.700 6 6M16 5.200a3.200 3.200 0 0 1 0 5.600M17.500 14.300c2 .900 3.500 3 3.500 5.700"/></svg><span><b>Share with your household</b><small>Everyone sees the same list</small></span></button>
       <button type="button" id="bigText" aria-pressed="false"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 18 9 6l5 12M5.800 14h6.400M15 18l3-7.500 3 7.500M16 16h4"/></svg><span><b>Larger text</b><small id="bigSub">Off</small></span></button>
       <button type="button" id="menuRemind"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4zM10 20a2 2 0 0 0 4 0"/></svg><span><b>Reminders and what I learned</b><small id="menuRemSub"></small></span></button>
+      <button type="button" id="menuHomes" hidden><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-7 9 7M5 10v10h14V10M10 20v-6h4v6"/></svg><span><b>Friends testing</b><small>A personal code and a private home for each friend</small></span></button>
       <button type="button" id="menuScore"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span><b id="menuScoreT">How Tote is doing</b><small>Test scores, week by week</small></span></button>
-      <button type="button" id="lockBtn"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg><span><b>Lock Stocker</b><small>Ask for the passcode again</small></span></button>
+      <button type="button" id="lockBtn"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg><span><b>Lock Stocker</b><small>Ask for your code again</small></span></button>
     </div>
     <button type="button" class="btn block" data-close>Close</button>
   </div>
@@ -780,7 +802,7 @@ button:active:not(:disabled),a.btn:active,label.btn:active,label.tile:active{tra
   function amount(q,u){var n=qtyText(q);return u==='pcs'?n:u==='pack'?n+(q<=1?' pack':' packs'):n+' '+u}
   function amt(it){return it.qty<=0?'Out':amount(it.qty,it.unit)}
 
-  var items=[],log=[],extras=[],waste=0,shelf=null,saved=null,shops=[],handoff=null,shop=null,moreLow=false,spend=null,profile=null,me='',tab='today',cat='All',query='',open={},turned=null,busy=false,pending=null,toastTimer=null;
+  var items=[],log=[],extras=[],waste=0,shelf=null,saved=null,shops=[],handoff=null,shop=null,moreLow=false,spend=null,profile=null,me='',owner=true,tab='today',cat='All',query='',open={},turned=null,busy=false,pending=null,toastTimer=null;
 
   /* why something failed, said truthfully: offline only when the phone really is offline */
   function why(e,what){var c=e&&e.code;return c==='offline'?what+' You seem to be offline, so nothing was changed.':c&&c!=='server'&&COPY[c]?COPY[c]:what+' Something went wrong on my side, and nothing was changed. Try again.'}
@@ -900,9 +922,9 @@ button:active:not(:disabled),a.btn:active,label.btn:active,label.tile:active{tra
   }
   function showGate(msg){document.querySelectorAll('dialog[open]').forEach(function(d){d.close()});$('app').hidden=true;$('tabbar').hidden=true;$('gate').hidden=false;if(msg)$('gateMsg').textContent=msg}
   $('gateForm').addEventListener('submit',async function(ev){ev.preventDefault();
-    try{await api('/api/login',{method:'POST',body:JSON.stringify({pin:$('pin').value,name:$('who').value})});try{localStorage.setItem('stocker.who',$('who').value.trim())}catch(e2){}$('pin').value='';$('gateMsg').textContent='Enter your passcode to open Stocker.';start()}
-    catch(e){$('gateMsg').textContent=e.code==='wrong_pin'?"That passcode isn't right. Try again.":e.code==='too_many'?'Too many tries. Wait ten minutes, then try again.':e.code==='setup'?'There is no passcode yet. Set one in the Worker settings as a secret named APP_PIN.':'Could not reach Stocker. Check your connection.'}});
-  $('lockBtn').onclick=async function(){try{await api('/api/logout',{method:'POST'})}catch(e){}showGate('Locked. Enter your passcode to open Stocker.')};
+    try{await api('/api/login',{method:'POST',body:JSON.stringify({pin:$('pin').value,name:$('who').value})});try{localStorage.setItem('stocker.who',$('who').value.trim())}catch(e2){}$('pin').value='';$('gateMsg').textContent='Enter your code to open Stocker.';start()}
+    catch(e){$('gateMsg').textContent=e.code==='wrong_pin'?"That code isn't right. Check it and try again.":e.code==='too_many'?'Too many tries. Wait ten minutes, then try again.':e.code==='setup'?'There is no passcode yet. Set one in the Worker settings as a secret named APP_PIN.':'Could not reach Stocker. Check your connection.'}});
+  $('lockBtn').onclick=async function(){try{await api('/api/logout',{method:'POST'})}catch(e){}showGate('Locked. Enter your code to open Stocker.')};
 
   /* ---- the agent's rules ---- */
   /* The shopping list holds only what you are out of, what you said is running low, and essentials about to run out.
@@ -1354,7 +1376,7 @@ button:active:not(:disabled),a.btn:active,label.btn:active,label.tile:active{tra
     var rr=el('div','row'),rg=el('div','grow'),rb=el('button','mini',pushOn?'Turn off':'Turn on');rb.type='button';rb.id='pushBtn';rb.setAttribute('aria-label',(pushOn?'Turn off':'Turn on')+' reminders on this phone');
     rg.append(el('div','name','Reminders on this phone'),el('div','sub',pushOn?'On. Around '+hourText(learnt.hour)+(learnt.hourLearned?', when you usually answer me':'')+', once a day at most, and only when something is due.':pushWhy()||'Off. I can tell you when something you buy regularly is due.'));
     rb.onclick=async function(){rb.disabled=true;try{if(pushOn)await pushDisable();else await pushEnable()}catch(er){if(er.code!=='locked')toast(why(er,'Could not change reminders.'))}rb.disabled=false};
-    rr.append(rg);if(pushOn||pushCan)rr.append(rb);cl.append(rr);var sc=el('div','row'),sg=el('div','grow'),sb=el('button','mini','Open');sb.type='button';sb.setAttribute('aria-label','Open how I am tested');sg.append(el('div','name','How I am doing'),el('div','sub','How I score on my tests, week by week, and where I still go wrong.'));sb.onclick=function(){location.href='/scorecard.html'};sc.append(sg,sb);cl.append(sc);sl.append(cl);v.append(sl);
+    rr.append(rg);if(pushOn||pushCan)rr.append(rb);cl.append(rr);var sc=el('div','row'),sg=el('div','grow'),sb=el('button','mini','Open');sb.type='button';sb.setAttribute('aria-label','Open how I am tested');sg.append(el('div','name','How I am doing'),el('div','sub','How I score on my tests, week by week, and where I still go wrong.'));sb.onclick=function(){location.href='/scorecard.html'};sc.append(sg,sb);if(owner)cl.append(sc);sl.append(cl);v.append(sl);
     var sk=el('div','sec'),hd=el('div','sechead');hd.append(el('h2','',profile?(ps.length===1&&ps[0]!=='other'?'Curated for a '+PERSONA[ps[0]][0].toLowerCase():'Curated for your home'):'Curated kits'));
     if(!profile){var mk=el('button','link','Make it yours');mk.type='button';mk.onclick=openProfile;hd.append(mk)}
     sk.append(hd,el('p','sub','Checklists for real situations, checked against what you already have.'));
@@ -1403,7 +1425,7 @@ button:active:not(:disabled),a.btn:active,label.btn:active,label.tile:active{tra
   var qtyTimer={};
   function setQty(it,q){it.qty=q;render();clearTimeout(qtyTimer[it.id]);
     qtyTimer[it.id]=setTimeout(function(){api('/api/items/'+it.id,{method:'PATCH',body:JSON.stringify({qty:q})}).catch(function(e){if(e.code!=='locked')toast(why(e,'Could not save that change.'))})},500)}
-  async function refresh(){var before=items.filter(needsBuy).length+extras.length;var d=await api('/api/items');items=d.items||[];log=d.log||[];extras=d.extras||[];waste=d.waste||0;shelf=d.shelf||null;saved=d.saved||null;shops=d.shops||[];handoff=d.handoff||null;shop=d.shop||null;spend=d.spend||null;profile=d.profile||null;me=d.me||'';learnt=d.learnt||learnt;reviewN=d.review||0;render();
+  async function refresh(){var before=items.filter(needsBuy).length+extras.length;var d=await api('/api/items');items=d.items||[];log=d.log||[];extras=d.extras||[];waste=d.waste||0;shelf=d.shelf||null;saved=d.saved||null;shops=d.shops||[];handoff=d.handoff||null;shop=d.shop||null;spend=d.spend||null;profile=d.profile||null;me=d.me||'';owner=d.owner!==false;learnt=d.learnt||learnt;reviewN=d.review||0;render();
     if(before>0&&items.filter(needsBuy).length+extras.length===0)say('List done. Nicely shopped.','party')}
 
   /* ---- sheets follow the finger ----
@@ -1531,11 +1553,32 @@ button:active:not(:disabled),a.btn:active,label.btn:active,label.tile:active{tra
   $('bigText').onclick=function(){var on=!document.documentElement.classList.contains('big');setBig(on);try{localStorage.setItem('stocker.big',on?'1':'0')}catch(e){}};
   function initial(){return (me||'?').trim().charAt(0).toUpperCase()||'?'}
   $('menuBtn').onclick=function(){$('menuMe').textContent=initial();$('menuH').textContent=me?me+'’s home':'Your home';$('menuSub').textContent=profileLine();
-    $('menuRemSub').textContent=pushOn?'Reminders are on':'Reminders are off';$('menuDlg').showModal()};
+    $('menuRemSub').textContent=pushOn?'Reminders are on':'Reminders are off';$('menuHomes').hidden=!owner;$('menuScore').hidden=!owner;$('menuDlg').showModal()};
   $('menuEdit').onclick=openProfile;
   $('menuRemind').onclick=function(){$('menuDlg').close();go('log')};
   $('menuScore').onclick=function(){location.href='/scorecard.html'};
-  $('menuShare').onclick=function(){$('menuDlg').close();$('shareLink').textContent=location.origin;$('shareMe').textContent=me?'You are signed in as '+me+'.':'';$('shareDlg').showModal()};
+  /* Friends testing (the owner only): a personal code per friend, and each code opens a home of its own */
+  function inviteText(d){return 'Hi '+d.name+', I am building Stocker, an app that keeps track of what you have at home so you do not run out. Would you try it for a few days?\n\n1. Open '+(d.link||location.origin)+' on your phone.\n2. Type your name and this code: '+d.code+'\n3. Add it to your home screen from the Share menu, so it opens like an app.\n\nThree things to try: paste or snap a grocery receipt, tell it what you used ("used 2 eggs", "we are out of rice"), and ask "what should I use first?"\n\nYour home is private: nobody else sees your things. I can see what you type to the app, so I can fix its mistakes. Replies can take 20 seconds for now. If something looks wrong, tap Undo or "Not right?" and send me a screenshot.'}
+  function showInvite(d){$('homesNew').style.display='flex';$('homesNewMsg').textContent='Code for '+d.name+': '+d.code+'. I show it only this once, so copy the invitation now.';$('homesInvite').textContent=inviteText(d)}
+  function seenText(h){if(h.off)return 'Turned off. Nothing was deleted.';if(!h.seen)return 'Not opened yet';var t=new Date().toISOString().slice(0,10);return 'Opened '+(h.seen===t?'today':fmt(h.seen))+' · '+h.items+' at home · '+h.turns+(h.turns===1?' message':' messages')+' this week'}
+  /* what happened is said inside the sheet: a toast would sit underneath it, where it cannot be read or tapped */
+  function homesSay(t){$('homesSay').textContent=t||''}
+  async function loadHomes(){var d=await api('/api/homes'),box=$('homesList');box.textContent='';
+    if(!d.homes.length){box.append(el('p','sub','Nobody yet. Make a code to invite your first friend.'));return}
+    d.homes.forEach(function(h){var r=el('div','row'),g=el('div','grow'),sub=el('div','sub',seenText(h)),nb=el('button','mini','New code'),ob=el('button','mini',h.off?'Turn on':'Turn off'),armed=0;
+      g.append(el('div','name',h.name),sub);sub.setAttribute('role','status');nb.type=ob.type='button';nb.setAttribute('aria-label','New code for '+h.name);ob.setAttribute('aria-label',(h.off?'Turn on ':'Turn off ')+h.name+'’s code');
+      /* a new code locks the phones using the old one, so it takes a second tap; what will happen is said in the row itself */
+      nb.onclick=async function(){if(Date.now()-armed>6000){armed=Date.now();nb.textContent='Tap again';sub.textContent='A new code locks '+h.name+'’s phone until the new one is typed in.';setTimeout(function(){if(nb.isConnected&&!nb.disabled){nb.textContent='New code';sub.textContent=seenText(h)}},6000);return}
+        nb.disabled=true;try{showInvite(await api('/api/homes/code',{method:'POST',body:JSON.stringify({id:h.id})}));await loadHomes();$('homesDlg').scrollTop=0}catch(er){nb.disabled=false;if(er.code!=='locked')sub.textContent=why(er,'Could not make a new code.')}};
+      /* turning a code off deletes nothing; the row then says so, and the same button turns it back on */
+      ob.onclick=async function(){ob.disabled=true;try{await api('/api/homes/off',{method:'POST',body:JSON.stringify({id:h.id,off:!h.off})});await loadHomes()}catch(er){ob.disabled=false;if(er.code!=='locked')sub.textContent=why(er,'Could not change that.')}};
+      r.append(g,nb,ob);box.append(r)})}
+  $('menuHomes').onclick=async function(){$('menuDlg').close();$('homesNew').style.display='none';$('homesName').value='';homesSay('');$('homesDlg').showModal();try{await loadHomes()}catch(er){if(er.code!=='locked')homesSay(why(er,'Could not load that.'))}};
+  $('homesForm').addEventListener('submit',async function(e){e.preventDefault();var b=$('homesMake');b.disabled=true;homesSay('');
+    try{showInvite(await api('/api/homes',{method:'POST',body:JSON.stringify({name:$('homesName').value})}));$('homesName').value='';await loadHomes()}
+    catch(er){if(er.code!=='locked'){$('homesNew').style.display='none';homesSay(er.code==='full'?'That is as many friends as I can keep apart for now.':why(er,'Could not make a code.'))}}b.disabled=false});
+  $('homesCopy').onclick=function(){var t=$('homesInvite').textContent,b=$('homesCopy'),done=function(m){b.textContent=m;setTimeout(function(){b.textContent='Copy the invitation'},2500)};try{navigator.clipboard.writeText(t).then(function(){done('Copied')},function(){done('Select the text above and copy it')})}catch(e){done('Select the text above and copy it')}};
+  $('menuShare').onclick=function(){$('menuDlg').close();$('shareLink').textContent=location.origin;$('shareHow').textContent='Send this link to anyone at home, and tell them '+(owner?'the passcode':'your code')+'. Each person types their own name, so the activity shows who did what. Everyone sees the same list.';$('shareMe').textContent=me?'You are signed in as '+me+'.':'';$('shareDlg').showModal()};
   $('shareCopy').onclick=function(){try{navigator.clipboard.writeText(location.origin).then(function(){toast('Link copied.')},function(){toast('Select the link and copy it.')})}catch(e){toast('Select the link and copy it.')}};
   try{$('who').value=localStorage.getItem('stocker.who')||''}catch(e){}
   var COPY={licence:'I need the vision model\u2019s licence accepted once before I can read photos.',
@@ -1544,7 +1587,7 @@ button:active:not(:disabled),a.btn:active,label.btn:active,label.tile:active{tra
     unknown_product:"I don't know that barcode. Tell me what it is instead, or type it.",bad_code:"That doesn't look like a barcode number.",
     ai_quota:'I have used up today\u2019s free AI allowance, so I cannot read photos or listen until it resets at '+new Date(Date.UTC(2000,0,1,0,0)).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})+'. Typed messages like \u201cadd milk\u201d, barcodes, your list and adding by hand still work.',
     slow_down:'That is a lot at once. Give me a few minutes to catch up, then try again.',
-    empty:'Write something first.',offline:'You seem to be offline. Nothing was changed.',server:'Something went wrong on my side. Nothing was changed. Try again.'};
+    empty:'Write something first.',owner_only:'That part belongs to the person who set Stocker up.',offline:'You seem to be offline. Nothing was changed.',server:'Something went wrong on my side. Nothing was changed. Try again.'};
   var lastScan=null;
   async function scan(doFetch,waitMsg){
     if(busy)return;lastScan=[doFetch,waitMsg];setBusy(waitMsg);
