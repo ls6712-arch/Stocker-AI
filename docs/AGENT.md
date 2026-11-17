@@ -250,14 +250,14 @@ Not built: more than one sign-in per home, sign-in by phone number, exporting a 
 A new home used to open on the whole household form: twenty kinds of home, people, pets, allergies, health rules, House rules and diets, with Save greyed out until a kind of home was picked. It now opens on **three short steps** (`#helloDlg`, `openHello`, `drawHello`), each fitting a phone with no scrolling, and each answered by Tote in one line (`helloLine`):
 
 1. **Who is at home?** Adults and children.
-2. **Anything off the table?** Allergies and how the home eats. When an allergy is picked, Tote names it and says to check the label.
+2. **Anything off the table?** Allergies and how the home eats. When an allergy is picked, Tote names it and says to check the label. An allergy that is not on the chips can be typed in ("Add an allergy"); a typed allergy is matched by its own word in a product's name, so avocado flags "Avocado Oil Mayo" but not "Guacamole".
 3. **Which sounds like you?** Six kinds of home that fit the counts (`fitTypes`), with "See every kind of home". Nothing has to be picked: `autoType` goes by who lives there (solo, couple, family of four, big family, or "something else" for three or more adults).
 
 Done saves through the same `POST /api/profile`. The last screen offers "Start using Stocker" and **"Get everything sorted"** (`#sortDlg`, `SORT`, `openSort`): eleven rows ("Set your people", "Set your House rules", "Turn on reminders", ...), with a count and a bar. A row opens the full form at that section (`openProfile(sec, key)`) and saving comes back to the list with the row ticked. A row is ticked when the home has something there, or when it was opened from the list and saved; which rows were answered is kept on the phone only (`localStorage` `stocker.sorted`). The list is also in the household menu, with the count.
 
 The full form is unchanged apart from its title ("Everything about your home"), section anchors, and Save, which is never greyed out: with no kind of home picked it uses `autoType`. "Not now" on the welcome saves nothing and does not ask again on that phone.
 
-Checks: `evals/welcome-audit.cjs` (`npm run test:welcome:browser`), 43 checks in phone-sized browsers on `evals/e2e/server.mjs`, each with its opposite. The older walk-throughs dismiss the welcome where they used to dismiss the form.
+Checks: `evals/welcome-audit.cjs` (`npm run test:welcome:browser`), 46 checks in phone-sized browsers on `evals/e2e/server.mjs`, each with its opposite. The older walk-throughs dismiss the welcome where they used to dismiss the form.
 
 ## App audit
 
