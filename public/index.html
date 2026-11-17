@@ -775,7 +775,7 @@ button:active:not(:disabled),a.btn:active,label.btn:active,label.tile:active{tra
   function amount(q,u){var n=qtyText(q);return u==='pcs'?n:u==='pack'?n+(q<=1?' pack':' packs'):n+' '+u}
   function amt(it){return it.qty<=0?'Out':amount(it.qty,it.unit)}
 
-  var items=[],log=[],extras=[],waste=0,shelf=null,saved=null,shops=[],handoff=null,spend=null,profile=null,me='',tab='today',cat='All',query='',open={},turned=null,busy=false,pending=null,toastTimer=null;
+  var items=[],log=[],extras=[],waste=0,shelf=null,saved=null,shops=[],handoff=null,shop=null,moreLow=false,spend=null,profile=null,me='',tab='today',cat='All',query='',open={},turned=null,busy=false,pending=null,toastTimer=null;
 
   /* why something failed, said truthfully: offline only when the phone really is offline */
   function why(e,what){var c=e&&e.code;return c==='offline'?what+' You seem to be offline, so nothing was changed.':c&&c!=='server'&&COPY[c]?COPY[c]:what+' Something went wrong on my side, and nothing was changed. Try again.'}
@@ -828,8 +828,8 @@ button:active:not(:disabled),a.btn:active,label.btn:active,label.tile:active{tra
   function pushSync(){pushState().then(function(s){if(!$('app').hidden)render();if(!s||!pushOn)return;var seen='';try{seen=localStorage.getItem('stocker.pushSync')||''}catch(e){}
     if(seen===iso(today()))return;pushSave(s,true).then(function(){try{localStorage.setItem('stocker.pushSync',iso(today()))}catch(e){}},function(){})})}
   /* one way to answer "is it running low?", from the bell, the list or a notification, so every answer teaches the same thing */
-  async function remindAnswer(list,ans){
-    await api('/api/remind',{method:'POST',body:JSON.stringify({ids:list.map(function(i){return i.id}),answer:ans,hour:new Date().getHours()})});await refresh();
+  async function remindAnswer(list,ans,ahead){
+    await api('/api/remind',{method:'POST',body:JSON.stringify({ids:list.map(function(i){return i.id}),answer:ans,ahead:!!ahead,hour:new Date().getHours()})});await refresh();
     var names=list.map(function(i){return i.name}).join(', ');
     toast(ans==='add'?'On your list: '+names+'.':ans==='still'?'Got it. I will ask about '+names+' again later.':ans==='stop'?'I will not remind you about '+names+'.':'I will remind you about '+names+' again.')}
   function openNudges(){drawNudges();if(!$('nudgeDlg').open)$('nudgeDlg').showModal()}
@@ -914,6 +914,8 @@ button:active:not(:disabled),a.btn:active,label.btn:active,label.tile:active{tra
   }
   function guess(it){return it.qty>0&&!it.low&&daysFrom(runOut(it))<=(it.essential?3:1)&&-daysFrom(it.bought||it.added)>=2}
   function maybeLow(it){return !needsBuy(it)&&!needsUse(it)&&guess(it)}
+  /* standing at the list, "low" means "out before I shop again": look ahead by how often this home shops, when that is known */
+  function ahead(it){if(needsBuy(it)||needsUse(it)||!(it.qty>0)||it.low)return false;var reach=Math.max(it.essential?3:1,shop&&shop.known?shop.days:1);return daysFrom(runOut(it))<=reach&&-daysFrom(it.bought||it.added)>=2}
   function expiry(it){
     if(!it.expiry||it.qty<=0||it.frozen)return null;var d=daysFrom(it.expiry);
     if(d<0)return {cls:'bad',text:'Expired',d:d};
@@ -1192,6 +1194,22 @@ button:active:not(:disabled),a.btn:active,label.btn:active,label.tile:active{tra
       try{var how=await addToList(t);await refresh();if(how!=='added'&&how!=='many')listSaid(t,how);var n=$('extraText');if(n)n.focus()}
       catch(er){if(er.code!=='locked')toast(er.code==='full'?'The list is full. Tick a few things off first.':'Could not add that. Check your connection.')}});
     v.append(f);
+    /* Before the next shop: what may run out before this home shops again, by my guess. Up to three at the top of the list, where
+       the decision is made; the rest behind "Show more". When I do not know how often this home shops, it is what is due by tomorrow, as before. */
+    function suggest(){
+      var sug=items.filter(ahead).sort(function(a,b){return plan(a).days-plan(b).days});
+      if(!sug.length)return;
+      var known=!!(shop&&shop.known&&shop.days>1),ss=el('div','sec'),cs=el('div','card'),more=null;ss.id='soonLow';
+      ss.append(el('h2','',known?'Before your next shop':'Might be running low'),el('p','sub',(known?'My guess: these may run out before you shop again. You shop about every '+every(shop.days)+'. ':'Going by your own pace where I know it, and a typical one where I do not. ')+'None of these are on your list unless you add them.'),cs);
+      sug.forEach(function(it,n){if(n>=3&&!moreLow)return;var wrap=el('div','sec'),r=el('div','row'),g=el('div','grow'),acts=el('div','acts'),ad=el('button','mini','Add to list'),no=el('button','mini','Still have it'),p=plan(it);
+        g.append(el('div','name',it.name),el('div','sub',(p.days<=0?'My guess: about to run out':'My guess: out by '+fmt(p.date))+'. Bought '+fmt(it.bought||it.added)+(it.learned?', and you buy it about every '+every(it.finish_days):', and it usually lasts about '+it.finish_days+' days')));r.append(iconFor(it),g);
+        ad.type=no.type='button';ad.setAttribute('aria-label','Add '+it.name+' to the list');no.setAttribute('aria-label','Still have '+it.name);
+        ad.onclick=async function(){ad.disabled=no.disabled=true;try{await remindAnswer([it],'add')}catch(er){ad.disabled=no.disabled=false;if(er.code!=='locked')toast(why(er,'Could not save that.'))}};
+        no.onclick=async function(){ad.disabled=no.disabled=true;try{await remindAnswer([it],'still',true)}catch(er){ad.disabled=no.disabled=false;if(er.code!=='locked')toast(why(er,'Could not save that.'))}};
+        acts.append(ad,no);wrap.style.gap='8px';wrap.append(r,acts);cs.append(wrap)});
+      if(sug.length>3&&!moreLow){more=btn('link','Show '+(sug.length-3)+' more',function(){moreLow=true;renderList()});more.style.minHeight='44px';cs.append(more)}
+      v.append(ss)}
+    suggest();
     if(!count)v.append(emptyCard('Pantry','Nothing to buy','Things land here when you run out, say they are low, or add them yourself.'));
     function tick(label,fn){var ck=el('button','check');ck.type='button';ck.setAttribute('aria-label',label);ck.onclick=function(){if(!ck.firstChild)ck.append(icon('M6 12l4 4 8-9'));fn()};return ck}
     if(count){var top=el('div','acts'),so=el('button','btn primary',shops.length?'Shop at '+shopName():'Order online'),cp=el('button','btn','Copy the list');so.type=cp.type='button';so.style.flex=cp.style.flex='1';
@@ -1218,15 +1236,6 @@ button:active:not(:disabled),a.btn:active,label.btn:active,label.tile:active{tra
         r.append(catIcon('Other'),g,tick('Mark '+x.text+' as bought',async function(){try{await api('/api/extras/'+x.id,{method:'DELETE'});await refresh();toast('Ticked off '+x.text+'.','Undo',putBack(x.text))}catch(er){if(er.code!=='locked')toast(why(er,'Could not save that.'))}}));ce.append(r)});
       v.append(se)}
     if(count)v.append(el('p','sub','Tick something when you buy it. Tap its name to change or remove it. Tracked items are restocked at home.'));
-    var sug=items.filter(maybeLow).sort(function(a,b){return plan(a).days-plan(b).days});
-    if(sug.length){var ss=el('div','sec'),cs=el('div','card');ss.append(el('h2','','Might be running low'),el('p','sub','Going by your own pace where I know it, and a typical one where I do not. None of these are on your list unless you add them.'),cs);
-      sug.forEach(function(it){var wrap=el('div','sec'),r=el('div','row'),g=el('div','grow'),acts=el('div','acts'),ad=el('button','mini','Add to list'),no=el('button','mini','Still have it');
-        g.append(el('div','name',it.name),el('div','sub','Bought '+fmt(it.bought||it.added)+(it.learned?'. You usually buy it about every '+every(it.finish_days):', usually lasts about '+it.finish_days+' days')));r.append(iconFor(it),g);
-        ad.type=no.type='button';
-        ad.onclick=async function(){ad.disabled=no.disabled=true;try{await remindAnswer([it],'add')}catch(er){ad.disabled=no.disabled=false;if(er.code!=='locked')toast(why(er,'Could not save that.'))}};
-        no.onclick=async function(){ad.disabled=no.disabled=true;try{await remindAnswer([it],'still')}catch(er){ad.disabled=no.disabled=false;if(er.code!=='locked')toast(why(er,'Could not save that.'))}};
-        acts.append(ad,no);wrap.style.gap='8px';wrap.append(r,acts);cs.append(wrap)});
-      v.append(ss)}
   }
   /* one row of the list: rename it, change how many, or take it off. Every change can be undone. */
   function putBack(text){return async function(){try{await api('/api/extras',{method:'POST',body:JSON.stringify({text:text.replace(/ \u00d7\d+$/,''),whole:true})});var n=Number((text.match(/ \u00d7(\d+)$/)||[])[1]||1);
@@ -1389,7 +1398,7 @@ button:active:not(:disabled),a.btn:active,label.btn:active,label.tile:active{tra
   var qtyTimer={};
   function setQty(it,q){it.qty=q;render();clearTimeout(qtyTimer[it.id]);
     qtyTimer[it.id]=setTimeout(function(){api('/api/items/'+it.id,{method:'PATCH',body:JSON.stringify({qty:q})}).catch(function(e){if(e.code!=='locked')toast(why(e,'Could not save that change.'))})},500)}
-  async function refresh(){var before=items.filter(needsBuy).length+extras.length;var d=await api('/api/items');items=d.items||[];log=d.log||[];extras=d.extras||[];waste=d.waste||0;shelf=d.shelf||null;saved=d.saved||null;shops=d.shops||[];handoff=d.handoff||null;spend=d.spend||null;profile=d.profile||null;me=d.me||'';learnt=d.learnt||learnt;reviewN=d.review||0;render();
+  async function refresh(){var before=items.filter(needsBuy).length+extras.length;var d=await api('/api/items');items=d.items||[];log=d.log||[];extras=d.extras||[];waste=d.waste||0;shelf=d.shelf||null;saved=d.saved||null;shops=d.shops||[];handoff=d.handoff||null;shop=d.shop||null;spend=d.spend||null;profile=d.profile||null;me=d.me||'';learnt=d.learnt||learnt;reviewN=d.review||0;render();
     if(before>0&&items.filter(needsBuy).length+extras.length===0)say('List done. Nicely shopped.','party')}
 
   /* ---- sheets follow the finger ----

@@ -1972,6 +1972,17 @@ function paceFrom(history, qty, unit) {
   const mid = last.length % 2 ? last[(last.length - 1) / 2] : (last[last.length / 2 - 1] + last[last.length / 2]) / 2;
   return { days: clamp(Math.round(mid), 1, 365), seen: last.length };
 }
+// How often this home shops: the usual gap between the days something was bought, from the last nine of them. One long gap (a
+// holiday) does not move a median. Three shopping days are needed before it counts as known; until then the list looks one day
+// ahead, as it always has. Capped at a week, so a monthly shopper is not asked about a month of things at once.
+function shopGapFrom(days) {
+  const d = [...new Set((days || []).filter(isDate))].sort().slice(-9), gaps = [];
+  for (let i = 1; i < d.length; i++) gaps.push(dayGap(d[i - 1], d[i]));
+  if (gaps.length < 2) return { days: 1, known: false };
+  gaps.sort((a, b) => a - b);
+  const mid = gaps.length % 2 ? gaps[(gaps.length - 1) / 2] : (gaps[gaps.length / 2 - 1] + gaps[gaps.length / 2]) / 2;
+  return { days: clamp(Math.round(mid), 1, 7), known: true };
+}
 const everyDays = (n) => (n <= 1 ? 'day' : n === 7 ? 'week' : n === 14 ? 'two weeks' : n + ' days');
 // "We are out of milk" closes the current purchase: that is exactly how long it lasted. Putting the amount back reopens it.
 const noteOut = (env, key, today) => env.DB.prepare('UPDATE purchases SET ran_out = ? WHERE name_key = ? AND ran_out IS NULL AND bought < ? AND bought = (SELECT MAX(bought) FROM purchases WHERE name_key = ?)').bind(today, key, today, key).run().catch(() => {});
@@ -2418,7 +2429,10 @@ async function digest(env, today, commit) {
   }
   // counted once per item per day, however many phones hear about it, so "led to the list" is a fair share
   if (raised) await bump(env, 'remind_sent', raised);
-  const use = items.filter((i) => i.qty > 0 && !i.frozen && i.expiry === today);
+  // Fresh food is mentioned the day before its date, while there is still time to use or freeze it, and not again on the day.
+  // Something that arrived today with no day before (bought today, best by today) is still said today.
+  const tomorrow = addDays(today, 1);
+  const use = items.filter((i) => i.qty > 0 && !i.frozen && (i.expiry === tomorrow || (i.expiry === today && (i.bought || i.added || '') >= today)));
   return { low: low.slice(0, 6).map((it) => ({ ...it, left: dayGap(today, runOutDay(it, p)) })), use: use.slice(0, 6) };
 }
 // Fixed sentences only. Item first, then when, said as my guess; each line under 12 words (Tote's voice rules).
@@ -2427,14 +2441,20 @@ function remindText(d, today) {
   if (!d.low.length && !d.use.length) return null;
   const many = (list) => listOf(list.slice(0, 2).map((i) => i.name).concat(list.length > 2 ? [list.length - 2 + ' more'] : []));
   let title = '', body = '';
+  // the nearer day is the one said: what is best by today first, otherwise what is best by tomorrow
+  const now = d.use.filter((i) => i.expiry === today), next = d.use.filter((i) => i.expiry !== today), first = now.length ? now : next, when = now.length ? 'today' : 'tomorrow';
+  const are = (list) => (list.length === 1 ? ' is' : ' are');
   if (d.low.length) {
     const left = Math.max(...d.low.map((i) => (Number.isFinite(i.left) ? i.left : 1)));
     title = d.low.length === 1 ? d.low[0].name + ' is running low' : many(d.low) + ' are running low';
     body = 'My guess: ' + (d.low.length === 1 ? whenOut(left) : left <= 1 ? whenOut(left) : 'out within ' + left + ' days') + '.';
-    body += d.use.length ? ' ' + many(d.use) + (d.use.length === 1 ? ' is' : ' are') + ' best by today.' : d.low.length === 1 ? ' Add it to your list?' : ' Add them to your list?';
+    body += first.length ? ' ' + many(first) + are(first) + ' best by ' + when + '.' : d.low.length === 1 ? ' Add it to your list?' : ' Add them to your list?';
+  } else if (now.length && next.length) {
+    title = many(now) + are(now) + ' best by today';
+    body = many(next) + are(next) + ' best by tomorrow. Use or freeze them.';
   } else {
-    title = many(d.use) + (d.use.length === 1 ? ' is' : ' are') + ' best by today';
-    body = d.use.length === 1 ? 'Use it today, or freeze it.' : 'Use them today, or freeze them.';
+    title = many(first) + are(first) + ' best by ' + when;
+    body = now.length ? (first.length === 1 ? 'Use it today, or freeze it.' : 'Use them today, or freeze them.') : first.length === 1 ? 'Use it by tomorrow, or freeze it.' : 'Use them by tomorrow, or freeze them.';
   }
   return {
     title, body, url: '/?n=1', ids: d.low.map((i) => i.id),
@@ -2903,7 +2923,10 @@ async function api(request, env, url) {
       if (ho) { const v = JSON.parse(ho.v); if (v && isDate(v.day) && dayGap(v.day, today) >= 0 && dayGap(v.day, today) <= 3) handoff = { store: String(v.store), day: v.day }; }
     } catch (e) { console.error('extras not read', String((e && e.message) || e)); }
     const shops = shopsFor(profile, request.headers.get('cf-ipcountry') || (request.cf && request.cf.country) || '', spend.currency || saved.currency);
-    return json({ items, log, extras, me, spend, waste: (binned && binned.n) || 0, profile, learnt, review: misses, shelf, saved, shops, handoff });
+    // how often this home shops, so the list can look ahead to the next shop; the app must still open if this cannot be read
+    let shop = { days: 1, known: false };
+    try { shop = shopGapFrom((await env.DB.prepare('SELECT DISTINCT bought FROM purchases WHERE bought <= ? ORDER BY bought DESC LIMIT 9').bind(today).all()).results.map((r) => r.bought)); } catch (e) { console.error('shop gap not read', String((e && e.message) || e)); }
+    return json({ items, log, extras, me, spend, waste: (binned && binned.n) || 0, profile, learnt, review: misses, shelf, saved, shops, handoff, shop });
   }
   // The list was handed to a store (the person tapped a store's link). Only the store's name and the day are kept, so Today can ask
   // for the order screen when it arrives. Nothing is sent anywhere by this.
@@ -3038,13 +3061,16 @@ async function api(request, env, url) {
     const ans = ['add', 'still', 'stop', 'start'].includes(body.answer) ? body.answer : '';
     if (!ans || !ids.length) return json({ error: 'empty' }, 400);
     const done = [], before = [];
+    let past = 0; // how far "still have it" must reach when it was asked about the time until the next shop
+    if (ans === 'still' && body.ahead) try { const sg = shopGapFrom((await env.DB.prepare('SELECT DISTINCT bought FROM purchases WHERE bought <= ? ORDER BY bought DESC LIMIT 9').bind(today).all()).results.map((r) => r.bought)); if (sg.known) past = sg.days + 1; } catch (e) {}
     for (const id of ids) {
       const it = await env.DB.prepare('SELECT * FROM items WHERE id = ?').bind(id).first();
       if (!it) continue;
       before.push({ id: it.id, low: it.low ? 1 : 0, finish_days: it.finish_days });
       if (ans === 'add') await env.DB.prepare('UPDATE items SET low = 1 WHERE id = ?').bind(id).run();
       // "still have it" means my estimate was short: give it half as long again before I ask
-      if (ans === 'still') await env.DB.prepare('UPDATE items SET finish_days = ? WHERE id = ?').bind(clamp(dayGap(it.bought || it.added, today) + Math.max(3, Math.ceil(it.finish_days * 0.5)), 1, 365), id).run();
+      // Asked at the list ("may run out before you shop again"), the answer holds until after that shop, or the same line would come straight back.
+      if (ans === 'still') await env.DB.prepare('UPDATE items SET finish_days = ? WHERE id = ?').bind(clamp(dayGap(it.bought || it.added, today) + Math.max(3, Math.ceil(it.finish_days * 0.5), past), 1, 365), id).run();
       if (ans === 'stop') await env.DB.prepare('INSERT INTO reminders (name_key, muted, answered) VALUES (?, 2, 1) ON CONFLICT(name_key) DO UPDATE SET muted = 2, answered = 1, streak = 0').bind(it.name_key).run();
       else await env.DB.prepare('INSERT INTO reminders (name_key, answered) VALUES (?, 1) ON CONFLICT(name_key) DO UPDATE SET answered = 1, streak = 0, muted = CASE WHEN muted = 1 OR ? = 1 THEN 0 ELSE muted END').bind(it.name_key, ans === 'start' ? 1 : 0).run();
       done.push(it.name);
