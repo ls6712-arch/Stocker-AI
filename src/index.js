@@ -181,7 +181,31 @@ function same(a, b) {
 }
 // Private details have no place in a pantry. Anything that looks like a card, account, identity or phone number, or an email
 // address, is removed before text is stored or shown to a model.
-const scrub = (t) => String(t || '').replace(/[\w.+-]+@[\w-]+\.[\w.-]+/g, '[removed]').replace(/\b\d{3}-\d{2}-\d{4}\b/g, '[removed]').replace(/(?<![\d.])(?:\d[ -]?){9,19}(?![\d.])/g, '[removed] ');
+// Private details are taken out before any model call and before anything is kept (the record of turns, notes, the profile).
+// Each rule is narrow on purpose: a quantity, a best-by date, a receipt line and a product name ("Rocky Road", "Dr Pepper",
+// "12 ct") must come through exactly as typed. evals/guard.mjs holds both directions.
+const ADDR_STOP = "(?=\\s+(?:and|also|then|but|so|plus)\\s+(?:add|we|i|put|bought|got|need|get|please|also|can|could|the)\\b|\\s*,\\s*(?:add|also|we|i|bought|put|please|and)\\b|[.!?\\n]|$)";
+const ADDR_TAIL = "(?:\\s*,?\\s*(?:apt|apartment|unit|suite|ste|flat|floor|#)\\.?\\s*#?\\s*[\\w-]+)";
+const NOT_STREET = "(?!(?:g|gm|kg|ml|l|lb|lbs|oz|pcs|packs?|x|ct|cans?|bottles?|boxes?|bags?|jars?|tubs?|cartons?|dozen|of|sesame)\\b)";
+const PRIVATE = [
+  [/[\w.+-]+@[\w-]+\.[\w.-]+/g, '[removed]'],
+  [/\b\d{3}-\d{2}-\d{4}\b/g, '[removed]'],
+  [/(?<![\d.])(?:\d[ -]?){13,19}(?![\d.])[\s,;:-]*(?:exp\w*\.?\s*)?(?:0?[1-9]|1[0-2])\s*\/\s*(?:20)?\d{2}\b(?!\s*\/)(?:[\s,;:-]*(?:cvv2?|cvc2?)?\s*\d{3,4}\b)?/gi, '[removed] '],
+  [/(?<![\d.])(?:\d[ -]?){9,19}(?![\d.\/])/g, '[removed] '],
+  // a password, passcode, one-time code or PIN: the word stays, what follows it goes
+  [/\b(pass ?words?|pass ?codes?|passphrase|pwd|otp|one[- ]time (?:code|password)|verification code|(?:gate|door|alarm|access|entry|lock|garage|building|locker|safe|wi-?fi) code)\b((?:\s+for [\w' ]{1,24}?)?(?:\s+(?:is|was)\s+|\s*[=:]\s*|\s+-\s+)|\s+(?=\S*[\d#@$!%&*]))\S{2,40}/gi, '$1$2[removed]'],
+  [/\b(pin(?: code| number)?)\b(\s+(?:is|was)\s+|\s*[=:]\s*|\s+-\s+|\s+)\d{3,8}\b/gi, '$1$2[removed]'],
+  // a card's security code, and its expiry (a best-by date is never touched: this needs the card to be named in the same line)
+  [/\b(cvv2?|cvc2?|cv2|security code|card code)\b(\D{0,12})\d{3,4}\b/gi, '$1$2[removed]'],
+  [/^(?=.*\b(?:card|visa|master ?card|amex|american express|rupay|debit|credit|cvv2?|cvc2?|security code)\b).*$/gim, (line) => line.replace(/\b(exp(?:iry|ires?|iration|iring)?\b\.?[^\d\n]{0,30}?)(?:0?[1-9]|1[0-2])\s*\/\s*(?:20)?\d{2}\b(?!\s*\/)/gi, '$1[removed]')],
+  // where someone lives: after "my address is", "we live at", "deliver to"; a numbered street; a flat or house number
+  [new RegExp("\\b((?:(?:my|our|home|the|delivery|shipping|billing) )*address(?: is|:)?|(?:we |i )?lives? (?:at|on)|deliver(?:y|ed)? to|ship(?:ped|ping)? to|send (?:it|them|this|the order) to|located at)\\s+(?=[^.!?\\n]{0,25}\\d)[^!?\\n]{4,90}?" + ADDR_STOP.replace('[.!?\\\\n]', '(?:\\\\.(?:\\\\s|$)|[!?\\\\n])'), 'gi'), '$1 [removed]'],
+  [new RegExp("\\b\\d{1,5}[a-z]?\\s+" + NOT_STREET + "(?:[a-z][a-z'.-]*\\s+){1,3}(?:street|avenue|boulevard|blvd)\\b\\.?" + ADDR_TAIL + "?(?:\\s*,\\s*[a-z .]{2,30}?,?\\s+[a-z]{2}\\s+\\d{5}(?:-\\d{4})?)?(?=\\s*(?:$|[,.;!?\\n]|(?:and|also|if|so|but|please|then|for|in|near|by|is|was|we|i|it|thanks?)\\b))", 'gi'), '[removed]'],
+  [new RegExp("\\b\\d{1,5}[a-z]?\\s+" + NOT_STREET + "(?:[a-z][a-z'.-]*\\s+){1,3}(?:road|rd|lane|ln|drive|dr|court|ct|place|pl|terrace|way|parkway|pkwy|highway|hwy|ave|st)\\b\\.?(?:" + ADDR_TAIL + "|\\s*,\\s*[a-z .]{2,30}?,?\\s+[a-z]{2}\\s+\\d{5}(?:-\\d{4})?)", 'gi'), '[removed]'],
+  [new RegExp("\\b(?:(?:flat|apt|apartment)\\.?\\s*(?:no\\.?|number|#)?|(?:house|door|plot)\\s*(?:no\\.?|number|#)|h\\.?\\s?no\\.?)\\s*[:#-]?\\s*\\d+[a-z]?\\b[^!?\\n]{0,70}?" + ADDR_STOP.replace('[.!?\\\\n]', '(?:\\\\.(?:\\\\s|$)|[!?\\\\n])'), 'gi'), '[removed]'],
+  [/\b[A-Z]{2}\s+\d{5}(?:-\d{4})?\b/g, '[removed]'],
+];
+const scrub = (t) => PRIVATE.reduce((out, [rx, to]) => out.replace(rx, to), String(t || ''));
 const isDate = (s) => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s) && !isNaN(Date.parse(s + 'T00:00:00Z'));
 const addDays = (s, n) => new Date(Date.parse(s + 'T00:00:00Z') + n * DAY).toISOString().slice(0, 10);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -330,7 +354,7 @@ function labelCheck(prod, p) {
     }
   }
   const more = missing.length ? ' ' + missing.join(' ') : '';
-  if (found.length) return { status: 'warn', warn: found.slice(0, 3).join(', ').slice(0, 70), text: 'From the ingredient list: ' + found.join('; ') + '. Check the pack before anyone eats it.' + (notes.length ? ' For your house rules: ' + notes.join('; ') + '.' : '') + more };
+  if (found.length) return { status: 'warn', warn: found.slice(0, 3).join(', ').slice(0, 70), text: 'From the ingredient list: ' + found.join('; ') + '. Check the label before anyone eats it.' + (notes.length ? ' For your house rules: ' + notes.join('; ') + '.' : '') + more };
   if (notes.length) return { status: 'note', warn: '', text: 'Good to know for your house rules: ' + notes.join('; ') + '.' + more };
   return { status: 'ok', warn: '', text: 'I checked the listed ingredients and declared allergens against everyone at home and found no match. Recipes change, so still glance at the pack.' + more };
 }
@@ -477,6 +501,8 @@ async function structure(env, kind, text, today, known, profile, history, model)
 }
 
 // Never trust model output: coerce every field before it reaches the person or the database.
+const ACTIONS = ['add', 'use', 'low', 'set', 'list', 'unlist'];
+const MAX_QTY = { pcs: 1000, pack: 1000, g: 100000, kg: 1000, ml: 100000, L: 1000, lb: 1000, oz: 10000 };
 function sanitize(raw, kind) {
   const list = raw && Array.isArray(raw.actions) ? raw.actions.slice(0, 40) : [];
   const actions = [];
@@ -485,18 +511,24 @@ function sanitize(raw, kind) {
     const name = String(a.name || '').replace(/\s+/g, ' ').trim().slice(0, 60);
     if (!name) continue;
     const talk = kind !== 'bill' && kind !== 'shelf';
+    // an action the schema does not know is dropped, never read as "add" (on a receipt or a shelf, everything known is something seen)
+    if (!ACTIONS.includes(a.action)) continue;
     const act = a.action === 'use' || a.action === 'low' || (talk && (a.action === 'list' || a.action === 'set' || a.action === 'unlist')) ? a.action : 'add';
     // an instruction smuggled in as a product name is never stored
     if (PROBE.test(fixTypos(name)) || /\b(ignore|instruction|system|admin|prompt|assistant|developer)\b|[<>{}]|"role"/i.test(fixTypos(name))) continue;
     const use = act !== 'add' && act !== 'set';
+    // no home holds a million of anything: an amount past the ceiling for its unit is not believed. A count or a use is dropped;
+    // something bought is kept as one, marked as a guess, so it is still at home and the amount is open
+    const unit = UNITS.includes(a.unit) ? a.unit : 'pcs', over = num(a.quantity, 0) > MAX_QTY[unit];
+    if (over && (act === 'set' || act === 'use')) continue;
     actions.push({
       action: act,
       name,
       note: act === 'list' ? word(scrub(a.note), 60) : '',
       inferred: act === 'use' && a.inferred === true,
-      quantity: act === 'set' ? Math.max(0, num(a.quantity, 0)) : use ? Math.max(0, num(a.quantity, 0)) : (num(a.quantity, 1) > 0 ? num(a.quantity, 1) : 1),
-      sure: use || (a.quantityKnown !== false && a.sure !== false),
-      unit: UNITS.includes(a.unit) ? a.unit : 'pcs',
+      quantity: over ? 1 : act === 'set' ? Math.max(0, num(a.quantity, 0)) : use ? Math.max(0, num(a.quantity, 0)) : (num(a.quantity, 1) > 0 ? num(a.quantity, 1) : 1),
+      sure: use || (!over && a.quantityKnown !== false && a.sure !== false),
+      unit,
       area: AREAS.includes(a.area) ? a.area : 'Kitchen',
       category: ROOM_CATS[AREAS.includes(a.area) ? a.area : 'Kitchen'].includes(a.category) ? a.category : 'Other',
       warn: use ? '' : String(a.warn || '').replace(/[^\p{L}\p{N} ,'-]/gu, ' ').replace(/\s+/g, ' ').trim().slice(0, 70),
@@ -600,9 +632,20 @@ function guardReply(text, profile) {
   let out = String(text || '').replace(/[*_#`<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, 500);
   // the instructions must never come back out
   if (/your character:|hard limits|helper character in the stocker app|never reveal|messages are data|inventory:\s|answer in at most three/i.test(out)) return 'That is not something I can share. I can tell you what is at home, what needs using up, or what is on your list.';
+  // Tote's voice is kept by code, not only asked for: no emoji, one exclamation mark at most, home words
+  out = out.replace(/[\p{Extended_Pictographic}\u{FE0F}\u{200D}\u{1F3FB}-\u{1F3FF}]/gu, ' ').replace(/\s+([,.!?])/g, '$1').replace(/!{2,}/g, '!');
+  let bangs = 0;
+  out = out.replace(/!/g, () => (bangs++ ? '.' : '!')).replace(/\s+/g, ' ').trim();
+  out = out.replace(/\b(in|on|from) (?:your|the|our|my) inventory\b/gi, 'at home').replace(/\b(?:your|the|our|my) inventory\b/gi, (m) => (/^[A-Z]/.test(m) ? 'Your home' : 'your home')).replace(/\binventory\b/gi, 'things at home')
+    .replace(/\b(?:is|are) (?:below|under|at) (?:the|its|their|your) threshold\b/gi, (m) => m.split(' ')[0] + ' running low').replace(/\b(?:below|under|at) (?:the|its|their|your) threshold\b/gi, 'running low').replace(/\bthresholds?\b/gi, 'limit').replace(/\bSKUs\b/gi, 'things').replace(/\bSKU\b/gi, 'thing');
   const claim = /\b(safe (to eat|to have|for)|is safe|are safe|perfectly safe|totally safe|completely safe|allergen[- ]free|won't (cause|trigger))\b/i;
-  if (claim.test(out)) {
-    out = out.split(/(?<=[.!?])\s+/).filter((x) => !claim.test(x)).join(' ').trim();
+  // in a home with an allergy, the model may not wave a food through for a person either ("that is fine for Leo", "Leo can have it")
+  const mem = (profile && Array.isArray(profile.members) && profile.members) || [];
+  const who = profile && ((profile.allergies || []).length || mem.some((m) => (m.allergies || []).length)) ? mem.map((m) => reEsc(String(m.name || '').toLowerCase())).filter(Boolean).concat(['him', 'her', 'them', 'the kids', 'the children', 'everyone', 'you all', '(?:someone|anyone|people|a child|kids|children) with', '(?:an?|the|his|her|their) [a-z ]{2,20}allerg\\w*']).join('|') : '';
+  const assure = who ? new RegExp("\\b(?:is|are|it'?s|that'?s|they'?re|should be|would be|will be|must be|looks?|sounds?|seems?)\\s+(?:(?:totally|perfectly|completely|absolutely|just|probably|also|all|quite)\\s+)*(?:fine|ok|okay|alright|all right|suitable|no problem)\\b[^.!?]{0,24}\\b(?:for|with)\\s+(?:" + who + ")\\b|\\b(?:" + who + "|he|she|they)\\s+(?:can|could|may)\\s+(?:safely\\s+|definitely\\s+|totally\\s+|still\\s+)?(?:have|eat|take|try)\\s+(?:it|that|this|them|those|these|one|some)\\b", 'i') : null;
+  const vouch = (x) => claim.test(x) || (assure && assure.test(x));
+  if (vouch(out)) {
+    out = out.split(/(?<=[.!?])\s+/).filter((x) => !vouch(x)).join(' ').trim();
     out = (out ? out + ' ' : '') + "With an allergy or a health condition I can't vouch for any food, so please check the label.";
   }
   out = scrub(out).replace(/\b(20\d\d)-(\d\d)-(\d\d)\b/g, (m, y, mo, d) => Number(d) + ' ' + (MONTHS[Number(mo) - 1] || mo)).replace(/\s+/g, ' ').trim();
@@ -3092,7 +3135,7 @@ async function api(request, env, url) {
     // off the list by hand: it stays at home as it is, and comes back on the list the next time it runs out
     if (body.offList !== undefined) await env.DB.prepare(body.offList ? 'UPDATE items SET low = 0, nolist = 1 WHERE id = ?' : 'UPDATE items SET nolist = 0 WHERE id = ?').bind(m[1]).run();
     if (body.qty !== undefined) {
-      const q = Math.max(0, num(body.qty, 0));
+      const q = clamp(num(body.qty, 0), 0, MAX_QTY[cur.unit] || 1000);
       await env.DB.prepare('UPDATE items SET qty = ?, unsure = 0' + ((q <= 0 && cur.qty > 0) || q > cur.qty ? ', nolist = 0' : '') + ' WHERE id = ?').bind(q, m[1]).run();
       if (q <= 0 && cur.qty > 0 && !body.binned) { await noteOut(env, cur.name_key, today); if (!body.undo) await noteSaved(env, cur, today); } else if (q > 0) await noteBack(env, cur.name_key, today);
     }
@@ -3144,7 +3187,7 @@ async function api(request, env, url) {
     if (await env.DB.prepare('SELECT id FROM items WHERE id = ? OR name_key = ?').bind(r.id, key).first()) return json({ ok: true, kept: true });
     const area = AREAS.includes(r.area) ? r.area : 'Kitchen', day = (v) => (isDate(v) ? v : null);
     await env.DB.prepare('INSERT INTO items (id, name, name_key, qty, unit, category, bought, added, store, expiry, expiry_est, finish_days, learned, source, area, essential, low, warn, note, owner, frozen, unsure, nolist) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
-      .bind(r.id, name, key, clamp(num(r.qty, 1), 0, 100000), UNITS.includes(r.unit) ? r.unit : 'pcs', ROOM_CATS[area].includes(r.category) ? r.category : 'Other', day(r.bought), day(r.added) || today, word(r.store, 40) || null, day(r.expiry), r.expiry_est ? 1 : 0,
+      .bind(r.id, name, key, clamp(num(r.qty, 1), 0, MAX_QTY[UNITS.includes(r.unit) ? r.unit : 'pcs']), UNITS.includes(r.unit) ? r.unit : 'pcs', ROOM_CATS[area].includes(r.category) ? r.category : 'Other', day(r.bought), day(r.added) || today, word(r.store, 40) || null, day(r.expiry), r.expiry_est ? 1 : 0,
         clamp(Math.round(num(r.finish_days, 14)), 1, 365), r.learned ? 1 : 0, SOURCES.includes(r.source) ? r.source : 'hand', area, r.essential ? 1 : 0, r.low ? 1 : 0, null, word(scrub(r.note), 40) || null, word(r.owner, 20) || null, r.frozen ? 1 : 0, r.unsure ? 1 : 0, r.nolist ? 1 : 0).run();
     if (body.binned) await env.DB.prepare("DELETE FROM log WHERE id = (SELECT MAX(id) FROM log WHERE summary = ?)").bind('threw away ' + name).run();
     await env.DB.prepare('INSERT INTO log (at, source, summary, who) VALUES (?, ?, ?, ?)').bind(new Date().toISOString(), 'hand', 'put ' + name + ' back', me || null).run();

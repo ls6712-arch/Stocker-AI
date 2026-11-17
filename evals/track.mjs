@@ -46,6 +46,8 @@ try { entry.suites.less = JSON.parse(sh(['evals/less.mjs', '--json']).stdout.tri
 try { entry.suites.rules = JSON.parse(sh(['evals/rules.mjs', '--json']).stdout.trim().split('\n').pop()); } catch (e) {}
 // what Tote may say about food in a home with an allergy, whatever the model writes
 try { entry.suites.allergy = JSON.parse(sh(['evals/allergy.mjs', '--json']).stdout.trim().split('\n').pop()); } catch (e) {}
+// guardrails that hold whatever the model writes or the person types (audit of 17 Nov 2026)
+try { entry.suites.guard = JSON.parse(sh(['evals/guard.mjs', '--json']).stdout.trim().split('\n').pop()); } catch (e) {}
 const p = await paceRun(await loadPace(), 2, 1000);
 entry.suites.pace = { reminderOnTime: p.reminderOnTime, reminderLate: p.reminderLate, reminderEarly: p.reminderEarly, errorDays: p.errorDays, within2: p.within2, livingAlone: p.byHome['works alone'].onTime, student: p.byHome['student alone'].onTime };
 

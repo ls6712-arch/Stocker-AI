@@ -82,6 +82,19 @@ const PRIVATE = HELD ? [
   ['a one-time code', 'my otp is 493021, also add bread', /493021/],
   ['a card expiry and security code', 'amex ending 1009 exp 03/29 security code 4471. bought eggs', /03\/29|4471/],
   ['a door number address said with a cue', 'we live at 5 Birch Lane, add bananas', /5 Birch Lane/],
+  // written after the code was finished (17 Nov), scored once at first sight and not tuned on
+  ['"we moved to" a numbered avenue', 'we moved to 45 Park Avenue, please add bin bags', /45 Park/],
+  ['a flat in a tower, with its PIN code', 'delivery address: Flat 9C, Green Towers, Powai, Mumbai 400076', /9C|Green Towers|400076/],
+  ['a debit card expiry', 'my debit card expires 1/27', /1\/27/],
+  ['an alarm code', 'the alarm code is 9090, also out of milk', /9090/],
+  ['a security code said alone', 'security code is 881', /881/],
+  ['a flat first, then the street', 'apt 12B, 300 W 23rd Street', /12B|300 W/],
+  ['"pwd"', 'pwd: Mango_42', /Mango_42/],
+  ['a street that is not in English', 'our address is 8 Rue de Rivoli and we need butter', /8 Rue/],
+  ['a locker code', 'locker code 3317 for the amazon parcel', /3317/],
+  ['an email address', 'email me at sam.k@example.org and add tea', /sam\.k/],
+  ['an identity number', 'Aadhaar 1234 5678 9012', /1234 5678/],
+  ['a one time password', 'one time password is 771204', /771204/],
 ] : [
   ['a street address', 'deliver to 12 Oak Street, Apt 4B, Jersey City NJ 07302 and add milk', /12 Oak|Oak Street|Apt 4B|07302/],
   ['a street address said in passing', 'my address is 221 Baker Street and we need eggs', /221 Baker/],
@@ -90,6 +103,10 @@ const PRIVATE = HELD ? [
   ['a PIN', 'pin: 9917 bought 2 apples', /9917/],
   ['a card expiry and CVV', 'my visa expires 08/27 cvv 392, add milk', /08\/27|\b392\b/],
   ['a CVC on its own', 'cvc 7714 for the order, we need rice', /7714/],
+  // from the second fresh round (17 Nov), where these three got through
+  ['a gate code', 'the gate code is 5521 and we need milk', /5521/],
+  ['a card number with its expiry and code written straight after', 'card 4242 4242 4242 4242, 11/28, 123 add eggs', /4242|11\/28|\b123\b/],
+  ['the expiry of a named card, put another way', 'expiry date on my mastercard is 04/2030, add rice', /04\/2030/],
 ];
 for (const [what, text, secret] of PRIVATE) {
   const h = await home(null, (i) => (isAnswer(i) ? 'Noted.' : plan([])));
@@ -101,10 +118,13 @@ const KEPT = HELD ? [
   'bought 3 cherry garcia and 2 mountain dew', 'used 250 g of ave maria coffee', 'best by 11/30 for the yogurt', 'got 6 ct bagels and 18 ct eggs',
   'bought 1 st dalfour jam', '2 drive-thru coffees finished', 'add 4 lane cakes to the list', 'bought 16 oz pin oats', 'the cream expires 1/5',
   'need 2 court bouillon cubes', 'COSTCO KS OLIVE OIL 2L 18.99', 'used 2 of the 12 pack', 'bought flat bread, 2 packs', 'put house blend coffee on the list',
+  'got 2 king street pies', 'used 4 of the 30 ct pack', 'added 3 park avenue chocolates... no wait 2', 'best before 1/27', 'bought 1 lb apt cheese', 'need 6 door hinges and 2 gate latches',
+  'the lock on the pantry broke, add a lock', 'set eggs to 18', 'ordered 2 security lights', 'saw the code red soda, add 2', '250 g expiry tea', 'bought alarm clock batteries 4 pcs',
 ] : [
   'bought 2 rocky road ice cream', 'add 2 dr pepper', 'the milk expires 12/26', 'eggs 12 ct and TIDE PODS 42CT 12.99', '1 bottle st ives lotion',
   '2 sesame street yogurts', 'used 500 g flour and 2 eggs', 'bought 3 packs of pasta on 2026-11-14', 'best before 11/20', 'add 6 avenue bars',
   'ORG WHL MILK 1GAL 5.99', 'we need 2 kg rice and 1 L milk', 'got 4 flat peaches', 'add pin bones tweezers', 'bought a 24 pack of water',
+  'bought 12 main street bagels', 'the code on the yogurt is 4821', '500 g flour and 12 eggs', 'chicken best by 11/28', 'used 1/2 cup rice',
 ];
 for (const text of KEPT) check('opposite: "' + text + '" is left exactly as typed', A.scrub(text) === text, A.scrub(text));
 
