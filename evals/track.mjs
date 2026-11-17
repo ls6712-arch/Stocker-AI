@@ -42,6 +42,8 @@ try { entry.suites.acceptance = JSON.parse(sh(['evals/acceptance.mjs', '--json']
 try { entry.suites.compete = JSON.parse(sh(['evals/compete.mjs', '--json']).stdout.trim().split('\n').pop()); } catch (e) {}
 // needing less, round 1 (16 Nov 2026): the list looks ahead to the next shop; fresh food is mentioned the day before
 try { entry.suites.less = JSON.parse(sh(['evals/less.mjs', '--json']).stdout.trim().split('\n').pop()); } catch (e) {}
+// house rules, round 1 (16 Nov 2026): the label check reads what a home keeps to, with the names an ingredient hides under
+try { entry.suites.rules = JSON.parse(sh(['evals/rules.mjs', '--json']).stdout.trim().split('\n').pop()); } catch (e) {}
 const p = await paceRun(await loadPace(), 2, 1000);
 entry.suites.pace = { reminderOnTime: p.reminderOnTime, reminderLate: p.reminderLate, reminderEarly: p.reminderEarly, errorDays: p.errorDays, within2: p.within2, livingAlone: p.byHome['works alone'].onTime, student: p.byHome['student alone'].onTime };
 
