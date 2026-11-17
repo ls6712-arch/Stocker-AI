@@ -33,7 +33,7 @@ const URL = 'http://127.0.0.1:8799/';
   const held = await p.evaluate(() => new DOMMatrixReadOnly(getComputedStyle(document.getElementById('bell')).transform).a);
   await p.mouse.move(5, 300); await p.mouse.up(); await p.waitForTimeout(450);
   const after = await p.evaluate(() => new DOMMatrixReadOnly(getComputedStyle(document.getElementById('bell')).transform).a);
-  check('A button shrinks a little the moment it is pressed', before === 'none' && held < 0.95 && held > 0.85, { before, held });
+  check('A button shrinks a little (to 0.97) the moment it is pressed', before === 'none' && Math.abs(held - 0.97) < 0.004, { before, held });
   check('...and returns when let go; sliding off it cancels the tap', after > 0.995 && !(await p.locator('dialog[open]').count()), { after });
   const tabHeld = await (async () => { const t = await p.locator('[data-tab=list]').boundingBox(); await p.mouse.move(t.x + t.width / 2, t.y + t.height / 2); await p.mouse.down(); await p.waitForTimeout(160);
     const r = await p.evaluate(() => { const e = document.querySelector('[data-tab=list]'); return { tab: getComputedStyle(e).transform, icon: new DOMMatrixReadOnly(getComputedStyle(e.querySelector('svg')).transform).a }; }); await p.mouse.move(5, 300); await p.mouse.up(); return r; })();
