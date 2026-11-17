@@ -153,12 +153,14 @@ html.big{zoom:1.16}
 .nudge{display:flex;gap:10px;align-items:center;justify-content:space-between;border-top:1px solid var(--line);padding:10px 0}.nudge:first-child{border-top:0}.nudge>div{min-width:0;flex:1}.nudge .btns{display:flex;gap:6px;flex:none}
 .msg .fb{display:block;border:0;background:none;color:var(--muted);font-size:.7813rem;padding:6px 0 0;min-height:32px;text-decoration:underline}
 .chip.add{border-style:dashed;color:var(--accent);background:none}
+.chip .e{margin-right:6px;font-size:1.0625em;line-height:1}.chip .h{margin-left:6px;font-weight:500;font-size:.8125rem;opacity:.68}
 .addin{display:flex;gap:6px;flex:1 1 220px;min-width:0}.addin input{flex:1;min-width:0;min-height:40px;padding:6px 12px;border-radius:999px}
 #profDlg .tile,#profDlg .tile b,#helloDlg .tile,#helloDlg .tile b{min-height:0}#profDlg .tile,#helloDlg .tile{padding:10px 12px;gap:2px;border-radius:14px}#profDlg .tile span,#helloDlg .tile span{font-size:.75rem}
 /* the first run: three short steps, each answered by Tote, and a list of what is left to set */
 .hellotop{display:flex;align-items:center;justify-content:space-between;min-height:20px;margin-bottom:8px}
 .dots{display:flex;gap:6px}.dots i{width:26px;height:5px;border-radius:3px;background:var(--line);transition:background-color .2s}.dots i.on{background:var(--accent)}
-.totesay{display:flex;gap:10px;align-items:flex-start;background:var(--surface2);border-radius:18px 18px 18px 6px;padding:12px 14px;margin:10px 0 16px;min-height:5.6em;font-size:.9375rem}
+.totesay{display:flex;gap:10px;align-items:flex-start;background:var(--surface2);border-radius:18px 18px 18px 6px;padding:12px 14px;margin:10px 0 14px;min-height:4.4em;font-size:.9375rem}
+#helloIn .wrapchips{gap:6px}#helloIn .chip{min-height:40px;padding:7px 12px}
 .totesay img{width:28px;height:28px;flex:none;border-radius:8px}
 #helloIn{display:flex;flex-direction:column;gap:10px;margin-bottom:16px}#helloIn h3{margin:4px 0 0}
 #helloIn .people{justify-content:space-around;padding:8px 0 4px}#helloIn .people label{align-items:center;font-size:.9375rem}
@@ -722,12 +724,14 @@ body{overflow-x:clip}
     <div class="grab"></div>
     <h2 id="profH">Everything about your home</h2>
     <p class="sub">Tell me who is at home and I will tailor estimates, dinner ideas and suggestions. You can change this any time.</p>
-    <h3 id="secType">Which sound like you? <span class="sub" id="profPick" style="font-family:var(--body,inherit);font-weight:500">Pick up to three</span></h3>
+    <h3 id="secType">Homes like yours <span class="sub" id="profPick" style="font-family:var(--body,inherit);font-weight:500">Suggestions. Pick any, or none</span></h3>
     <p class="grp">Your home</p>
     <div class="tiles" id="profHome" role="group" aria-label="Your home"></div>
     <p class="grp">Your style</p>
     <div class="tiles" id="profStyle" role="group" aria-label="Your style"></div>
-    <p class="sub">This picks your starter list, your kits and how fast I expect things to run out.</p>
+    <p class="sub">These only shape your starter list and how fast I expect things to run out. Your own words count for more.</p>
+    <label for="profAbout" class="field" style="margin-top:4px">Your home, in your own words</label>
+    <textarea id="profAbout" rows="3" maxlength="240" placeholder="Joint family, five adults. My mother-in-law cooks lunch. We buy milk every morning."></textarea>
     <h3 id="secPeople">Who lives here?</h3>
     <div class="people" id="profPeople"></div>
     <div class="who" id="profMembers"></div>
@@ -762,9 +766,6 @@ body{overflow-x:clip}
         <p class="grp">Where you shop</p>
         <div class="wrapchips" id="profStores" role="group" aria-label="Where you shop"></div>
         <label for="profBudget" class="field">Monthly budget<input type="number" id="profBudget" min="0" step="10" placeholder="600"></label>
-        <h3>Anything else I should know?</h3>
-        <label for="profAbout" class="sub">Ages, routines, brands you always buy.</label>
-        <textarea id="profAbout" rows="3" maxlength="240" placeholder="Kids are 3, 6 and 9. We do one big shop on Sundays. Diapers are size 4."></textarea>
       </div>
     </details>
     <button type="button" class="btn primary block" id="profSave">Save</button>
@@ -1646,19 +1647,32 @@ body{overflow-x:clip}
   $('chatSnap').onclick=function(){$('chatDlg').close();$('capDlg').showModal()};
   $('chatTalk').onclick=function(){startRec()};
   $('chatCode').onclick=function(){$('chatDlg').close();$('capCode').click()};
-  var draft=null,mem=null,memAt=-1,ui={more:{},adding:''},helloAt=-1,helloEvery=false,helloFull=false,sortBack='';
+  var draft=null,mem=null,memAt=-1,ui={more:{},adding:''},helloAt=-1,sortBack='';
   function redraw(){if(helloAt>-1)drawHello();else drawProfile();if(mem)drawMember()}
   /* a chip group: suggested options, anything the household added, and a plus chip to add their own */
+  /* a food's picture where there is a plain one, and a few words for the names many people do not know (from the 1,000-household test) */
+  var EMO={Peanuts:'\u{1F95C}','Tree nuts':'\u{1F330}',Milk:'\u{1F95B}',Eggs:'\u{1F95A}',Wheat:'\u{1F33E}',Soy:'\u{1FAD8}',Fish:'\u{1F41F}',Shellfish:'\u{1F990}',Corn:'\u{1F33D}',Celery:'\u{1F96C}',Sulphites:'\u{1F377}',
+    Vegetarian:'\u{1F966}',Vegan:'\u{1F331}',Pescatarian:'\u{1F41F}',Eggetarian:'\u{1F95A}','High protein':'\u{1F357}',Keto:'\u{1F951}',Mediterranean:'\u{1FAD2}'};
+  var HINT={'Tree nuts':'almonds, cashews',Sesame:'til, tahini',Soy:'tofu',Sulphites:'in wine, dried fruit',Celery:'and celeriac',Pescatarian:'fish, no meat',Eggetarian:'veg and eggs',
+    Jain:'no root vegetables',Kosher:'Jewish food laws','Gluten-free':'no wheat',Keto:'very low carb','Low carb':'less bread and rice',Paleo:'no grains, dairy or beans',Mediterranean:'veg, fish, olive oil','Low FODMAP':'for IBS, a sensitive gut'};
+  var INDIA=(function(){var z='',l='';try{z=Intl.DateTimeFormat().resolvedOptions().timeZone||''}catch(e){}try{l=(navigator.languages||[navigator.language||'']).join(',')}catch(e){}return /Kolkata|Calcutta/.test(z)||/-IN\b|^(hi|te|ta|kn|mr|bn|gu|ml)\b/.test(l)})();
+  /* the usual choices where the phone is, first; the rest keep their order behind "More" */
+  function placeFirst(all,first){return first.filter(function(n){return all.indexOf(n)>-1}).concat(all.filter(function(n){return first.indexOf(n)<0}))}
+  function allergyChoices(){return placeFirst(ALLERGENS,INDIA?['Peanuts','Milk','Eggs','Wheat','Tree nuts','Fish','Shellfish','Soy','Sesame']:[])}
+  function dietChoices(){return placeFirst(DIETS,INDIA?['Vegetarian','Eggetarian','Jain','No onion or garlic','No beef','Halal','Vegan']:['Vegetarian','Vegan','Gluten-free','Dairy-free','Pescatarian','Halal','Kosher'])}
   function chipBox(box,all,obj,key,o){o=o||{};box.textContent='';var id=box.id,sel=obj[key],low=function(x){return x.toLowerCase()};
     var shown=o.show&&!ui.more[id]?all.filter(function(n,i){return i<o.show||sel.indexOf(n)>-1}):all;
-    shown.concat(sel.filter(function(n){return all.indexOf(n)<0})).forEach(function(n){var on=sel.indexOf(n)>-1,b=el('button','chip',n);b.type='button';b.setAttribute('aria-pressed',on?'true':'false');
+    shown.concat(sel.filter(function(n){return all.indexOf(n)<0})).forEach(function(n){var on=sel.indexOf(n)>-1,b=el('button','chip');b.type='button';b.dataset.v=n;b.setAttribute('aria-pressed',on?'true':'false');
+      if(o.rich&&EMO[n]){var e=el('span','e',EMO[n]);e.setAttribute('aria-hidden','true');b.append(e)}
+      b.append(document.createTextNode(n));if(o.rich&&HINT[n]){b.append(el('span','h',HINT[n]));b.setAttribute('aria-label',n+', '+HINT[n])}
       b.onclick=function(){obj[key]=on?sel.filter(function(x){return x!==n}):sel.concat([n]);redraw()};box.append(b)});
-    if(shown.length<all.length){var m=el('button','chip add','More');m.type='button';m.onclick=function(){ui.more[id]=1;redraw()};box.append(m)}
+    var more=shown.length<all.length;
     if(ui.adding===id){var w=el('span','addin'),inp=el('input'),ok=el('button','mini','Add');inp.type='text';inp.maxLength=24;inp.placeholder=o.ph||'Type it here';inp.setAttribute('aria-label',o.add||'Add your own');ok.type='button';
       var done=function(){var v=inp.value.replace(/\s+/g,' ').trim();ui.adding='';if(v){var k=all.filter(function(x){return low(x)===low(v)})[0]||v;if(!obj[key].some(function(x){return low(x)===low(k)}))obj[key]=obj[key].concat([k])}redraw()};
       ok.onclick=done;inp.onkeydown=function(ev){if(ev.key==='Enter'){ev.preventDefault();done()}else if(ev.key==='Escape'){ev.preventDefault();ui.adding='';redraw()}};
       w.append(inp,ok);box.append(w);setTimeout(function(){inp.focus()},0)}
-    else if(!o.fixed){var a=el('button','chip add','+ '+(o.add||'Add your own'));a.type='button';a.onclick=function(){ui.adding=id;redraw()};box.append(a)}}
+    else if(!o.fixed){var a=el('button','chip add','+ '+(o.add||'Add your own'));a.type='button';a.onclick=function(){ui.adding=id;redraw()};box.append(a)}
+    if(more){var m=el('button','chip add','More');m.type='button';m.onclick=function(){ui.more[id]=1;redraw()};box.append(m)}}
   function oneOf(box,pairs,obj,key,clear){box.textContent='';pairs.forEach(function(pr){var b=el('button','chip',pr[1]);b.type='button';b.setAttribute('aria-pressed',obj[key]===pr[0]?'true':'false');
     b.onclick=function(){obj[key]=clear&&obj[key]===pr[0]?'':pr[0];redraw()};box.append(b)})}
   function memLine(m){var k=KINDS.filter(function(x){return x[0]===m.kind})[0][1];return [k].concat(m.when?['here '+m.when]:[],m.allergies.map(function(a){return 'no '+a.toLowerCase()}),m.rules,m.diet,m.avoid.map(function(a){return 'no '+a.toLowerCase()}),(m.house||[]).map(function(a){return a.toLowerCase()})).join(', ')}
@@ -1671,7 +1685,7 @@ body{overflow-x:clip}
         else{if(draft.personas.length>=3){$('profPick').textContent='Three picked. Tap one to swap it.';$('profPick').style.color='var(--accent)';return}
           draft.personas.push(k);if(P[2]&&!draft.counted){draft.adults=P[2];draft.kids=P[3]}P[4].forEach(function(d){if(draft.diet.indexOf(d)<0)draft.diet.push(d)})}
         drawProfile()};pp.append(b)})});
-    $('profPick').textContent=draft.personas.length?draft.personas.length+' of 3 picked':'Pick up to three';$('profPick').style.color='';
+    $('profPick').textContent=draft.personas.length?draft.personas.length+' of 3 picked':'Suggestions. Pick any, or none';$('profPick').style.color='';
     var pe=$('profPeople');pe.textContent='';[['adults','Adults',1],['kids','Children',0]].forEach(function(f){var l=el('label','',f[1]),q=el('span','qty'),m=el('button','','\u2212'),pl=el('button','','+');
       m.type=pl.type='button';m.setAttribute('aria-label','Fewer '+f[1].toLowerCase());pl.setAttribute('aria-label','More '+f[1].toLowerCase());
       m.onclick=function(){draft.counted=true;draft[f[0]]=Math.max(f[2],draft[f[0]]-1);drawProfile()};pl.onclick=function(){draft.counted=true;draft[f[0]]=Math.min(10,draft[f[0]]+1);drawProfile()};
@@ -1680,10 +1694,10 @@ body{overflow-x:clip}
       g.append(el('b','',m.name),el('span','',memLine(m)));b.append(g,el('span','','Edit'));b.onclick=function(){openMember(i)};pm.append(b)});
     if(draft.members.length<8){var ap=el('button','chip add','+ Add a person');ap.type='button';ap.style.alignSelf='flex-start';ap.onclick=function(){openMember(-1)};pm.append(ap)}
     chipBox($('profPets'),['Dog','Cat'],draft,'pets',{add:'Add a pet',ph:'Rabbit, fish, bird'});
-    chipBox($('profAll'),ALLERGENS,draft,'allergies',{show:9,add:'Add an allergy',ph:'Kiwi, strawberries'});
+    chipBox($('profAll'),allergyChoices(),draft,'allergies',{show:9,add:'Add an allergy',ph:'Avocado, kiwi',rich:true});
     chipBox($('profRules'),RULES,draft,'rules',{add:'Add a rule',ph:'Low cholesterol'});
     chipBox($('profHouse'),HOUSE,draft,'house',{show:5,fixed:true});
-    chipBox($('profDiet'),DIETS,draft,'diet',{show:9,add:'Add your own',ph:'Whole30, no red meat'});
+    chipBox($('profDiet'),dietChoices(),draft,'diet',{show:9,add:'Add your own',ph:'Whole30, no red meat',rich:true});
     chipBox($('profAvoid'),AVOID,draft,'avoid',{add:'Add your own',ph:'Bell peppers'});
     oneOf($('profGoal'),GOALS,draft,'goal',true);
     chipBox($('profCui'),CUISINES,draft,'cuisines',{add:'Add your own',ph:'Ethiopian, Filipino'});
@@ -1696,10 +1710,10 @@ body{overflow-x:clip}
   }
   function drawMember(){
     oneOf($('memKind'),KINDS,mem,'kind');
-    chipBox($('memAll'),ALLERGENS,mem,'allergies',{show:9,add:'Add an allergy',ph:'Kiwi, strawberries'});
+    chipBox($('memAll'),allergyChoices(),mem,'allergies',{show:9,add:'Add an allergy',ph:'Avocado, kiwi',rich:true});
     chipBox($('memRules'),RULES,mem,'rules',{add:'Add a rule',ph:'Low cholesterol'});
     chipBox($('memHouse'),HOUSE,mem,'house',{show:5,fixed:true});
-    chipBox($('memDiet'),DIETS,mem,'diet',{show:9,add:'Add your own',ph:'No red meat'});
+    chipBox($('memDiet'),dietChoices(),mem,'diet',{show:9,add:'Add your own',ph:'No red meat',rich:true});
     chipBox($('memAvoid'),AVOID,mem,'avoid',{add:'Add your own',ph:'Bell peppers'});
   }
   function openMember(i){memAt=i;var m=i>-1?draft.members[i]:null;ui.adding='';
@@ -1715,7 +1729,7 @@ body{overflow-x:clip}
       {personas:[],adults:2,kids:0,members:[],pets:[],diet:[],allergies:[],rules:[],avoid:[],house:[],cuisines:[],goal:'',eatOut:0,cook:'any',shopDay:'',stores:[]}}
   function openProfile(sec,key){sortBack='';document.querySelectorAll('dialog[open]').forEach(function(d){d.close()});var p=profile;ui={more:{},adding:''};draft=newDraft(p);sec=typeof sec==='string'?sec:'';
     $('profBuddy').value=p&&p.buddy||'';$('profBudget').value=p&&p.budget?p.budget:'';$('profAbout').value=p&&p.about||'';
-    $('profMore').open=!!(p&&(p.avoid&&p.avoid.length||p.goal||p.eatOut||p.buddy||p.cuisines&&p.cuisines.length||p.cook!=='any'||p.shopDay||p.stores&&p.stores.length||p.budget||p.about));
+    $('profMore').open=!!(p&&(p.avoid&&p.avoid.length||p.goal||p.eatOut||p.buddy||p.cuisines&&p.cuisines.length||p.cook!=='any'||p.shopDay||p.stores&&p.stores.length||p.budget));
     if(/^sec(Shop|Cook|Helper)$/.test(sec))$('profMore').open=true;
     drawProfile();$('profDlg').showModal();$('profH').tabIndex=-1;$('profH').focus();$('profDlg').scrollTop=0;
     /* opened from the list: straight to that section, and back to the list afterwards */
@@ -1729,17 +1743,17 @@ body{overflow-x:clip}
   function listOf(a){return a.length<2?a.join(''):a.slice(0,-1).join(', ')+' and '+a[a.length-1]}
   /* nothing picked: the plainest kind of home that fits who lives there */
   function autoType(d){return d.kids?(d.adults+d.kids>=5?'big':'family4'):d.adults===1?'solo':d.adults===2?'couple':'other'}
-  function fitTypes(d){var a=d.adults,k=d.kids,h=k?(a===1?['momsolo','dad','newparents']:a+k>=5?['big','mom','dadbusy']:k===2?['family4','mom','dadbusy']:['newparents','mom','dadbusy']):a===1?['solo','student','pro']:a===2?['couple','empty','carer']:['roommates','big','carer'];
-    return h.concat(k?['pro','host','petparent']:a===1?['gym','host','petparent']:['pro','host','petparent']).concat(d.personas).filter(function(x,i,l){return l.indexOf(x)===i})}
   function helloLine(){var d=draft,a=d.adults,k=d.kids;
     if(helloAt===0)return k?capFirst(cnt(a,'adult','adults'))+' and '+cnt(k,'child','children')+'. '+(a+k>=6?'A full house. I will keep a close eye on the staples.':'I will plan for a busy table.'):a===1?'Just you. I will keep the portions small.':a===2?'Two of you. Easy to plan for.':capFirst(cnt(a,'adult','adults'))+'. I will expect things to go quickly.';
     if(helloAt===1){var al=d.allergies.map(function(x){return x.toLowerCase()});
-      if(al.length)return 'No '+listOf(al)+'. I will keep '+(al.length>1?'them':'it')+' out of dinner ideas and flag what looks risky. I can miss things, so always check the label.';
+      if(al.length)return 'No '+listOf(al).replace(/ and ([^,]+)$/,' or $1')+'. I will keep '+(al.length>1?'them':'it')+' out of dinner ideas. I can miss things, so check the label.';
       return d.diet.length?listOf(d.diet)+'. I will suggest dinners that fit.':'Tap anything that applies. If nothing does, carry on.'}
-    if(helloAt===2)return helloFull?'Three picked. Tap one to swap it.':d.personas.length?listOf(d.personas.map(function(x){return PERSONA[x][0]}))+'. I will shape your starter list around that.':'Pick up to three, or skip it and I will go by who is at home.';
-    return 'I will keep watch from here. Snap a receipt or tell me what you bought, and I will do the rest.'}
+    if(helloAt===2)return pushOn?'Reminders are on for this phone. One a day at most, the day before something runs out.':pushCan?'One a day at most, the day before something runs out. You can turn them off any time.':pushWhy();
+    /* what Tote learnt about an allergy the home typed in, said once */
+    var hid=(profile&&profile.hidden)||{},also=[];Object.keys(hid).forEach(function(k){if(hid[k].length)also.push(hid[k].slice(0,2).join(' and ')+' (they usually have '+k+' in them)')});
+    return (also.length?'I will also watch for '+listOf(also)+'. ':'')+'Snap a receipt or tell me what you bought, and I will do the rest.'}
   function drawHello(dir){var s=helloAt,box=$('helloIn');box.textContent='';
-    $('helloH').textContent=['Who is at home?','Anything off the table?','Which sounds like you?','You are all set'+(me?', '+me:'')+'.'][s];
+    $('helloH').textContent=['Who is at home?','Anything off the table?','A nudge before things run out?','You are all set'+(me?', '+me:'')+'.'][s];
     $('helloStep').textContent=s<3?(s+1)+' of 3':'';$('helloDots').style.visibility=s<3?'':'hidden';
     [].forEach.call($('helloDots').children,function(i,n){i.classList.toggle('on',n<=s)});
     if(s===0){var pe=el('div','people');[['adults','Adults',1],['kids','Children',0]].forEach(function(f){var l=el('label','',f[1]),q=el('span','qty'),m=el('button','','\u2212'),pl=el('button','','+');
@@ -1748,30 +1762,25 @@ body{overflow-x:clip}
       q.append(m,el('span','',String(draft[f[0]])),pl);l.append(q);pe.append(l)});box.append(pe)}
     if(s===1){var a=el('div','wrapchips'),di=el('div','wrapchips');a.id='helloAll';di.id='helloDiet';a.setAttribute('role','group');a.setAttribute('aria-label','Allergies');di.setAttribute('role','group');di.setAttribute('aria-label','How you eat');
       box.append(el('h3','','Allergies at home'),a,el('h3','','How you eat'),di);
-      chipBox(a,ALLERGENS,draft,'allergies',{show:9,add:'Add an allergy',ph:'Avocado, kiwi'});chipBox(di,DIETS,draft,'diet',{show:5,fixed:true})}
-    if(s===2){var tl=el('div','tiles');tl.setAttribute('role','group');tl.setAttribute('aria-label','Kinds of home');
-      (helloEvery?Object.keys(PERSONA):fitTypes(draft).slice(0,Math.max(6,draft.personas.length))).forEach(function(k){var P=PERSONA[k],b=el('button','tile'),on=draft.personas.indexOf(k)>-1;b.type='button';b.setAttribute('aria-pressed',on?'true':'false');b.append(el('b','',P[0]),el('span','',P[1]));
-        b.onclick=function(){helloFull=false;
-          if(on){draft.personas=draft.personas.filter(function(x){return x!==k});P[4].forEach(function(d){if(!draft.personas.some(function(x){return PERSONA[x][4].indexOf(d)>-1}))draft.diet=draft.diet.filter(function(y){return y!==d})})}
-          else if(draft.personas.length>=3)helloFull=true;
-          else{draft.personas.push(k);P[4].forEach(function(d){if(draft.diet.indexOf(d)<0)draft.diet.push(d)})}
-          drawHello()};tl.append(b)});box.append(tl);
-      if(!helloEvery){var ev=el('button','chip add','See every kind of home');ev.type='button';ev.id='helloAllTypes';ev.style.alignSelf='flex-start';ev.onclick=function(){helloEvery=true;drawHello()};box.append(ev)}}
+      chipBox(a,allergyChoices(),draft,'allergies',{show:6,add:'Add an allergy',ph:'Avocado, kiwi',rich:true});chipBox(di,dietChoices(),draft,'diet',{show:4,add:'Your own',ph:'Sattvic, no red meat',rich:true})}
     $('helloSay').textContent=helloLine();
-    $('helloBack').hidden=s<1||s>2;$('helloSkip').hidden=s>2;$('helloSort').hidden=s<3;$('helloNext').textContent=s<2?'Next':s===2?'Done':'Start using Stocker';
+    $('helloBack').hidden=s<1||s>2;$('helloSkip').hidden=s>2;$('helloSkip').textContent=s===2?'Maybe later':'Not now';$('helloSort').hidden=s<3;$('helloNext').textContent=s===2&&pushCan&&!pushOn?'Turn on reminders':s<3?'Next':'Start using Stocker';
     if(dir){var body=$('helloBody');body.classList.remove('step-f','step-b');void body.offsetWidth;body.classList.add(dir==='b'?'step-b':'step-f');$('helloDlg').scrollTop=0;$('helloH').focus()}}
-  function openHello(){document.querySelectorAll('dialog[open]').forEach(function(d){d.close()});ui={more:{},adding:''};draft=newDraft(null);draft.counted=true;helloAt=0;helloEvery=false;helloFull=false;drawHello();$('helloDlg').showModal();$('helloH').focus()}
+  function openHello(){document.querySelectorAll('dialog[open]').forEach(function(d){d.close()});ui={more:{},adding:''};draft=newDraft(null);draft.counted=true;helloAt=0;drawHello();$('helloDlg').showModal();$('helloH').focus()}
   $('helloDlg').addEventListener('close',function(){helloAt=-1});
   $('helloBack').onclick=function(){if(helloAt>0&&helloAt<3){helloAt--;drawHello('b')}};
-  $('helloSkip').onclick=function(){try{localStorage.setItem('stocker.profSkip','1')}catch(e){}$('helloDlg').close()};
+  $('helloSkip').onclick=function(){if(helloAt===2){helloAt=3;drawHello('f');return}try{localStorage.setItem('stocker.profSkip','1')}catch(e){}$('helloDlg').close()};
   $('helloSort').onclick=function(){openSort()};
   $('helloNext').onclick=async function(){var b=$('helloNext');
-    if(helloAt<2){helloAt++;drawHello('f');return}
+    if(helloAt===0){helloAt=1;drawHello('f');return}
     if(helloAt>2){$('helloDlg').close();return}
-    var body=JSON.parse(JSON.stringify(draft)),picked=draft.personas.length>0;if(!picked)body.personas=[autoType(draft)];body.budget=0;body.about='';body.buddy='';
     b.disabled=true;
+    if(helloAt===2){try{if(pushCan&&!pushOn)await pushEnable()}catch(e){if(e.code!=='locked')toast(why(e,'Could not turn on reminders.'))}finally{b.disabled=false}
+      if(pushOn)sortMark(['remind']);helloAt=3;drawHello('f');return}
+    /* saved after "anything off the table", so the home is set even if the person stops at reminders */
+    var body=JSON.parse(JSON.stringify(draft));body.personas=[autoType(draft)];body.budget=0;body.about='';body.buddy='';
     try{var r=await api('/api/profile',{method:'POST',body:JSON.stringify(body)});profile=r.profile;try{localStorage.removeItem('stocker.starterHide')}catch(e2){}
-      sortMark(['allergies','diet'].concat(picked?['type']:[]));helloAt=3;drawHello('f');render();say('Nice to meet you'+(me?', '+me:'')+'. I will keep an eye on things from here.','party')}
+      sortMark(['allergies','diet']);helloAt=2;drawHello('f');render();say('Nice to meet you'+(me?', '+me:'')+'. I will keep an eye on things from here.','party')}
     catch(e){if(e.code!=='locked')$('helloSay').textContent=why(e,'I could not save that. Try again.')}
     finally{b.disabled=false}};
 
@@ -1783,7 +1792,7 @@ body{overflow-x:clip}
     ['rules','Set your health rules','Celiac, low salt, diabetic and more','secRules',function(p){return p.rules&&p.rules.length}],
     ['house','Set your House rules','What your home chooses to keep to','secHouse',function(p){return p.house&&p.house.length}],
     ['diet','Set how you eat','Vegetarian, halal, high protein and more','secDiet',function(p){return p.diet&&p.diet.length}],
-    ['type','Set your kind of home','Picks your starter list and your kits','secType',null],
+    ['type','Describe your home','Suggestions to pick from, or your own words','secType',function(p){return p.about}],
     ['shop','Set your shopping','Your day, your stores, your budget','secShop',function(p){return p.shopDay||p.stores&&p.stores.length||p.budget}],
     ['cook','Set your cooking','Food you like, weeknight time, things nobody eats','secCook',function(p){return p.avoid&&p.avoid.length||p.cuisines&&p.cuisines.length||p.goal||p.eatOut||p.cook&&p.cook!=='any'}],
     ['helper','Name your helper','Tote answers to any name you like','secHelper',function(p){return p.buddy}],

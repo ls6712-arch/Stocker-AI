@@ -62,7 +62,7 @@ fs.mkdirSync(SHOTS, { recursive: true });
   await p.fill('#memName', 'Leo');
   if (await p.locator('#memKind select').count()) await p.selectOption('#memKind select', { label: 'Child' }).catch(() => {});
   else await p.locator('#memKind button', { hasText: /^Child$/ }).click().catch(() => {});
-  await p.locator('#memAll button', { hasText: /^Peanuts$/ }).click(); await wait(100);
+  await p.locator('#memAll button[data-v="Peanuts"]').click(); await wait(100);
   await shot('02-leo-peanuts');
   await p.click('#memSave'); await wait(300);
   await p.click('#profSave'); await wait(900);
