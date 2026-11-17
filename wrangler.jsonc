@@ -25,7 +25,12 @@
     "SMALL_MODEL": "@cf/meta/llama-3.1-8b-instruct-fp8-fast",
     "DELEGATE": "on",
     "SPEECH_MODEL": "@cf/openai/whisper-large-v3-turbo",
-    "IMAGE_MODEL": "@cf/black-forest-labs/flux-1-schnell"
+    "IMAGE_MODEL": "@cf/black-forest-labs/flux-1-schnell",
+    // real sign-in: every home there is (signed up or by code), a home's daily share of model-using messages,
+    // and the day's ceiling for all homes together. GOOGLE_CLIENT_ID, CONTACT and MAIL_FROM are set in the dashboard.
+    "HOMES_MAX": "100",
+    "AI_HOME_DAY": "60",
+    "AI_ALL_DAY": "2000"
   },
   "triggers": { "crons": ["* * * * *"] },
   "version_metadata": { "binding": "CF_VERSION" },

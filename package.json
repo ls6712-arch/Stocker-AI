@@ -22,7 +22,7 @@
     "test:homes": "node --no-warnings evals/homes.mjs",
     "test:signup": "node --no-warnings evals/signup.mjs",
     "test:homes:browser": "node evals/homes-audit.cjs",
-    "test:signup:browser": "node evals/signup-audit.cjs",
+    "test:signup:browser": "E2E_SIGNUP=1 E2E_HOMES_MAX=2 node --no-warnings evals/e2e/server.mjs 8812 & sleep 2; node evals/signup-audit.cjs; s=$?; kill %1; exit $s",
     "glossary": "node scripts/glossary.mjs",
     "test:world": "node --no-warnings evals/world.mjs --set=heldout2",
     "test:compete": "node --no-warnings evals/compete.mjs",
