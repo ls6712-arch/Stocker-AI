@@ -1748,7 +1748,7 @@ body{overflow-x:clip}
       q.append(m,el('span','',String(draft[f[0]])),pl);l.append(q);pe.append(l)});box.append(pe)}
     if(s===1){var a=el('div','wrapchips'),di=el('div','wrapchips');a.id='helloAll';di.id='helloDiet';a.setAttribute('role','group');a.setAttribute('aria-label','Allergies');di.setAttribute('role','group');di.setAttribute('aria-label','How you eat');
       box.append(el('h3','','Allergies at home'),a,el('h3','','How you eat'),di);
-      chipBox(a,ALLERGENS,draft,'allergies',{show:9,fixed:true});chipBox(di,DIETS,draft,'diet',{show:5,fixed:true})}
+      chipBox(a,ALLERGENS,draft,'allergies',{show:9,add:'Add an allergy',ph:'Avocado, kiwi'});chipBox(di,DIETS,draft,'diet',{show:5,fixed:true})}
     if(s===2){var tl=el('div','tiles');tl.setAttribute('role','group');tl.setAttribute('aria-label','Kinds of home');
       (helloEvery?Object.keys(PERSONA):fitTypes(draft).slice(0,Math.max(6,draft.personas.length))).forEach(function(k){var P=PERSONA[k],b=el('button','tile'),on=draft.personas.indexOf(k)>-1;b.type='button';b.setAttribute('aria-pressed',on?'true':'false');b.append(el('b','',P[0]),el('span','',P[1]));
         b.onclick=function(){helloFull=false;
