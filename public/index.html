@@ -296,8 +296,7 @@ button,a.btn,label.btn,label.tile{transition:transform .3s var(--ease-out),opaci
 button:active:not(:disabled),a.btn:active,label.btn:active,label.tile:active{transition-duration:.1s}
 @media (prefers-reduced-motion:no-preference){
   button:active:not(:disabled),a.btn:active,label.btn:active,label.tile:active{transform:scale(.97)}
-  .iconbtn:active:not(:disabled),.avatar:active:not(:disabled),.check:active:not(:disabled),.qty button:active:not(:disabled),.round:active:not(:disabled),.micb:active:not(:disabled){transform:scale(.92)}
-  .tab:active svg.i{transform:scale(.88);transition-duration:.1s}
+    .tab:active svg.i{transform:scale(.88);transition-duration:.1s}
 }
 /* whole rows and text links dim instead of shrinking */
 .ihead:active:not(:disabled),.rowbtn:active:not(:disabled),.menu>button:active:not(:disabled),.latest:active:not(:disabled),.link:active:not(:disabled),.danger:active:not(:disabled),.msg .fb:active:not(:disabled),.toast button:active:not(:disabled){transform:none;opacity:.5}
@@ -323,19 +322,38 @@ button:active:not(:disabled),a.btn:active,label.btn:active,label.tile:active{tra
 /* the waiting card arrives as a surface, and leaves the way it came */
 .busy{transition:opacity .25s ease,display .25s allow-discrete}
 .busy .box{transition:transform .4s var(--spring)}
-.busy[hidden]{opacity:0}.busy[hidden] .box{transform:scale(.96)}
-@starting-style{.busy{opacity:0}.busy .box{transform:scale(.96)}}
+.busy[hidden]{opacity:0}.busy[hidden] .box{transform:scale(.97)}
+@starting-style{.busy{opacity:0}.busy .box{transform:scale(.97)}}
 @media (prefers-reduced-motion:no-preference){
   /* a new message grows from the side that sent it; an opened item unfolds from its row */
   .chat>.msg:last-child{animation:msgin .34s var(--spring) both}
   .msg.me{transform-origin:100% 100%}.msg.bot{transform-origin:0 100%}
-  @keyframes msgin{from{opacity:0;transform:translateY(8px) scale(.96)}}
-  .ipanel.in{animation:panelin .3s var(--spring) both}
-  @keyframes panelin{from{opacity:0;transform:translateY(-6px)}}
+  @keyframes msgin{from{opacity:0;transform:translateY(8px) scale(.97)}}
+  .ipanel.in{overflow-y:clip;transition:height .35s var(--spring),padding .35s var(--spring),opacity .25s ease}
+  @starting-style{.ipanel.in{height:0;padding-top:0;padding-bottom:0;opacity:0}}
   .ihead.in>svg{animation:turn .3s var(--spring) both}
   @keyframes turn{from{transform:rotate(0)}}
   .ihead.out>svg{animation:unturn .3s var(--spring) both}
   @keyframes unturn{from{transform:rotate(180deg)}}
+}
+/* ---- motion details (docs/AGENT.md, "Motion details") ---- */
+/* height can move to and from its natural size, so a fold opens smoothly instead of snapping */
+:root{interpolate-size:allow-keywords}
+details.fold::details-content{block-size:0;overflow-y:clip}
+details.fold[open]::details-content{block-size:auto}
+/* a wrong code is red, and said to screen readers; the shake is below, only where motion is welcome */
+input[aria-invalid="true"]{border-color:var(--bad);box-shadow:0 0 0 1px var(--bad)}
+/* while the phone switches between light and dark, nothing transitions, or every colour would move at once */
+.swap,.swap *,.swap *::before,.swap *::after{transition:none!important}
+/* the page never scrolls sideways, even while a strip is stretched past its end */
+body{overflow-x:clip}
+@media (prefers-reduced-motion:no-preference){
+  details.fold::details-content{transition:block-size .35s var(--spring),content-visibility .35s allow-discrete}
+  .shake{animation:shake .4s cubic-bezier(.36,.07,.19,.97) both}
+  @keyframes shake{10%,90%{transform:translateX(-2px)}20%,80%{transform:translateX(4px)}30%,50%,70%{transform:translateX(-7px)}40%,60%{transform:translateX(7px)}}
+  /* a step slides in from the side it comes from: forward from the right, back from the left. No fade */
+  .step-f{animation:stepf .4s var(--spring) both}.step-b{animation:stepb .4s var(--spring) both}
+  @keyframes stepf{from{transform:translateX(40px)}}@keyframes stepb{from{transform:translateX(-40px)}}
 }
 /* less motion: nothing slides or shrinks; things fade */
 @media (prefers-reduced-motion:reduce){
@@ -978,21 +996,27 @@ button:active:not(:disabled),a.btn:active,label.btn:active,label.tile:active{tra
     catch(e){$('gBtn').textContent='Could not show the Google button. Reload and try again.'}}
   async function signIn(path,body){
     try{var d=await api(path,{method:'POST',body:JSON.stringify(body)});if(d.fresh){try{localStorage.removeItem('stocker.profSkip')}catch(e){}}gateSaid='';mailReset();await start();return true}
-    catch(e){gateSay(SIGNMSG[e.code]||'Could not reach Stocker. Check your connection.');return false}}
+    catch(e){gateSay(SIGNMSG[e.code]||'Could not reach Stocker. Check your connection.');if(e.code==='wrong_code'&&!$('mailCodeRow').hidden)wrongIn($('mailCode'));return false}}
+  /* a wrong code: red, and a shake (CSS leaves the shake out under reduce motion). A second wrong try shakes again */
+  function wrongIn(inp){inp.setAttribute('aria-invalid','true');inp.classList.remove('shake');void inp.offsetWidth;inp.classList.add('shake')}
+  ['pin','mailCode'].forEach(function(id){var i=$(id);i.addEventListener('input',function(){i.removeAttribute('aria-invalid')});i.addEventListener('animationend',function(){i.classList.remove('shake')})});
+  /* the next step slides in from the right, the step back from the left */
+  function stepIn(e,back){e.classList.remove('step-f','step-b');void e.offsetWidth;e.classList.add(back?'step-b':'step-f')}
+  ['signin','gateForm','mailCodeRow'].forEach(function(id){$(id).addEventListener('animationend',function(ev){if(ev.target===$(id))$(id).classList.remove('step-f','step-b')})});
   function mailReset(){$('mailCodeRow').hidden=true;$('mailCode').value='';$('mailCode').required=false;$('mailGo').textContent='Email me a code'}
   $('mailForm').addEventListener('submit',async function(ev){ev.preventDefault();var b=$('mailGo'),to=$('mailTo').value.trim();b.disabled=true;
     if($('mailCodeRow').hidden){
-      try{await api('/api/signin/email',{method:'POST',body:JSON.stringify({email:to})});$('mailCodeRow').hidden=false;$('mailCode').required=true;b.textContent='Open';gateSay('I sent a 6-digit code to '+to+'. It works for 10 minutes.');$('mailCode').focus()}
+      try{await api('/api/signin/email',{method:'POST',body:JSON.stringify({email:to})});$('mailCodeRow').hidden=false;stepIn($('mailCodeRow'));$('mailCode').required=true;b.textContent='Open';gateSay('I sent a 6-digit code to '+to+'. It works for 10 minutes.');$('mailCode').focus()}
       catch(e){gateSay(SIGNMSG[e.code]||'Could not reach Stocker. Check your connection.')}}
     else if(!(await signIn('/api/signin/email/check',{email:to,code:$('mailCode').value}))&&/taken|turned off/.test(gateSaid))mailReset();
     b.disabled=false});
   $('mailTo').addEventListener('input',function(){if(!$('mailCodeRow').hidden){mailReset();gateSay('')}});
-  $('haveCode').onclick=function(){gateSaid='';gateMode(true);$('who').focus()};
-  $('backSign').onclick=function(){gateSaid='';gateMode(false)};
+  $('haveCode').onclick=function(){gateSaid='';gateMode(true);stepIn($('gateForm'));$('who').focus()};
+  $('backSign').onclick=function(){gateSaid='';gateMode(false);stepIn($('signin'),true)};
   function showGate(msg){document.querySelectorAll('dialog[open]').forEach(function(d){d.close()});$('app').hidden=true;$('tabbar').hidden=true;$('gate').hidden=false;gateSaid=msg||'';if(signOpts)gateMode(false);else{$('signin').hidden=true;$('gateForm').hidden=true;$('gateMsg').textContent=gateSaid}loadSignin()}
   $('gateForm').addEventListener('submit',async function(ev){ev.preventDefault();
     try{await api('/api/login',{method:'POST',body:JSON.stringify({pin:$('pin').value,name:$('who').value})});try{localStorage.setItem('stocker.who',$('who').value.trim())}catch(e2){}$('pin').value='';gateSaid='';start()}
-    catch(e){gateSaid=$('gateMsg').textContent=e.code==='wrong_pin'?"That code isn't right. Check it and try again.":e.code==='too_many'?'Too many tries. Wait ten minutes, then try again.':e.code==='setup'?'There is no passcode yet. Set one in the Worker settings as a secret named APP_PIN.':'Could not reach Stocker. Check your connection.'}});
+    catch(e){if(e.code==='wrong_pin')wrongIn($('pin'));gateSaid=$('gateMsg').textContent=e.code==='wrong_pin'?"That code isn't right. Check it and try again.":e.code==='too_many'?'Too many tries. Wait ten minutes, then try again.':e.code==='setup'?'There is no passcode yet. Set one in the Worker settings as a secret named APP_PIN.':'Could not reach Stocker. Check your connection.'}});
   $('lockBtn').onclick=async function(){var acct=signup;try{await api('/api/logout',{method:'POST'})}catch(e){}showGate(acct?'Signed out.':'Locked. Enter your code to open Stocker.')};
   $('menuOutAll').onclick=async function(){try{await api('/api/signout/all',{method:'POST'});showGate('Signed out on every phone.')}catch(e){if(e.code!=='locked')toast(why(e,'Could not sign out.'))}};
   $('menuPrivacy').onclick=function(){location.href='/privacy.html'};
@@ -1535,6 +1559,38 @@ button:active:not(:disabled),a.btn:active,label.btn:active,label.tile:active{tra
         if(away)spring(h+12,1,.3,shut);else spring(0,Math.abs(v)>300?.8:1,.3,rest)}
       g.addEventListener('pointerup',drop);g.addEventListener('pointercancel',drop);
       d.addEventListener('close',function(){if(hold||raf||d.classList.contains('held')){cancelAnimationFrame(raf);raf=0;hold=null;requestAnimationFrame(function(){if(!d.open)rest()})}})})})();
+  /* switching between light and dark: transitions are off for that frame, so colours change at once instead of all moving together */
+  (function(){var q=window.matchMedia('(prefers-color-scheme: dark)'),r=document.documentElement;
+    function swap(){r.classList.add('swap');requestAnimationFrame(function(){requestAnimationFrame(function(){r.classList.remove('swap')})})}
+    if(q.addEventListener)q.addEventListener('change',swap);else if(q.addListener)q.addListener(swap)})();
+  /* ---- strips that scroll sideways stretch past their ends ----
+     Dragged past the first or last chip, the strip follows the finger with resistance (the same rubber band as a sheet), and on
+     release springs back from the finger's speed. Where the phone already bounces the strip itself (iOS), it is left to the phone. */
+  (function(){var calm=window.matchMedia('(prefers-reduced-motion: reduce)');
+    function band(over,dim){return over*dim*.55/(dim+.55*Math.abs(over))}
+    document.querySelectorAll('.rooms,.chips').forEach(function(s){var x=0,v=0,raf=0,t=null,hist=[];
+      function put(){s.style.transform=Math.abs(x)>.01?'translateX('+x.toFixed(1)+'px)':''}
+      function home(){cancelAnimationFrame(raf);raf=0;x=0;v=0;put()}
+      function spring(damp){var k=Math.pow(2*Math.PI/.4,2),c=4*Math.PI*damp/.4,last=0;cancelAnimationFrame(raf);
+        raf=requestAnimationFrame(function tick(now){var dt=last?Math.min(.034,(now-last)/1000):.016;last=now;
+          for(var n=0;n<4;n++){v+=(-k*x-c*v)*dt/4;x+=v*dt/4}
+          if(Math.abs(x)<.5&&Math.abs(v)<20){home();return}put();raf=requestAnimationFrame(tick)})}
+      s.addEventListener('touchstart',function(e){if(e.touches.length!==1){t=null;return}var p=e.touches[0];cancelAnimationFrame(raf);raf=0;v=0;
+        var w=s.clientWidth||1;t={x0:p.clientX,y0:p.clientY,sl:s.scrollLeft,axis:null,r0:x?x*w/(.55*(w-Math.abs(x))):0};hist=[{t:e.timeStamp,x:x}]},{passive:true});
+      s.addEventListener('touchmove',function(e){if(!t)return;var p=e.touches[0],dx=p.clientX-t.x0,dy=p.clientY-t.y0;
+        if(!t.axis){if(!t.r0&&Math.abs(dx)+Math.abs(dy)<8)return;t.axis=t.r0||Math.abs(dx)>Math.abs(dy)?'x':'y'}
+        if(t.axis!=='x')return;var max=s.scrollWidth-s.clientWidth,sl=s.scrollLeft,w=s.clientWidth||1,raw=0;
+        if(sl<-.5||sl>max+.5){t=null;home();return}
+        /* how far the finger has gone past what the scroll could take: past the start is positive, past the end negative.
+           Caught while it was springing back, it carries on from where it was */
+        if(t.r0){raw=t.r0+dx;if(raw*t.r0<0)raw=0}
+        else if(sl<=.5&&dx>t.sl)raw=dx-t.sl;else if(sl>=max-.5&&dx<-(max-t.sl))raw=dx+(max-t.sl);
+        x=raw>0?band(raw,w):raw<0?-band(-raw,w):0;put();
+        hist.push({t:e.timeStamp,x:x});while(hist.length>2&&e.timeStamp-hist[0].t>90)hist.shift()},{passive:true});
+      function end(e){if(!t)return;t=null;if(!x)return;var a=hist[0],b=hist[hist.length-1];
+        v=b.t>a.t&&e.timeStamp-b.t<90?(b.x-a.x)/((b.t-a.t)/1000):0;
+        if(calm.matches){home();return}spring(Math.abs(v)>300?.8:1)}
+      s.addEventListener('touchend',end);s.addEventListener('touchcancel',end)})})();
   /* iOS only shows the pressed state of a control when something listens for touches */
   document.addEventListener('touchstart',function(){},{passive:true});
 

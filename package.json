@@ -33,7 +33,8 @@
     "test:less:sim": "node evals/less-sim/run.mjs",
     "test:rules": "node --no-warnings evals/rules.mjs",
     "test:rules:fresh": "node --no-warnings evals/rules.mjs --heldout",
-    "test:rules:browser": "node evals/rules-audit.cjs"
+    "test:rules:browser": "node evals/rules-audit.cjs",
+    "test:motion": "E2E_SIGNUP=1 node --no-warnings evals/e2e/server.mjs 8813 & sleep 2; node evals/motion-audit.cjs; s=$?; kill %1; exit $s"
   },
   "devDependencies": {
     "wrangler": "^4.162.0"
