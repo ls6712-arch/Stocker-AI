@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Privacy notice · Stocker AI</title>
+<meta name="theme-color" content="#0E6B5C">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Instrument+Sans:wght@400;500;600&display=swap">
+<style>
+:root{--bg:#EEF3F0;--surface:#FFFFFF;--fg:#11211D;--muted:#56685F;--line:#DCE5E0;--accent:#0E6B5C;
+  --display:"Bricolage Grotesque","Arial Narrow",system-ui,sans-serif;--body:"Instrument Sans",system-ui,-apple-system,"Segoe UI",sans-serif}
+@media (prefers-color-scheme:dark){:root{--bg:#0C1412;--surface:#16211E;--fg:#E7F0EC;--muted:#9DB0A8;--line:#2A3833;--accent:#5FD0B8;color-scheme:dark}}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--body);font-size:100%;line-height:1.55}
+main{max-width:640px;margin:0 auto;padding:max(20px,env(safe-area-inset-top)) 16px 64px}
+a{color:var(--accent);text-underline-offset:3px}
+.back{display:inline-block;min-height:44px;line-height:44px;text-decoration:none;font-weight:600}
+h1,h2{font-family:var(--display);font-weight:800;text-wrap:balance;margin:0}
+h1{font-size:1.875rem;letter-spacing:-.026em;line-height:1.05;margin:8px 0 10px}
+h2{font-size:1.125rem;letter-spacing:-.016em;line-height:1.15;margin:0 0 8px}
+p{margin:0 0 10px}ul{margin:0;padding-left:20px}li{margin:6px 0}
+.lede{color:var(--muted);font-size:1.0625rem;margin-bottom:20px}
+section{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:16px 18px;margin:12px 0}
+.small{color:var(--muted);font-size:.875rem;margin-top:20px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+</style>
+</head>
+<body>
+<main>
+<a class="back" href="/">&larr; Back to Stocker</a>
+<h1>What Stocker keeps, and who can read it</h1>
+<p class="lede">Stocker is an early version, made and run by one person. This page says plainly what is kept about your home, where it goes, and how to delete all of it.</p>
+
+<section>
+<h2>What is kept</h2>
+<ul>
+<li><b>Your email address</b>, so you can sign in again. If you sign in with Google, Google tells Stocker your email address and first name, and nothing else. There are no passwords.</li>
+<li><b>Your home</b>: what you have, your shopping list, the lines and prices from receipts and orders you add, and when things were bought or used up.</li>
+<li><b>What you type or say to Tote</b>, and what Tote answered.</li>
+<li><b>The people you add</b>: names, allergies, diets and House rules. You choose what to add.</li>
+<li><b>Your phone&rsquo;s reminder address</b>, if you switch reminders on.</li>
+</ul>
+</section>
+
+<section>
+<h2>What is not kept</h2>
+<ul>
+<li>Photos and voice notes. They are read once to find the groceries in them, then dropped.</li>
+<li>Card numbers, passwords, phone numbers and where you live. If you type one by mistake, it is taken out before your message is saved or shown to a model.</li>
+<li>Where you are. Stocker uses the country your phone connects from to suggest stores, and does not keep it.</li>
+</ul>
+</section>
+
+<section>
+<h2>Who can read it</h2>
+<ul>
+<li><b>You.</b> Each home is kept apart from every other home. Nobody who signs up can see yours.</li>
+<li><b>The person who makes Stocker</b> can read what is typed to Tote, and what Tote did with it, to find and fix its mistakes. Private details are taken out first, as above.</li>
+<li>Nothing is sold, and there are no adverts.</li>
+</ul>
+</section>
+
+<section>
+<h2>Where it goes</h2>
+<ul>
+<li><b>Cloudflare</b> stores your home and runs the AI models that read receipts, photos, voice notes and harder messages. Those models get your message, the things at home it is about, and the people, allergies and diets you added, so the answer fits your home. They are not given your email address.</li>
+<li><b>Open Food Facts</b> gets the digits of a barcode you scan, to look the product up. It is not told who scanned it.</li>
+<li><b>Google</b>, only if you sign in with Google, and only to confirm it is you.</li>
+<li><b>A mail service</b>, only if you sign in with a code by email: it gets your address and the code.</li>
+<li><b>Your phone&rsquo;s own notification service</b> (Apple, Google or Mozilla) carries reminders, if you switch them on.</li>
+<li>The lettering on these pages is loaded from Google Fonts.</li>
+</ul>
+</section>
+
+<section>
+<h2>Allergies and children</h2>
+<p>If you add someone&rsquo;s allergy or diet, Stocker keeps it so Tote can point out a clash. That is information about a person&rsquo;s health, so add only what you are comfortable keeping here. Tote can miss things. Whatever it says about an allergy, check the label.</p>
+<p>Stocker is for adults. You can add your children to your home; they should not have a sign-in of their own.</p>
+</section>
+
+<section>
+<h2>Deleting everything</h2>
+<p>Open the household menu (your initial, top right) and choose <b>Delete my home</b>. Your things, your list, what you typed, your reminders and your sign-in are all deleted at once. It cannot be undone, and nothing of it is kept.</p>
+<p><b>Sign out everywhere</b>, in the same menu, locks every phone that is signed in to your home.</p>
+</section>
+
+<section id="contactBox" hidden>
+<h2>Questions</h2>
+<p>Write to <a id="contact"></a>.</p>
+</section>
+
+<p class="small">Last changed on 17 November 2026. If what is kept or who can read it changes, this page will say so before the change.</p>
+</main>
+<script>
+(async function(){try{var r=await fetch('/api/signin/options');var d=r.ok?await r.json():{};if(d.contact&&/^[^\s@<>"']+@[^\s@<>"']+$/.test(d.contact)){var a=document.getElementById('contact');a.textContent=d.contact;a.href='mailto:'+d.contact;document.getElementById('contactBox').hidden=false}}catch(e){}})();
+</script>
+</body>
+</html>

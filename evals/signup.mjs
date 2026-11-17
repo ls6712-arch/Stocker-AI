@@ -278,7 +278,7 @@ await section('AI share', async () => {
   check('past its daily share, a home\'s question no longer reaches the model', fourth.calls === 0, [fourth.calls, fourth.r.data]);
   check('  ...and Tote says so plainly, instead of failing or inventing', fourth.r.status === 200 && typeof fourth.r.data.reply === 'string' && fourth.r.data.reply.length > 0, [fourth.r.status, fourth.r.data]);
   const plain = await a.say('add milk');
-  check('  ...and plain messages still work with the share used up', plain.status === 200 && (await a.names()).includes('Milk'), [plain.data, await a.names()]);
+  check('  ...and plain messages still work with the share used up', plain.status === 200 && plain.data.via === 'code' && ((await a.state()).extras || []).some((x) => /milk/i.test(x.text)), [plain.data, (await a.state()).extras]);
   check('opposite: another home\'s share is untouched', (await used(b)).calls >= 1, null);
   check('opposite: the owner\'s home is not held to a signed-up home\'s share', (await used(owner)).calls >= 1 && (await used(owner)).calls >= 1 && (await used(owner)).calls >= 1 && (await used(owner)).calls >= 1, null);
 

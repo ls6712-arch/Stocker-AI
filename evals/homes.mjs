@@ -24,7 +24,7 @@ function d1(db) {
 const results = [];
 const check = (name, pass, detail) => results.push([!!pass, name, pass ? '' : JSON.stringify(detail ?? '').slice(0, 400)]);
 const DAY = new Date().toISOString().slice(0, 10);
-const TABLES = ['items', 'purchases', 'log', 'extras', 'pics', 'spend', 'settings', 'feedback', 'push_subs', 'reminders', 'turns', 'cases', 'eval_runs', 'eval_trials', 'facts', 'memo'];
+const TABLES = ['items', 'purchases', 'log', 'extras', 'pics', 'spend', 'settings', 'feedback', 'push_subs', 'reminders', 'turns', 'cases', 'eval_runs', 'eval_trials', 'facts', 'memo', 'prices', 'saves'];
 
 // the parts under test; on a version without separate homes they do not exist, and every check that needs them fails
 let A, built = true;
@@ -115,13 +115,15 @@ const invite = async (owner, name) => (await owner.call('POST', '/api/homes', { 
   // every query in the code, when run for a friend's home, names only that home's own tables
   if (built) {
     const src = fs.readFileSync(path.join(ROOT, 'src/index.js'), 'utf8').split('\n// GROCERY-START')[0];
-    const sqls = [...src.matchAll(/(["'`])((?:SELECT|INSERT|UPDATE|DELETE|CREATE|ALTER)\b[^"'`]*?)\1/g)].map((m) => m[2]).filter((s) => !/\bhomes\b/.test(s));
+    const sqls = [...src.matchAll(/(["'`])((?:SELECT|INSERT|UPDATE|DELETE|CREATE|ALTER)\b[^"'`]*?)\1/g)].map((m) => m[2]).filter((s) => !/\b(homes|accounts|waitlist|signin_codes)\b/.test(s)); // the owner's own tables are never run for a home: see the refusals below
     const bare = new RegExp('\\b(?:FROM|INTO|UPDATE|JOIN|TABLE(?:\\s+IF\\s+NOT\\s+EXISTS)?|ON)\\s+(?:' + TABLES.join('|') + ')\\b', 'i');
     const leaks = sqls.filter((s) => bare.test(A.scopeSql(s, 'abc123'))), pointed = sqls.filter((s) => /h_abc123_/.test(A.scopeSql(s, 'abc123'))).length;
     check('every query in the code is pointed at the friend\'s own tables (' + pointed + ' queries read)', pointed > 150 && !leaks.length, leaks.slice(0, 3));
     check('and it makes no difference how a query is typed (small letters, extra spaces)', A.scopeSql('select * from  items join purchases on 1 where 1', 'abc123') === 'select * from  h_abc123_items join h_abc123_purchases on 1 where 1', A.scopeSql('select * from  items join purchases on 1', 'abc123'));
     let refused = false; try { A.scopeSql('SELECT * FROM homes', 'abc123'); } catch (e) { refused = true; }
     check('a friend\'s home can never read the list of homes or codes', refused, null);
+    const shut = ['SELECT * FROM accounts', 'SELECT email FROM waitlist', 'DELETE FROM signin_codes', 'select * from Accounts a join homes h on 1'].filter((q) => { try { A.scopeSql(q, 'abc123'); return false; } catch (e) { return true; } });
+    check('nor who signed up, who is waiting, or a sign-in code on its way', shut.length === 4, shut);
   } else { check('every query in the code is pointed at the friend\'s own tables', false, 'not built'); check('and it makes no difference how a query is typed (small letters, extra spaces)', false, 'not built'); check('a friend\'s home can never read the list of homes or codes', false, 'not built'); }
   const cols = (t) => w.db.prepare('PRAGMA table_info(' + t + ')').all().map((c) => c.name + ':' + c.type + ':' + c.notnull + ':' + c.pk).sort().join(',');
   const mine = w.db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name LIKE 'h\\_%\\_items' ESCAPE '\\'").all().map((t) => t.name.replace(/items$/, ''));

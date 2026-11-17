@@ -217,11 +217,14 @@ if (!HELD) {
 // ---- 7. safeguards the other suites did not notice when broken on purpose ----
 if (!HELD) {
   const src = fs.readFileSync(process.env.TOTE_SRC || path.join(ROOT, 'src/index.js'), 'utf8');
-  const routes = [...new Set([...src.matchAll(/path === '(\/api\/[a-z/_-]+)' && method === '([A-Z]+)'/g)].map((m) => m[2] + ' ' + m[1]))].filter((r) => !/\/api\/(login|mcp)$/.test(r));
+  const routes = [...new Set([...src.matchAll(/path === '(\/api\/[a-z/_-]+)' && method === '([A-Z]+)'/g)].map((m) => m[2] + ' ' + m[1]))].filter((r) => !/\/api\/(login|mcp)$|\/api\/signin\//.test(r)); // the ways in are the only doors open without a sign-in
   let h = await home(null, '');
   const open = [];
   for (const r of routes.concat(['PATCH /api/items/00000000-0000-0000-0000-000000000000', 'DELETE /api/extras/00000000-0000-0000-0000-000000000000'])) { const [m, p] = r.split(' '); const res = await h.call(m, p, m === 'GET' ? undefined : {}, { cookie: '' }); if (res.status !== 401) open.push(r + ' ' + res.status); }
   check('every data route (' + routes.length + ' of them) answers "locked" without a sign-in', routes.length >= 25 && !open.length, open);
+  const doors = [...new Set([...src.matchAll(/path === '(\/api\/signin\/[a-z/_-]+)' && method === '([A-Z]+)'/g)].map((m) => m[2] + ' ' + m[1]))].sort();
+  const optRes = await h.call('GET', '/api/signin/options', undefined, { cookie: '' });
+  check('the only doors open without a sign-in are the four ways to sign in, and the one that can be read says nothing about any home', doors.join() === 'GET /api/signin/options,POST /api/signin/email,POST /api/signin/email/check,POST /api/signin/google' && Object.keys(optRes.data).sort().join() === 'contact,email,google,places', [doors, optRes.data]);
   check('  ...and a made-up sign-in cookie is no better', (await h.call('GET', '/api/items', undefined, { cookie: 'pk=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' })).status === 401);
   check('opposite: signed in, the same route answers', (await h.call('GET', '/api/items')).status === 200);
   let res = await h.call('POST', '/api/apply', { source: 'hand', actions: [{ action: 'add', name: 'Honey', quantity: 1 }] }, { origin: 'https://evil.test' });

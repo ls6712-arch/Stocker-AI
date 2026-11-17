@@ -50,6 +50,8 @@ try { entry.suites.allergy = JSON.parse(sh(['evals/allergy.mjs', '--json']).stdo
 try { entry.suites.guard = JSON.parse(sh(['evals/guard.mjs', '--json']).stdout.trim().split('\n').pop()); } catch (e) {}
 // separate homes: a personal code opens its own home, and no home reaches another
 try { entry.suites.homes = JSON.parse(sh(['evals/homes.mjs', '--json']).stdout.trim().split('\n').pop()); } catch (e) {}
+// real sign-in: Google or a code by email opens a home of one's own, up to a cap, with a share of the AI allowance each
+try { entry.suites.signup = JSON.parse(sh(['evals/signup.mjs', '--json']).stdout.trim().split('\n').pop()); } catch (e) {}
 const p = await paceRun(await loadPace(), 2, 1000);
 entry.suites.pace = { reminderOnTime: p.reminderOnTime, reminderLate: p.reminderLate, reminderEarly: p.reminderEarly, errorDays: p.errorDays, within2: p.within2, livingAlone: p.byHome['works alone'].onTime, student: p.byHome['student alone'].onTime };
 
