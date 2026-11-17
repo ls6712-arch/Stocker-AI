@@ -101,7 +101,7 @@ await tryIt('wording', async () => {
   check('a house rule is a quiet note, not a warning', note && note.status === 'note' && !/before anyone eats|warning|danger|unsafe/i.test(note.text), note);
   check('a house rule note leaves no allergy-style flag on the item', note && note.warn === '', note);
   const both = A.labelCheck(prod('wheat flour, palm oil, peanuts', { allergens: ['en:peanuts'] }), home({ allergies: ['Peanuts'], house: ['No palm oil'] }));
-  check('an allergy still gets its plain safety wording', both && both.status === 'warn' && /contains peanuts/i.test(both.text) && /check the pack/i.test(both.text), both);
+  check('an allergy still gets its plain safety wording', both && both.status === 'warn' && /contains peanuts/i.test(both.text) && /check the label/i.test(both.text), both);
   check('and the house rule is added after it, not mixed into it', both && /house rules?/i.test(both.text) && both.text.indexOf('peanuts') < both.text.toLowerCase().indexOf('palm oil'), both);
   check('opposite: the allergy flag on the item does not carry the house rule', both && /peanut/i.test(both.warn) && !/palm/i.test(both.warn), both && both.warn);
   const alone = A.labelCheck(prod('wheat flour, palm oil, peanuts', { allergens: ['en:peanuts'] }), home({ allergies: ['Peanuts'] }));

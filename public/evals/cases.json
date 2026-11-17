@@ -8012,6 +8012,634 @@
      "maxCalls": 0
     }
    ]
+  },
+  {
+   "id": "real-allergy-short-name",
+   "group": "Allergies",
+   "suite": "capability",
+   "kind": "chat",
+   "offline": true,
+   "profile": {
+    "personas": [
+     "mom"
+    ],
+    "adults": 2,
+    "kids": 1,
+    "members": [
+     {
+      "name": "Leo",
+      "kind": "child",
+      "allergies": [
+       "Peanuts"
+      ]
+     }
+    ]
+   },
+   "inventory": [
+    {
+     "name": "Peanut Butter Pretzel Sandwich",
+     "qty": 3,
+     "unit": "pack",
+     "category": "Snacks"
+    },
+    {
+     "name": "Bartlett Pears",
+     "qty": 1,
+     "unit": "lb",
+     "category": "Produce",
+     "expiry": "2026-11-15"
+    },
+    {
+     "name": "Beef Hot Dogs",
+     "qty": 1,
+     "unit": "pack",
+     "category": "Meat",
+     "expiry": "2026-11-16"
+    },
+    {
+     "name": "Unsalted Butter",
+     "qty": 1,
+     "unit": "pack",
+     "category": "Dairy"
+    },
+    {
+     "name": "Eggs",
+     "qty": 12,
+     "unit": "pcs",
+     "category": "Dairy"
+    }
+   ],
+   "text": "is the pretzel sandwich ok for leo",
+   "checks": [
+    {
+     "replyHas": "^No\\b"
+    },
+    {
+     "replyHas": "Leo is marked no peanuts"
+    },
+    {
+     "replyHas": "check the label"
+    },
+    {
+     "replyNot": "\\b(is|are|it's|its) safe\\b"
+    },
+    {
+     "count": [
+      0,
+      0
+     ]
+    },
+    {
+     "maxCalls": 0
+    },
+    {
+     "replyHas": "peanut butter pretzel sandwich"
+    }
+   ]
+  },
+  {
+   "id": "real-allergy-the-sandwich",
+   "group": "Allergies",
+   "suite": "capability",
+   "kind": "chat",
+   "offline": true,
+   "profile": {
+    "personas": [
+     "mom"
+    ],
+    "adults": 2,
+    "kids": 1,
+    "members": [
+     {
+      "name": "Leo",
+      "kind": "child",
+      "allergies": [
+       "Peanuts"
+      ]
+     }
+    ]
+   },
+   "inventory": [
+    {
+     "name": "Peanut Butter Pretzel Sandwich",
+     "qty": 3,
+     "unit": "pack",
+     "category": "Snacks"
+    },
+    {
+     "name": "Bartlett Pears",
+     "qty": 1,
+     "unit": "lb",
+     "category": "Produce",
+     "expiry": "2026-11-15"
+    },
+    {
+     "name": "Beef Hot Dogs",
+     "qty": 1,
+     "unit": "pack",
+     "category": "Meat",
+     "expiry": "2026-11-16"
+    },
+    {
+     "name": "Unsalted Butter",
+     "qty": 1,
+     "unit": "pack",
+     "category": "Dairy"
+    },
+    {
+     "name": "Eggs",
+     "qty": 12,
+     "unit": "pcs",
+     "category": "Dairy"
+    }
+   ],
+   "text": "Can Leo have the sandwich?",
+   "checks": [
+    {
+     "replyHas": "^No\\b"
+    },
+    {
+     "replyHas": "Leo is marked no peanuts"
+    },
+    {
+     "replyHas": "check the label"
+    },
+    {
+     "replyNot": "\\b(is|are|it's|its) safe\\b"
+    },
+    {
+     "count": [
+      0,
+      0
+     ]
+    },
+    {
+     "maxCalls": 0
+    },
+    {
+     "replyHas": "peanut butter pretzel sandwich"
+    }
+   ]
+  },
+  {
+   "id": "real-allergy-pb",
+   "group": "Allergies",
+   "suite": "capability",
+   "kind": "chat",
+   "offline": true,
+   "profile": {
+    "personas": [
+     "mom"
+    ],
+    "adults": 2,
+    "kids": 1,
+    "members": [
+     {
+      "name": "Leo",
+      "kind": "child",
+      "allergies": [
+       "Peanuts"
+      ]
+     }
+    ]
+   },
+   "inventory": [
+    {
+     "name": "Peanut Butter Pretzel Sandwich",
+     "qty": 3,
+     "unit": "pack",
+     "category": "Snacks"
+    },
+    {
+     "name": "Bartlett Pears",
+     "qty": 1,
+     "unit": "lb",
+     "category": "Produce",
+     "expiry": "2026-11-15"
+    },
+    {
+     "name": "Beef Hot Dogs",
+     "qty": 1,
+     "unit": "pack",
+     "category": "Meat",
+     "expiry": "2026-11-16"
+    },
+    {
+     "name": "Unsalted Butter",
+     "qty": 1,
+     "unit": "pack",
+     "category": "Dairy"
+    },
+    {
+     "name": "Eggs",
+     "qty": 12,
+     "unit": "pcs",
+     "category": "Dairy"
+    }
+   ],
+   "text": "Can I give Leo a pb sandwich?",
+   "checks": [
+    {
+     "replyHas": "^No\\b"
+    },
+    {
+     "replyHas": "Leo is marked no peanuts"
+    },
+    {
+     "replyHas": "check the label"
+    },
+    {
+     "replyNot": "\\b(is|are|it's|its) safe\\b"
+    },
+    {
+     "count": [
+      0,
+      0
+     ]
+    },
+    {
+     "maxCalls": 0
+    }
+   ]
+  },
+  {
+   "id": "real-allergy-other-person",
+   "group": "Allergies",
+   "suite": "capability",
+   "kind": "chat",
+   "offline": true,
+   "profile": {
+    "personas": [
+     "mom"
+    ],
+    "adults": 2,
+    "kids": 1,
+    "members": [
+     {
+      "name": "Leo",
+      "kind": "child",
+      "allergies": [
+       "Peanuts"
+      ]
+     }
+    ]
+   },
+   "inventory": [
+    {
+     "name": "Peanut Butter Pretzel Sandwich",
+     "qty": 3,
+     "unit": "pack",
+     "category": "Snacks"
+    },
+    {
+     "name": "Bartlett Pears",
+     "qty": 1,
+     "unit": "lb",
+     "category": "Produce",
+     "expiry": "2026-11-15"
+    },
+    {
+     "name": "Beef Hot Dogs",
+     "qty": 1,
+     "unit": "pack",
+     "category": "Meat",
+     "expiry": "2026-11-16"
+    },
+    {
+     "name": "Unsalted Butter",
+     "qty": 1,
+     "unit": "pack",
+     "category": "Dairy"
+    },
+    {
+     "name": "Eggs",
+     "qty": 12,
+     "unit": "pcs",
+     "category": "Dairy"
+    }
+   ],
+   "text": "could my husband have the pretzel sandwiches",
+   "checks": [
+    {
+     "replyHas": "Leo is marked no peanuts"
+    },
+    {
+     "replyHas": "check the label"
+    },
+    {
+     "replyNot": "^Yes\\b|\\bsafe\\b"
+    },
+    {
+     "count": [
+      0,
+      0
+     ]
+    },
+    {
+     "maxCalls": 0
+    }
+   ]
+  },
+  {
+   "id": "real-allergy-butter-is-not-it",
+   "group": "Allergies",
+   "suite": "capability",
+   "kind": "chat",
+   "offline": true,
+   "profile": {
+    "personas": [
+     "mom"
+    ],
+    "adults": 2,
+    "kids": 1,
+    "members": [
+     {
+      "name": "Leo",
+      "kind": "child",
+      "allergies": [
+       "Peanuts"
+      ]
+     }
+    ]
+   },
+   "inventory": [
+    {
+     "name": "Peanut Butter Pretzel Sandwich",
+     "qty": 3,
+     "unit": "pack",
+     "category": "Snacks"
+    },
+    {
+     "name": "Bartlett Pears",
+     "qty": 1,
+     "unit": "lb",
+     "category": "Produce",
+     "expiry": "2026-11-15"
+    },
+    {
+     "name": "Beef Hot Dogs",
+     "qty": 1,
+     "unit": "pack",
+     "category": "Meat",
+     "expiry": "2026-11-16"
+    },
+    {
+     "name": "Unsalted Butter",
+     "qty": 1,
+     "unit": "pack",
+     "category": "Dairy"
+    },
+    {
+     "name": "Eggs",
+     "qty": 12,
+     "unit": "pcs",
+     "category": "Dairy"
+    }
+   ],
+   "text": "Can Leo have butter?",
+   "checks": [
+    {
+     "replyNot": "^No\\b|peanut butter pretzel"
+    },
+    {
+     "replyHas": "unsalted butter"
+    },
+    {
+     "replyHas": "check the label"
+    },
+    {
+     "replyNot": "^Yes\\b|\\bsafe\\b"
+    },
+    {
+     "count": [
+      0,
+      0
+     ]
+    },
+    {
+     "maxCalls": 0
+    }
+   ]
+  },
+  {
+   "id": "real-allergy-pears-no-clash",
+   "group": "Allergies",
+   "suite": "capability",
+   "kind": "chat",
+   "offline": true,
+   "profile": {
+    "personas": [
+     "mom"
+    ],
+    "adults": 2,
+    "kids": 1,
+    "members": [
+     {
+      "name": "Leo",
+      "kind": "child",
+      "allergies": [
+       "Peanuts"
+      ]
+     }
+    ]
+   },
+   "inventory": [
+    {
+     "name": "Peanut Butter Pretzel Sandwich",
+     "qty": 3,
+     "unit": "pack",
+     "category": "Snacks"
+    },
+    {
+     "name": "Bartlett Pears",
+     "qty": 1,
+     "unit": "lb",
+     "category": "Produce",
+     "expiry": "2026-11-15"
+    },
+    {
+     "name": "Beef Hot Dogs",
+     "qty": 1,
+     "unit": "pack",
+     "category": "Meat",
+     "expiry": "2026-11-16"
+    },
+    {
+     "name": "Unsalted Butter",
+     "qty": 1,
+     "unit": "pack",
+     "category": "Dairy"
+    },
+    {
+     "name": "Eggs",
+     "qty": 12,
+     "unit": "pcs",
+     "category": "Dairy"
+    }
+   ],
+   "text": "Can Leo have the pears?",
+   "checks": [
+    {
+     "replyNot": "^(No|Yes)\\b|\\bsafe\\b"
+    },
+    {
+     "replyHas": "pears"
+    },
+    {
+     "replyHas": "check the label"
+    },
+    {
+     "count": [
+      0,
+      0
+     ]
+    },
+    {
+     "maxCalls": 0
+    }
+   ]
+  },
+  {
+   "id": "real-allergy-lunchbox-ideas",
+   "group": "Allergies",
+   "suite": "capability",
+   "kind": "chat",
+   "profile": {
+    "personas": [
+     "mom"
+    ],
+    "adults": 2,
+    "kids": 1,
+    "members": [
+     {
+      "name": "Leo",
+      "kind": "child",
+      "allergies": [
+       "Peanuts"
+      ]
+     }
+    ]
+   },
+   "inventory": [
+    {
+     "name": "Peanut Butter Pretzel Sandwich",
+     "qty": 3,
+     "unit": "pack",
+     "category": "Snacks"
+    },
+    {
+     "name": "Bartlett Pears",
+     "qty": 1,
+     "unit": "lb",
+     "category": "Produce",
+     "expiry": "2026-11-15"
+    },
+    {
+     "name": "Beef Hot Dogs",
+     "qty": 1,
+     "unit": "pack",
+     "category": "Meat",
+     "expiry": "2026-11-16"
+    },
+    {
+     "name": "Unsalted Butter",
+     "qty": 1,
+     "unit": "pack",
+     "category": "Dairy"
+    },
+    {
+     "name": "Eggs",
+     "qty": 12,
+     "unit": "pcs",
+     "category": "Dairy"
+    }
+   ],
+   "text": "What can I pack for Leo's lunchbox tomorrow?",
+   "checks": [
+    {
+     "replyNot": "\\b(pack|put|try|use|have|give|make|like)\\b[^.?!]{0,60}\\b(peanut butter|pretzel sandwich)"
+    },
+    {
+     "replyNot": "\\b(is|are|it's|its) safe\\b"
+    },
+    {
+     "replyHas": "pear|hot dog|egg"
+    },
+    {
+     "count": [
+      0,
+      0
+     ]
+    },
+    {
+     "maxCalls": 1
+    }
+   ]
+  },
+  {
+   "id": "real-no-allergy-lunchbox-ideas",
+   "group": "Allergies",
+   "suite": "capability",
+   "kind": "chat",
+   "profile": {
+    "personas": [
+     "mom"
+    ],
+    "adults": 2,
+    "kids": 1
+   },
+   "inventory": [
+    {
+     "name": "Peanut Butter Pretzel Sandwich",
+     "qty": 3,
+     "unit": "pack",
+     "category": "Snacks"
+    },
+    {
+     "name": "Bartlett Pears",
+     "qty": 1,
+     "unit": "lb",
+     "category": "Produce",
+     "expiry": "2026-11-15"
+    },
+    {
+     "name": "Beef Hot Dogs",
+     "qty": 1,
+     "unit": "pack",
+     "category": "Meat",
+     "expiry": "2026-11-16"
+    },
+    {
+     "name": "Unsalted Butter",
+     "qty": 1,
+     "unit": "pack",
+     "category": "Dairy"
+    },
+    {
+     "name": "Eggs",
+     "qty": 12,
+     "unit": "pcs",
+     "category": "Dairy"
+    }
+   ],
+   "text": "What can I pack for lunchboxes tomorrow?",
+   "checks": [
+    {
+     "replyNot": "marked no|allerg"
+    },
+    {
+     "replyHas": "sandwich|pear|hot dog|egg"
+    },
+    {
+     "count": [
+      0,
+      0
+     ]
+    },
+    {
+     "maxCalls": 1
+    }
+   ]
   }
  ]
 }

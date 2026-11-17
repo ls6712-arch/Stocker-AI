@@ -7,7 +7,8 @@ import { fileURLToPath, pathToFileURL } from 'url';
 export const ROOT = fileURLToPath(new URL('../', import.meta.url));
 
 export async function loadAgent(names) {
-  const src = fs.readFileSync(path.join(ROOT, 'src/index.js'), 'utf8');
+  // TOTE_SRC points the tests at another copy of the Worker, to score an earlier version with today's checks
+  const src = fs.readFileSync(process.env.TOTE_SRC || path.join(ROOT, 'src/index.js'), 'utf8');
   const tmp = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'tote-')), 'agent.mjs');
   fs.writeFileSync(tmp, src + '\nexport { ' + names.join(', ') + ' };\n');
   return import(pathToFileURL(tmp).href);
