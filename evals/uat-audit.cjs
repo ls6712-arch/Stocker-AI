@@ -21,7 +21,7 @@ const URL = 'http://127.0.0.1:8799/';
   const tab = async (t) => { await p.click('[data-tab=' + t + ']'); await wait(250); };
   const closeAll = async () => { for (let i = 0; i < 4 && (await p.locator('dialog[open]').count()); i++) { await p.keyboard.press('Escape'); await wait(200); } };
 
-  await p.goto(URL); await p.fill('#who', 'Sush'); await p.fill('#pin', 'test1234'); await p.click('#gateForm button'); await wait(900); await p.click('#profSkip').catch(() => {});
+  await p.goto(URL); await p.fill('#who', 'Sush'); await p.fill('#pin', 'test1234'); await p.click('#gateForm button'); await wait(900); await p.click('#helloSkip').catch(() => {});
   const A = (name, q, unit, area, category, exp, extra) => Object.assign({ action: 'add', name, quantity: q, unit, area, category, expiry: exp || '', shelfLifeDays: exp ? 0 : 300, finishDays: 30 }, extra || {});
   await api('POST', '/api/profile', { personas: ['mom'], adults: 1, kids: 3, buddy: 'Bagsy', members: [{ name: 'Leo', kind: 'child', allergies: ['Peanuts'] }] });
   await api('POST', '/api/apply', { source: 'bill', bought: d(-5), actions: [

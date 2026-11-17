@@ -85,6 +85,7 @@ const BASE = process.env.E2E_URL || 'http://127.0.0.1:8813';
   await p.reload(); await p.waitForSelector('#app:not([hidden])'); await p.waitForTimeout(700);
 
   // the household profile's "More about your home" fold opens and closes smoothly
+  if (await p.locator('#helloDlg[open]').count()) { await p.click('#helloSkip'); await p.waitForTimeout(450); }
   const profOpen = await p.locator('#profDlg[open]').count();
   if (!profOpen) { await p.click('#menuBtn'); await p.waitForTimeout(450); await p.click('#menuEdit'); }
   await p.waitForSelector('#profDlg[open]'); await p.waitForTimeout(650);
@@ -209,6 +210,7 @@ const BASE = process.env.E2E_URL || 'http://127.0.0.1:8813';
   const calmShake = (await frames(p, '#pin', 500)).map((f) => f.x);
   check('...a wrong code turns red without shaking', (await p.evaluate(() => document.getElementById('pin').getAttribute('aria-invalid'))) === 'true' && calmShake.every((x) => Math.abs(x) < 0.5), calmShake.slice(0, 6));
   await p.fill('#pin', 'test1234'); await p.press('#pin', 'Enter'); await p.waitForSelector('#app:not([hidden])', { timeout: 8000 }).catch(() => {}); await p.waitForTimeout(600);
+  if (await p.locator('#helloDlg[open]').count()) { await p.click('#helloSkip'); await p.waitForTimeout(450); }
   if (!(await p.locator('#profDlg[open]').count())) { await p.click('#menuBtn'); await p.waitForTimeout(300); await p.click('#menuEdit'); }
   await p.waitForSelector('#profDlg[open]'); await p.waitForTimeout(300);
   await p.locator('#profMore summary').scrollIntoViewIfNeeded();

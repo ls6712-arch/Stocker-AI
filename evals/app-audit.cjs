@@ -3,7 +3,7 @@ const d=n=>{const x=new Date();x.setDate(x.getDate()+n);return x.getFullYear()+'
 (async()=>{const b=await chromium.launch({args:['--use-gl=swiftshader','--enable-unsafe-swiftshader','--ignore-gpu-blocklist']});const c=await b.newContext({viewport:{width:400,height:820}});const p=await c.newPage();
  const errs=[];p.on('pageerror',e=>errs.push(e.message));
  const R=[],check=(name,ok,detail)=>{R.push([ok,name,detail||'']);};
- await p.goto('about:blank');await p.goto('http://127.0.0.1:8799/');await p.fill('#who','Sush');await p.fill('#pin','test1234');await p.click('#gateForm button');await p.waitForTimeout(900);await p.click('#profSkip').catch(()=>{});
+ await p.goto('about:blank');await p.goto('http://127.0.0.1:8799/');await p.fill('#who','Sush');await p.fill('#pin','test1234');await p.click('#gateForm button');await p.waitForTimeout(900);await p.click('#helloSkip').catch(()=>{});
  const A=(name,q,area,cat,exp,fin)=>({action:'add',name,quantity:q,unit:'pcs',area,category:cat,expiry:exp||'',shelfLifeDays:exp?0:300,finishDays:fin||30});
  const acts=[];for(let i=0;i<28;i++)acts.push(A('Item '+String(i).padStart(2,'0'),1+i%3,['Kitchen','Bathroom','Cleaning','Health'][i%4],'Pantry',i<4?d(i-1):''));
  await p.evaluate(async a=>{const h={'content-type':'application/json'};await fetch('/api/apply',{method:'POST',credentials:'same-origin',headers:h,body:JSON.stringify({source:'bill',bought:new Date(Date.now()-6*864e5).toISOString().slice(0,10),actions:a})});

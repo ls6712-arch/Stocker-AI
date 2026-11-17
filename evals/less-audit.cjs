@@ -20,7 +20,7 @@ const URL = 'http://127.0.0.1:8799/';
   const openList = async () => { await p.click('[data-tab=list]'); await p.waitForTimeout(350); };
 
   await p.goto('about:blank'); await p.goto(URL);
-  await p.fill('#who', 'Sush'); await p.fill('#pin', 'test1234'); await p.click('#gateForm button'); await p.waitForTimeout(900); await p.click('#profSkip').catch(() => {});
+  await p.fill('#who', 'Sush'); await p.fill('#pin', 'test1234'); await p.click('#gateForm button'); await p.waitForTimeout(900); await p.click('#helloSkip').catch(() => {});
   await post('/api/profile', { personas: ['mom'], adults: 2, kids: 1 });
 
   // ---- a new home: one shop so far, so nobody knows how often it shops ----

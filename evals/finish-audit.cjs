@@ -13,7 +13,7 @@ const URL = 'http://127.0.0.1:8799/';
     const p = await c.newPage(); p.on('pageerror', (e) => errs.push(e.message));
     await p.goto(URL); await p.waitForTimeout(700);
     if (await p.locator('#gate:not([hidden])').count()) { await p.fill('#who', 'Sush'); await p.fill('#pin', 'test1234'); await p.press('#pin', 'Enter'); await p.waitForTimeout(900); }
-    await p.click('#profSkip').catch(() => {}); await p.waitForTimeout(500);
+    await p.click('#helloSkip').catch(() => {}); await p.waitForTimeout(500);
     return { c, p };
   };
   // where the sheet is on screen (px moved down from its place), whether it is shown, and how see-through it is
