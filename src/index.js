@@ -49,6 +49,37 @@ const RULES = {
   'Low sugar': "low sugar on a doctor's advice",
   'Diabetic': 'diabetic, so keep added sugar and refined carbohydrates low',
 };
+// House rules: what a home chooses to keep to, apart from allergies (safety) and health rules. A "without" rule knows the names an
+// ingredient hides under on a label. A "less of" rule uses the UK front-of-pack line for "high" per 100 g of food: a published
+// line, never Tote's opinion, and never used on a drink. Tote reports what the label says; it makes no health claim.
+const HOUSE = {
+  'No palm oil': { say: 'palm oil', rx: /palm ?olein|palm[ -]?kernel(?: (?:oil|fat))?|palm (?:oil|fat|stearin|shortening)|vegetable (?:oil|fat)s?\s*\([^)]*\bpalm\b[^)]*\)/, maybe: /vegetable (?:oil|fat)s?(?!\s*\()/, guess: 'the vegetable oil may be palm oil' },
+  'No MSG': { say: 'MSG', rx: /flavou?r enhancers?\s*\([^)]*\b621\b[^)]*\)|monosodium glutamate|\bsodium glutamate|\bmsg\b|ajinomoto|\b(?:(?:e|ins)[ -]?)?621\b/ },
+  'No artificial colours': { say: 'an artificial colour', rx: /colou?rs?\s*\([^)]*\b(?:102|104|110|122|123|124|127|129|131|132|133|142|143|151|155)\b[^)]*\)|tartrazine|sunset yellow|allura red|brilliant blue|carmoisine|azorubine|ponceau|erythrosine|indigo carmine|indigotine|fast green|quinoline yellow|\b(?:e|ins)[ -]?(?:102|104|110|122|123|124|127|129|131|132|133|142|143|151|155)\b|\b(?:fd&c )?(?:red|yellow|blue|green)(?: no\.?| #)? ?(?:40|[1-6])\b(?: lake)?|(?:artificial|synthetic)(?: food)? colou?r(?:s|ing|ings)?/ },
+  'No artificial sweeteners': { say: 'an artificial sweetener', rx: /sweeteners?\s*\([^)]*\b(?:950|951|952|954|955|961|962|969)\b[^)]*\)|aspartame|sucralose|saccharin|acesulfame(?:[ -]?k\b| potassium)?|cyclamate|neotame|advantame|\b(?:e|ins)[ -]?(?:950|951|952|954|955|961|962|969)\b|artificial sweeteners?/ },
+  'No hydrogenated oils': { say: 'hydrogenated oil', rx: /(?:partially |fully )?hydrogenated(?: vegetable)?(?: (?:oil|fat)s?)?|vanaspati/ },
+  'Fewer preservatives': { say: 'a preservative', rx: /preservatives?\s*\([^)]*\)|sodium benzoate|potassium sorbate|sodium nitrite|sodium nitrate|potassium nitrate|sodium metabisul(?:ph|f)ite|sul(?:ph|f)ur dioxide|calcium propionate|sorbic acid|benzoic acid|\bbha\b|\bbht\b|\btbhq\b|\b(?:e|ins)[ -]?(?:2[0-9]{2}|319|320|321)\b|\bpreservatives?\b/ },
+  'Less sugar': { say: 'sugar', key: 'sugar', over: 22.5 },
+  'Less salt': { say: 'salt', key: 'salt', over: 1.5 },
+  'Less fat': { say: 'fat', key: 'fat', over: 17.5 },
+  'Less saturated fat': { say: 'saturated fat', key: 'sat', over: 5 },
+};
+const HOUSE_NAMES = Object.keys(HOUSE);
+const houseList = (v) => chipList(v, HOUSE_NAMES, 10).filter((x) => HOUSE_NAMES.includes(x));
+// "palm oil" or "MSG" typed under things nobody eats means the same house rule, so it gets the same hidden names
+function houseAlias(a) {
+  const t = String(a || '').toLowerCase().replace(/[^a-z ]/g, ' ').replace(/\s+/g, ' ').trim();
+  if (/^palm ?(oil|olein)$/.test(t)) return 'No palm oil';
+  if (/^(msg|ajinomoto|monosodium glutamate)$/.test(t)) return 'No MSG';
+  if (/^(artificial |synthetic |food )+(colou?rs?|colou?rings?|dyes?)$/.test(t)) return 'No artificial colours';
+  if (/^(artificial )?sweeteners?$/.test(t)) return 'No artificial sweeteners';
+  if (/^(hydrogenated (oils?|fats?)|trans fats?|vanaspati)$/.test(t)) return 'No hydrogenated oils';
+  if (/^preservatives?$/.test(t)) return 'Fewer preservatives';
+  return '';
+}
+// what a pack says it leaves out ("no artificial colours or preservatives", "no added MSG") is not something it lists
+const LEFT_OUT_WORD = '(?:added\\s+|artificial\\s+|synthetic\\s+)*(?:colou?rs?|colou?rings?|flavou?rs?|flavou?rings?|preservatives?|msg|sweeteners?|palm oil|hydrogenated (?:fats?|oils?)|trans fats?)';
+const LEFT_OUT = new RegExp('\\b(?:no|without|free (?:from|of)|zero|does not contain|contains no)\\s+' + LEFT_OUT_WORD + '(?:\\s*(?:,|and|or|&)\\s*' + LEFT_OUT_WORD + ')*|\\b(?:msg|palm oil|preservative|colou?r|sweetener)[- ]free\\b', 'g');
 const CUISINES = ['Indian', 'Italian', 'Mexican', 'Chinese', 'Thai', 'Japanese', 'Mediterranean', 'American', 'Middle Eastern', 'Korean'];
 const GOALS = { waste: 'Their top priority is wasting less food.', spend: 'Their top priority is spending less.', healthy: 'Their top priority is eating healthier.', time: 'Their top priority is saving time.', stock: 'Their top priority is never running out of essentials.' };
 const KINDS = { adult: 'adult', teen: 'teenager', child: 'child', toddler: 'toddler', baby: 'baby', older: 'older adult', visitor: 'regular visitor' };
@@ -80,7 +111,7 @@ function cleanProfile(p) {
     if (!name) return null;
     return {
       name, kind: Object.prototype.hasOwnProperty.call(KINDS, m.kind) ? m.kind : 'adult', when: word(m.when, 40), away: !!m.away && !!word(m.when, 40),
-      diet: chipList(m.diet, DIETS, 8), allergies: chipList(m.allergies, ALLERGENS, 10), rules: chipList(m.rules, Object.keys(RULES), 6), avoid: chipList(m.avoid, [], 10),
+      diet: chipList(m.diet, DIETS, 8), allergies: chipList(m.allergies, ALLERGENS, 10), rules: chipList(m.rules, Object.keys(RULES), 6), avoid: chipList(m.avoid, [], 10), house: houseList(m.house),
     };
   }).filter(Boolean);
   const stores = chipList(Array.isArray(p.stores) ? p.stores : [p.store], [], 4);
@@ -97,6 +128,7 @@ function cleanProfile(p) {
     allergies: chipList(p.allergies, ALLERGENS, 16),
     rules: chipList(p.rules, Object.keys(RULES), 8),
     avoid: chipList(p.avoid, [], 16),
+    house: houseList(p.house),
     cuisines: chipList(p.cuisines, CUISINES, 12),
     goal: Object.prototype.hasOwnProperty.call(GOALS, p.goal) ? p.goal : '',
     buddy: word(p.buddy, 16),
@@ -124,9 +156,10 @@ function describe(p) {
     (p.rules.length ? ' Health rules for the whole home: ' + p.rules.map(ruleText).join('; ') + '.' : '') +
     (hard.length ? ' HARD RULE, allergies at home: ' + hard.join(', ') + '. Never suggest food that contains or commonly contains these.' : '') +
     (p.avoid.length ? ' Nobody eats: ' + p.avoid.join(', ') + '.' : '') +
+    (p.house.length ? ' House rules (preferences only): ' + p.house.join(', ').toLowerCase() + '.' : '') +
     p.members.map((m) => ' ' + m.name + ' is a ' + KINDS[m.kind] + (m.when ? ' who is here ' + m.when + (m.away ? ' and is NOT home this week, so leave them out of this week\'s dinners' : '') : '') +
       (m.diet.length ? ', eats ' + m.diet.join(', ') : '') + (m.rules.length ? ', ' + m.rules.map(ruleText).join('; ') : '') +
-      (m.allergies.length ? ', allergic to ' + m.allergies.join(', ') : '') + (m.avoid.length ? ', will not eat ' + m.avoid.join(', ') : '') + '.').join('') +
+      (m.allergies.length ? ', allergic to ' + m.allergies.join(', ') : '') + (m.avoid.length ? ', will not eat ' + m.avoid.join(', ') : '') + (m.house.length ? ', house rules (preferences only): ' + m.house.join(', ').toLowerCase() : '') + '.').join('') +
     (p.members.some((m) => m.diet.length || m.rules.length || m.avoid.length) ? ' A shared dinner must work for every person listed, or say plainly who it does not suit.' : '') +
     (p.cuisines.length ? ' Food they like most: ' + p.cuisines.join(', ') + '.' : '') +
     (COOK[p.cook] ? ' ' + COOK[p.cook] : '') + (GOALS[p.goal] ? ' ' + GOALS[p.goal] : '') +
@@ -199,20 +232,32 @@ async function hearAudio(env, base64) {
 }
 
 async function lookupBarcode(code) {
-  const r = await fetch('https://world.openfoodfacts.org/api/v2/product/' + code + '.json?fields=product_name,brands,quantity,allergens_tags,traces_tags,ingredients_text_en,ingredients_text,labels_tags', {
+  const r = await fetch('https://world.openfoodfacts.org/api/v2/product/' + code + '.json?fields=product_name,brands,quantity,allergens_tags,traces_tags,ingredients_text_en,ingredients_text,labels_tags,nutriments,categories_tags', {
     headers: { 'user-agent': 'StockerAI/1.0 (household inventory tracker)' },
   });
   if (!r.ok) return null;
-  const d = await r.json();
+  return productFrom(await r.json());
+}
+// What the product database says, as Tote keeps it. Nutrition is per 100 g and only what the database really has: a missing or
+// impossible figure is left out, never read as zero.
+function productFrom(d) {
   if (!d || d.status !== 1 || !d.product || !d.product.product_name) return null;
   const p = d.product;
   const tags = (v) => (Array.isArray(v) ? v.map((t) => String(t).toLowerCase()) : []);
+  const n = p.nutriments && typeof p.nutriments === 'object' ? p.nutriments : {};
+  const num = (v) => { const x = typeof v === 'number' ? v : typeof v === 'string' && /^\d+(\.\d+)?$/.test(v.trim()) ? Number(v) : NaN; return Number.isFinite(x) && x >= 0 && x <= 100 ? Math.round(x * 100) / 100 : undefined; };
+  const per100 = {};
+  const put = (k, v) => { if (v !== undefined) per100[k] = v; };
+  put('sugar', num(n.sugars_100g)); put('fat', num(n.fat_100g)); put('sat', num(n['saturated-fat_100g']));
+  const sodium = num(n.sodium_100g);
+  put('salt', num(n.salt_100g) !== undefined ? num(n.salt_100g) : sodium !== undefined ? num(sodium * 2.5) : undefined);
   return {
     name: String(p.product_name).replace(/\s+/g, ' ').trim().slice(0, 60),
     brand: word(String(p.brands || '').split(',')[0], 24), size: word(p.quantity, 16),
     text: [p.brands, p.product_name].filter(Boolean).join(' ') + (p.quantity ? ', pack size ' + p.quantity : ''),
     allergens: tags(p.allergens_tags), traces: tags(p.traces_tags), labels: tags(p.labels_tags),
     ingredients: String(p.ingredients_text_en || p.ingredients_text || '').toLowerCase().slice(0, 4000),
+    per100: Object.keys(per100).length ? per100 : null, drink: tags(p.categories_tags).includes('en:beverages'),
   };
 }
 
@@ -234,13 +279,35 @@ const WORDS = {
 const GLUTEN = /wheat|barley|\brye\b|malt|\boats?\b|spelt|semolina/;
 function labelCheck(prod, p) {
   if (!p) return null;
-  const who = [{ name: '', allergies: p.allergies, rules: p.rules, avoid: p.avoid }].concat(p.members);
-  if (!who.some((w) => w.allergies.length || w.rules.length || w.avoid.length)) return null;
+  const who = [{ name: '', allergies: p.allergies, rules: p.rules, avoid: p.avoid, house: p.house }].concat(p.members);
+  if (!who.some((w) => w.allergies.length || w.rules.length || w.avoid.length || (w.house || []).length)) return null;
   const known = prod.ingredients.length > 0 || prod.allergens.length > 0;
   const has = (list, tags) => (tags || []).some((t) => list.includes(t));
-  if (!known) return { status: 'unknown', warn: 'no ingredient list on file', text: 'This product has no ingredient list in the database, so I could not check it against your allergies. Read the pack.' };
+  // a home with only house rules gets a quiet answer: no flag on the item, and no talk of allergies it does not have
+  const strict = who.some((w) => w.allergies.length || w.rules.length || w.avoid.length);
+  if (!known) return { status: 'unknown', warn: strict ? 'no ingredient list on file' : '', text: 'This product has no ingredient list in the database, so I could not check it against ' + (who.some((w) => w.allergies.length) ? 'your allergies' : 'what your home keeps to') + '. Read the pack.' };
   const found = [], seen = new Set();
   const say = (text, name) => { const k = text + '|' + name; if (!seen.has(k)) { seen.add(k); found.push(text + (name ? ', for ' + name : '')); } };
+  // house rules: said after any allergy, as a note, from what the label lists (or, clearly marked, a guess)
+  const notes = [], noted = new Set(), missing = [];
+  const note = (text, name) => { const k = text + '|' + name; if (!noted.has(k)) { noted.add(k); notes.push(text + (name ? ', for ' + name : '')); } };
+  const miss = (text) => { if (!missing.includes(text)) missing.push(text); };
+  const listed = prod.ingredients.replace(LEFT_OUT, ' ');
+  const house = (key, name) => {
+    const h = HOUSE[key];
+    if (!h) return;
+    if (h.rx) {
+      if (!prod.ingredients) return miss('I could not find its ingredient list, so I did not check for ' + h.say.replace(/^an? /, '') + '.');
+      const m = listed.match(h.rx);
+      if (m) { const as = m[0].replace(/\s+/g, ' ').trim().slice(0, 40), bare = h.say.replace(/^an? /, ''); note('lists ' + h.say + (as.toLowerCase() === bare.toLowerCase() ? '' : ' (as ' + as + ')'), name); }
+      else if (h.maybe && h.maybe.test(listed)) note('my guess: ' + h.guess + ', check the label', name);
+      return;
+    }
+    if (prod.drink) return miss('It is a drink, so I did not use the food line for ' + h.say + '.');
+    const v = prod.per100 ? prod.per100[h.key] : undefined;
+    if (typeof v !== 'number') return miss('I could not find its ' + h.say + ' figure, so I did not check that.');
+    if (v > h.over) note('high in ' + h.say + ' (' + v + ' g per 100 g, above the UK labelling line of ' + h.over + ' g)', name);
+  };
   for (const w of who) {
     for (const a of w.allergies) {
       const stem = a.toLowerCase().replace(/[^\p{L}\p{N} ]/gu, '').replace(/(es|s)$/, '');
@@ -255,13 +322,17 @@ function labelCheck(prod, p) {
       else if (!prod.labels.includes('en:no-gluten')) say('not labelled gluten-free', w.name);
     }
     if (w.rules.includes('Lactose intolerant') && (prod.allergens.includes('en:milk') || WORDS.Milk.test(prod.ingredients)) && !/lactose[- ]free/.test(prod.ingredients)) say('contains milk', w.name);
+    for (const k of w.house || []) house(k, w.name);
     for (const a of w.avoid) {
+      if (houseAlias(a)) { house(houseAlias(a), w.name); continue; }
       const word = a.toLowerCase().replace(/[^\p{L}\p{N} ]/gu, '').replace(/(es|s)$/, '');
       if (word.length > 2 && new RegExp('(^|[^\\p{L}])' + word, 'u').test(prod.ingredients)) say('has ' + a.toLowerCase(), w.name);
     }
   }
-  if (found.length) return { status: 'warn', warn: found.slice(0, 3).join(', ').slice(0, 70), text: 'From the ingredient list: ' + found.join('; ') + '. Check the pack before anyone eats it.' };
-  return { status: 'ok', warn: '', text: 'I checked the listed ingredients and declared allergens against everyone at home and found no match. Recipes change, so still glance at the pack.' };
+  const more = missing.length ? ' ' + missing.join(' ') : '';
+  if (found.length) return { status: 'warn', warn: found.slice(0, 3).join(', ').slice(0, 70), text: 'From the ingredient list: ' + found.join('; ') + '. Check the pack before anyone eats it.' + (notes.length ? ' For your house rules: ' + notes.join('; ') + '.' : '') + more };
+  if (notes.length) return { status: 'note', warn: '', text: 'Good to know for your house rules: ' + notes.join('; ') + '.' + more };
+  return { status: 'ok', warn: '', text: 'I checked the listed ingredients and declared allergens against everyone at home and found no match. Recipes change, so still glance at the pack.' + more };
 }
 
 // ---------- picture ----------

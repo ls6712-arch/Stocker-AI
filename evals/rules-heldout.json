@@ -1,0 +1,33 @@
+{
+  "about": "House rules, first-sight set. Written on 16 Nov 2026 after the code was finished, in the style of real Indian, US and UK labels. Score it once and do not tune on it; once any line is used for fixing, write a fresh set.",
+  "lines": [
+    { "label": "refined wheat flour (maida), sugar, refined palm oil, invert sugar syrup, raising agents (503(ii), 500(ii)), salt, emulsifier (322)", "lists": ["No palm oil"] },
+    { "label": "potato, edible vegetable oil (palmolein, rice bran oil), spices and condiments, salt, sugar", "lists": ["No palm oil"] },
+    { "label": "corn, vegetable oil (corn, canola, and/or sunflower oil), maltodextrin, salt, cheddar cheese, monosodium glutamate, artificial color (yellow 6, yellow 5, red 40)", "lists": ["No MSG", "No artificial colours"] },
+    { "label": "noodles: wheat flour, palm oil, salt. seasoning: salt, flavour enhancers (ins 627, ins 631), sugar, spices", "lists": ["No palm oil"] },
+    { "label": "carbonated water, sugar, acidity regulator (338), caffeine, colour (150d), natural flavouring", "lists": [] },
+    { "label": "carbonated water, colour (caramel e150d), sweeteners (aspartame, acesulfame k), natural flavourings, phosphoric acid", "lists": ["No artificial sweeteners"] },
+    { "label": "tomato paste, sugar, salt, acidity regulator (260), stabilizers (1422, 415), preservative (211)", "lists": ["Fewer preservatives"] },
+    { "label": "milk solids, sugar, cocoa butter, cocoa solids, emulsifiers (442, 476), artificial flavouring substance (vanilla)", "lists": [] },
+    { "label": "sugar, hydrogenated vegetable fat, cocoa solids, emulsifier (soya lecithin)", "lists": ["No hydrogenated oils"] },
+    { "label": "water, sugar, mango pulp, acidity regulator (ins 330), antioxidant (ins 300), synthetic food colours (ins 102, ins 110)", "lists": ["No artificial colours"] },
+    { "label": "rice flour, edible vegetable oil, gram flour, salt, spices", "lists": [], "guess": ["No palm oil"] },
+    { "label": "sugar, glucose syrup, gelatine, citric acid, fruit and plant concentrates (apple, carrot, blackcurrant), flavouring", "lists": [] },
+    { "label": "wheat flour, sugar, vegetable oils (palm, rapeseed), fat-reduced cocoa, glucose-fructose syrup", "lists": ["No palm oil"] },
+    { "label": "enriched flour, sugar, palm and/or canola oil, cocoa, high fructose corn syrup, leavening, salt, soy lecithin, artificial flavor", "lists": ["No palm oil"] },
+    { "label": "milk, cream, sugar. contains no artificial colours, flavours or preservatives", "lists": [] },
+    { "label": "pork, water, salt, dextrose, sodium nitrite, sodium ascorbate", "lists": ["Fewer preservatives"] },
+    { "label": "water, erythritol, natural flavours, steviol glycosides (ins 960)", "lists": [] },
+    { "label": "roasted peanuts, sugar, sea salt. no palm oil.", "lists": [] },
+    { "label": "wheat flour, yeast, salt, calcium propionate (preservative), vinegar", "lists": ["Fewer preservatives"] },
+    { "label": "sugar, corn syrup, modified corn starch, citric acid, blue 1, red 40 lake, yellow 5", "lists": ["No artificial colours"] },
+    { "label": "dehydrated vegetables, salt, yeast extract, hydrolysed vegetable protein, sugar, spices", "lists": [] },
+    { "label": "soy sauce (water, soybeans, wheat, salt), sugar, flavour enhancer (e621, e635), thickener", "lists": ["No MSG"] },
+    { "label": "milk, sugar, cocoa, carrageenan, vitamin a palmitate, vitamin d3", "lists": [] },
+    { "label": "sunflower oil, vinegar, egg yolk, sugar, salt, mustard, antioxidant (calcium disodium edta)", "lists": [] },
+    { "label": "maida, vanaspati, sugar, milk solids, permitted class ii preservative (e202)", "lists": ["No hydrogenated oils", "Fewer preservatives"] },
+    { "label": "apple juice from concentrate, water, vitamin c", "lists": [] },
+    { "label": "water, sugar, flavouring, sucralose", "lists": ["No artificial sweeteners"] },
+    { "label": "vegetable fat (palm kernel), sugar, whey powder", "lists": ["No palm oil"] }
+  ]
+}

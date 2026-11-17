@@ -585,6 +585,8 @@ button:active:not(:disabled),a.btn:active,label.btn:active,label.tile:active{tra
     <div class="wrapchips" id="memAll" role="group" aria-label="Their allergies"></div>
     <h3>Health rules</h3>
     <div class="wrapchips" id="memRules" role="group" aria-label="Their health rules"></div>
+    <h3>Their house rules</h3>
+    <div class="wrapchips" id="memHouse" role="group" aria-label="Their house rules"></div>
     <h3>How they eat</h3>
     <div class="wrapchips" id="memDiet" role="group" aria-label="Their diet"></div>
     <h3>Will not eat</h3>
@@ -616,6 +618,9 @@ button:active:not(:disabled),a.btn:active,label.btn:active,label.tile:active{tra
     <p class="sub">Allergies are a hard rule: I keep them out of dinner ideas and starter lists, and flag products that look risky. I work from product names, so I can miss things. Always check the label yourself.</p>
     <h3>Health rules</h3>
     <div class="wrapchips" id="profRules" role="group" aria-label="Health rules"></div>
+    <h3>House rules</h3>
+    <div class="wrapchips" id="profHouse" role="group" aria-label="House rules"></div>
+    <p class="sub">What your home chooses to keep to. When you scan a pack, I read its label for these, including the names they hide under. I only report what the label says.</p>
     <h3>How you eat</h3>
     <div class="wrapchips" id="profDiet" role="group" aria-label="Diet"></div>
     <details class="fold" id="profMore">
@@ -726,7 +731,7 @@ button:active:not(:disabled),a.btn:active,label.btn:active,label.tile:active{tra
     other:['Milk','Eggs','Bread','Rice','Coffee','Fruit','Vegetables','Toilet paper','Dish soap','Laundry detergent']};
   var CUISINES=['Indian','Italian','Mexican','Chinese','Thai','Japanese','Mediterranean','American','Middle Eastern','Korean'],DAYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],DAYNAMES=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
   var DIETS=['Vegetarian','Vegan','Pescatarian','Eggetarian','Halal','Kosher','Gluten-free','Dairy-free','High protein','Keto','Low carb','Paleo','Mediterranean','Jain','No onion or garlic','No beef','No pork','Low FODMAP'],ALLERGENS=['Peanuts','Tree nuts','Milk','Eggs','Wheat','Soy','Fish','Shellfish','Sesame','Mustard','Celery','Corn','Sulphites'];
-  var RULES=['Celiac','Lactose intolerant','Low salt','Low sugar','Diabetic'],AVOID=['Mushrooms','Onions','Cilantro','Spicy food','Seafood','Olives','Eggplant'],GOALS=[['waste','Waste less'],['spend','Spend less'],['healthy','Eat healthier'],['time','Save time'],['stock','Never run out']],
+  var RULES=['Celiac','Lactose intolerant','Low salt','Low sugar','Diabetic'],HOUSE=['Less sugar','Less salt','No palm oil','No MSG','No artificial colours','Less fat','Less saturated fat','No artificial sweeteners','No hydrogenated oils','Fewer preservatives'],AVOID=['Mushrooms','Onions','Cilantro','Spicy food','Seafood','Olives','Eggplant'],GOALS=[['waste','Waste less'],['spend','Spend less'],['healthy','Eat healthier'],['time','Save time'],['stock','Never run out']],
     KINDS=[['adult','Adult'],['teen','Teenager'],['child','Child'],['toddler','Toddler'],['baby','Baby'],['older','Older adult'],['visitor','Visits often']];
   var PLANT=/peanut butter|almond butter|oat milk|almond milk|soy milk|coconut milk/i,DAIRY=/milk|yogurt|cheese|butter|cream|whey|parmesan|mozzarella|cheddar|paneer|ghee|custard|pizza|lasagn|chocolate|frozen meals/i,MEAT=/chicken|beef|pork|turkey|salmon|tuna|fish|meat|hot dog|bacon|ham\b/i,WHEAT=/bread|pasta|noodle|cereal|flour|tortilla|pizza|cracker/i;
   var CLASH={Peanuts:/peanut/i,'Tree nuts':/almond|walnut|cashew|pecan|hazelnut|pistachio/i,Eggs:/\begg/i,Soy:/tofu|soy|edamame|tempeh/i,Fish:/salmon|tuna|fish/i,Shellfish:/shrimp|prawn|crab|lobster/i,Sesame:/sesame|tahini|hummus/i};
@@ -1454,10 +1459,10 @@ button:active:not(:disabled),a.btn:active,label.btn:active,label.tile:active{tra
       var done=function(){var v=inp.value.replace(/\s+/g,' ').trim();ui.adding='';if(v){var k=all.filter(function(x){return low(x)===low(v)})[0]||v;if(!obj[key].some(function(x){return low(x)===low(k)}))obj[key]=obj[key].concat([k])}redraw()};
       ok.onclick=done;inp.onkeydown=function(ev){if(ev.key==='Enter'){ev.preventDefault();done()}else if(ev.key==='Escape'){ev.preventDefault();ui.adding='';redraw()}};
       w.append(inp,ok);box.append(w);setTimeout(function(){inp.focus()},0)}
-    else{var a=el('button','chip add','+ '+(o.add||'Add your own'));a.type='button';a.onclick=function(){ui.adding=id;redraw()};box.append(a)}}
+    else if(!o.fixed){var a=el('button','chip add','+ '+(o.add||'Add your own'));a.type='button';a.onclick=function(){ui.adding=id;redraw()};box.append(a)}}
   function oneOf(box,pairs,obj,key,clear){box.textContent='';pairs.forEach(function(pr){var b=el('button','chip',pr[1]);b.type='button';b.setAttribute('aria-pressed',obj[key]===pr[0]?'true':'false');
     b.onclick=function(){obj[key]=clear&&obj[key]===pr[0]?'':pr[0];redraw()};box.append(b)})}
-  function memLine(m){var k=KINDS.filter(function(x){return x[0]===m.kind})[0][1];return [k].concat(m.when?['here '+m.when]:[],m.allergies.map(function(a){return 'no '+a.toLowerCase()}),m.rules,m.diet,m.avoid.map(function(a){return 'no '+a.toLowerCase()})).join(', ')}
+  function memLine(m){var k=KINDS.filter(function(x){return x[0]===m.kind})[0][1];return [k].concat(m.when?['here '+m.when]:[],m.allergies.map(function(a){return 'no '+a.toLowerCase()}),m.rules,m.diet,m.avoid.map(function(a){return 'no '+a.toLowerCase()}),(m.house||[]).map(function(a){return a.toLowerCase()})).join(', ')}
   function drawProfile(){
     [['profHome','home'],['profStyle','style']].forEach(function(g){var pp=$(g[0]);pp.textContent='';Object.keys(PERSONA).filter(function(k){return PERSONA[k][5]===g[1]}).forEach(function(k){var P=PERSONA[k],b=el('button','tile'),on=draft.personas.indexOf(k)>-1;b.type='button';
       b.setAttribute('aria-pressed',on?'true':'false');b.append(el('b','',P[0]),el('span','',P[1]));
@@ -1478,6 +1483,7 @@ button:active:not(:disabled),a.btn:active,label.btn:active,label.tile:active{tra
     chipBox($('profPets'),['Dog','Cat'],draft,'pets',{add:'Add a pet',ph:'Rabbit, fish, bird'});
     chipBox($('profAll'),ALLERGENS,draft,'allergies',{show:9,add:'Add an allergy',ph:'Kiwi, strawberries'});
     chipBox($('profRules'),RULES,draft,'rules',{add:'Add a rule',ph:'Low cholesterol'});
+    chipBox($('profHouse'),HOUSE,draft,'house',{show:5,fixed:true});
     chipBox($('profDiet'),DIETS,draft,'diet',{show:9,add:'Add your own',ph:'Whole30, no red meat'});
     chipBox($('profAvoid'),AVOID,draft,'avoid',{add:'Add your own',ph:'Bell peppers'});
     oneOf($('profGoal'),GOALS,draft,'goal',true);
@@ -1493,20 +1499,21 @@ button:active:not(:disabled),a.btn:active,label.btn:active,label.tile:active{tra
     oneOf($('memKind'),KINDS,mem,'kind');
     chipBox($('memAll'),ALLERGENS,mem,'allergies',{show:9,add:'Add an allergy',ph:'Kiwi, strawberries'});
     chipBox($('memRules'),RULES,mem,'rules',{add:'Add a rule',ph:'Low cholesterol'});
+    chipBox($('memHouse'),HOUSE,mem,'house',{show:5,fixed:true});
     chipBox($('memDiet'),DIETS,mem,'diet',{show:9,add:'Add your own',ph:'No red meat'});
     chipBox($('memAvoid'),AVOID,mem,'avoid',{add:'Add your own',ph:'Bell peppers'});
   }
   function openMember(i){memAt=i;var m=i>-1?draft.members[i]:null;ui.adding='';
-    mem=m?{name:m.name,kind:m.kind,when:m.when,away:!!m.away,diet:m.diet.slice(),allergies:m.allergies.slice(),rules:m.rules.slice(),avoid:m.avoid.slice()}:{name:'',kind:'adult',when:'',diet:[],allergies:[],rules:[],avoid:[]};
+    mem=m?{name:m.name,kind:m.kind,when:m.when,away:!!m.away,diet:m.diet.slice(),allergies:m.allergies.slice(),rules:m.rules.slice(),avoid:m.avoid.slice(),house:(m.house||[]).slice()}:{name:'',kind:'adult',when:'',diet:[],allergies:[],rules:[],avoid:[],house:[]};
     $('memH').textContent=m?'Edit '+m.name:'Add a person';$('memName').value=mem.name;$('memName').setCustomValidity('');$('memName').oninput=function(){$('memName').setCustomValidity('')};$('memWhen').value=mem.when;$('memDel').hidden=!m;drawMember();$('memDlg').showModal()}
   $('memDlg').addEventListener('close',function(){mem=null;ui.adding='';if(draft)drawProfile()});
   $('memSave').onclick=function(){var n=$('memName').value.replace(/\s+/g,' ').trim();if(!n){$('memName').setCustomValidity('Give them a name first.');$('memName').reportValidity();return}
     mem.name=n;mem.when=$('memWhen').value.replace(/\s+/g,' ').trim();if(memAt>-1)draft.members[memAt]=mem;else draft.members.push(mem);$('memDlg').close()};
   $('memDel').onclick=function(){if(memAt>-1)draft.members.splice(memAt,1);$('memDlg').close()};
   function openProfile(){document.querySelectorAll('dialog[open]').forEach(function(d){d.close()});var p=profile,cp=function(a){return (a||[]).slice()};ui={more:{},adding:''};
-    draft=p?{had:true,counted:true,personas:cp(p.personas||[p.persona]),adults:p.adults,kids:p.kids,members:(p.members||[]).map(function(m){return {name:m.name,kind:m.kind,when:m.when,away:!!m.away,diet:cp(m.diet),allergies:cp(m.allergies),rules:cp(m.rules),avoid:cp(m.avoid)}}),
-        pets:cp(p.pets),diet:cp(p.diet),allergies:cp(p.allergies),rules:cp(p.rules),avoid:cp(p.avoid),cuisines:cp(p.cuisines),goal:p.goal||'',eatOut:p.eatOut||0,cook:p.cook||'any',shopDay:p.shopDay||'',stores:cp(p.stores)}:
-      {personas:[],adults:2,kids:0,members:[],pets:[],diet:[],allergies:[],rules:[],avoid:[],cuisines:[],goal:'',eatOut:0,cook:'any',shopDay:'',stores:[]};
+    draft=p?{had:true,counted:true,personas:cp(p.personas||[p.persona]),adults:p.adults,kids:p.kids,members:(p.members||[]).map(function(m){return {name:m.name,kind:m.kind,when:m.when,away:!!m.away,diet:cp(m.diet),allergies:cp(m.allergies),rules:cp(m.rules),avoid:cp(m.avoid),house:cp(m.house)}}),
+        pets:cp(p.pets),diet:cp(p.diet),allergies:cp(p.allergies),rules:cp(p.rules),avoid:cp(p.avoid),house:cp(p.house),cuisines:cp(p.cuisines),goal:p.goal||'',eatOut:p.eatOut||0,cook:p.cook||'any',shopDay:p.shopDay||'',stores:cp(p.stores)}:
+      {personas:[],adults:2,kids:0,members:[],pets:[],diet:[],allergies:[],rules:[],avoid:[],house:[],cuisines:[],goal:'',eatOut:0,cook:'any',shopDay:'',stores:[]};
     $('profBuddy').value=p&&p.buddy||'';$('profBudget').value=p&&p.budget?p.budget:'';$('profAbout').value=p&&p.about||'';
     $('profMore').open=!!(p&&(p.avoid&&p.avoid.length||p.goal||p.eatOut||p.buddy||p.cuisines&&p.cuisines.length||p.cook!=='any'||p.shopDay||p.stores&&p.stores.length||p.budget||p.about));
     drawProfile();$('profDlg').showModal();$('profH').tabIndex=-1;$('profH').focus();$('profDlg').scrollTop=0}

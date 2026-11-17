@@ -293,6 +293,7 @@ Scores (`npm run test:world`, `evals/world.mjs`): the tuning set (108 lines, 13 
 | 16 Nov | Needing less, round 1 (branch `tote-less-1`): the list looks ahead to the next shop (`shopGapFrom`, `ahead`), "Still have it" at the list holds until after that shop, fresh food is mentioned the day before its date. Chosen from eight ideas by a simulation of 2,000 households (`evals/less-sim/`), scored against the live app | Offline, exact: new checks 6/14 on main → 28/28; walk-through could not run on main → 20/20; app audit 24/24, acceptance walk-through 38/38, competitor walk-through 35/35, fit and finish 24/24, `npm test` otherwise unchanged. Simulated, with assumed behaviour: about 0.7 fewer days without a staple per home per month (of 17.3), about 1 point less fresh food thrown away. Live: not deployed |
 
 | 15 Nov | Delegation: a small model (8B, about a sixth of the price) takes everyday updates and questions code could not read; code checks its work and sends mistakes to the large model. Cost per task in dollars on the scorecard; 6 new live tasks ("Right model for the job") | Offline: on 629 phrasings by other writers, 49.9% of model jobs go to the small model, and after widening the dish and food-safety words no dish, health question or correction does (first sight: 9 would have). Estimated cost on those messages, stand-in answers: $0.425 → $0.262 per 1,000. Whether the small model reads well enough is only known live: the escalation rate and the regression suite on the scorecard are the gate |
+| 16 Nov | House rules, round 1 (branch `tote-rules-1`): a home keeps rules apart from allergies (`house` in the profile, for everyone or one person); the label check on a barcode scan reads them, with the names an ingredient hides under (`HOUSE`, `houseAlias`, `LEFT_OUT`) and the UK front-of-pack line for "high" from the product's own figures (`productFrom`, `per100`). A house rule is a quiet note; an allergy keeps its wording. | Offline only: new checks 19 of 64 before, 72 of 72 after (8 added while building); first sight on 28 labels written after the code was finished: 26 exactly right, 0 wrong flags, 1 missed ("palm and/or canola oil"), 1 extra guess. Every earlier suite unchanged. Not measured: the live app, the real product database, a real phone |
 
 ### The weekly loop
 
@@ -385,3 +386,27 @@ Checks: `evals/less.mjs` (`npm run test:less`, part of `npm test`), 28 checks in
 Choices to confirm: the look-ahead is capped at a week; three suggestions before "Show more"; Today and the phone still speak only about what is due by tomorrow.
 
 Not measured: the live app, a real phone, a real push reminder, and whether real people answer these suggestions the way the simulation assumes.
+
+## House rules (16 Nov 2026, branch `tote-rules-1`)
+
+A home says once what it chooses to keep to, and Tote reads labels for it. This is apart from allergies (safety, `clashOf` and the allergy half of `labelCheck`) and from health rules (`RULES`). Round 1 covers one place only: the label check on a barcode scan, which already looked the product up in Open Food Facts. Receipts, order screens, a photo of a label and a remembered product per home are later rounds, and are not built.
+
+### What was built
+
+- **The menu** (`HOUSE` in `src/index.js`). Six "without" rules (no palm oil, no MSG, no artificial colours, no artificial sweeteners, no hydrogenated oils, fewer preservatives) and four "less of" rules (sugar, salt, fat, saturated fat). Kept in the profile as `house`, for the whole home and per person, from the menu only: typed text is never kept here (`houseList`).
+- **Hidden names.** Each "without" rule has the names it appears under on a label: palmolein, palm kernel fat, "vegetable oils (sunflower, palm)"; flavour enhancer (621), E621; a colour number inside "colours (102, 110)", "red 40"; a sweetener or preservative by name or number. The reply says which name was on the pack: "lists palm oil (as palmolein)".
+- **What a pack says it leaves out is not a listing** (`LEFT_OUT`): "no artificial colours or preservatives" and "no added MSG" are removed before matching.
+- **Three levels, and nothing else.** "lists" comes from the real ingredient list. "my guess ... check the label" is used in one case only, an unnamed "vegetable oil". Otherwise nothing is said. Tote never says a product is free of something.
+- **"High" is a published line** (`over` in `HOUSE`): the UK front-of-pack criteria per 100 g of food (sugars above 22.5 g, salt 1.5 g, fat 17.5 g, saturates 5 g), read from the product's own figures (`productFrom` keeps `per100`; salt is worked out from sodium when only sodium is given). A missing or impossible figure is left out, never read as zero, and Tote says it could not check. The food line is never used on a drink (`drink`, from the product's category).
+- **Quiet, and second.** A house rule gives `status: 'note'` and no flag on the item. With an allergy at home the allergy wording comes first, unchanged, and the house rule follows it. A home with no house rules reads exactly as before.
+- **"Palm oil" or "MSG" typed under things nobody eats** gets the same hidden names (`houseAlias`); any other typed food reads as before.
+- **Dinner ideas** are told the house rules as preferences (`describe`). A house rule alone does not switch on allergy-style warnings by name (`restricted` is unchanged).
+- **In the app**: a "House rules" chip group in the household sheet and in each person's sheet. `public/index.html` only gained those chips.
+
+Checks: `evals/rules.mjs` (`npm run test:rules`, part of `npm test`), 72 checks in both directions against the real code, no network and no model. `evals/rules-audit.cjs` (`npm run test:rules:browser`), 13 checks at phone width on an empty local database: the chips are pick-only, fit the phone, are kept after a reload, and one person keeps their own. First sight: `evals/rules-heldout.json` (`npm run test:rules:fresh`), 28 labels written after the code was finished; it must not be tuned on, and once any line is used for fixing a fresh set is needed.
+
+Known gaps, from the first-sight set and left unfixed so the set stays honest: "palm and/or canola oil" is not read as palm oil; "hydrogenated vegetable fat" also draws the palm-oil guess.
+
+Choices to confirm: the menu's ten rules and their wording; "fewer preservatives" notes any preservative; the UK line is used in every country; a house rule leaves no flag on the item at home, so it is said at the scan and not again; a person on "Low salt" or "Low sugar" as a health rule does not get the "high in" note unless the house rule is also chosen.
+
+Not measured: the live app, the real product database (how many scanned products carry an ingredient list or nutrition figures, least of all Indian ones), a real phone.
