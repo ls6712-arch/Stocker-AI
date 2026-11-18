@@ -39,9 +39,12 @@ const AI = {
     const said = userText(input), sys = JSON.stringify(input.messages || '');
     seen.push({ model, said, sys: sys.slice(0, 4000), schema: !!input.response_format });
     const reading = /You keep an inventory/.test(sys), photo = Array.isArray((input.messages || []).find((x) => x.role === 'user')?.content) || !!input.image;
-    const r = rules.find((x) => x.when !== '*' && new RegExp(x.when, 'i').test(said)) || rules.find((x) => x.when === '*');
+    const r = rules.find((x) => x.when && x.when !== '*' && new RegExp(x.when, 'i').test(said)) || rules.find((x) => x.when === '*');
     if (model === 'image') return { image: '' }; // no pictures are drawn in the harness
     if (r && r.fail === 'quota') throw new Error('4006: you have used up your daily free allocation of 10,000 neurons');
+    // the photo pipeline: the detector answers with the rule's boxes, and each cut-out is read in turn from the rule's reads
+    if (input.task === 'detect') { const f = rules.find((x) => x.find); return { objects: (f && f.find) || [] }; }
+    if (photo && !input.image) { const f = rules.find((x) => x.reads); if (f) { const k = (f.k = (f.k || 0) + 1); return { response: f.reads[k - 1] ?? '' }; } }
     if (photo) return { response: (r && r.see) || '' };
     if (reading) return { response: JSON.stringify(r && r.plan ? { intent: 'update', store: '', purchaseDate: '', currency: '', ...r.plan } : { intent: 'question', store: '', purchaseDate: '', currency: '', actions: [] }) };
     if (/suggest home-cooked dinners/i.test(sys)) return { response: JSON.stringify({ meals: (r && r.meals) || [] }) };
@@ -55,7 +58,7 @@ const ASSETS = { fetch: async (req) => {
   if (!f.startsWith(path.join(ROOT, 'public')) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) return new Response('not found', { status: 404 });
   return new Response(fs.readFileSync(f), { headers: { 'content-type': TYPES[path.extname(f)] || 'application/octet-stream' } });
 } };
-const env = { APP_PIN: 'test1234', DB, AI, ASSETS, TEXT_MODEL: 'big', SMALL_MODEL: 'small', VISION_MODEL: 'vision', SPEECH_MODEL: 'speech', IMAGE_MODEL: 'image', DELEGATE: 'on', CF_VERSION: { id: 'e2e00000' } };
+const env = { APP_PIN: 'test1234', DB, AI, ASSETS, TEXT_MODEL: 'big', SMALL_MODEL: 'small', VISION_MODEL: 'vision', SPEECH_MODEL: 'speech', IMAGE_MODEL: 'image', DELEGATE: 'on', CF_VERSION: { id: 'e2e00000' }, PHOTO_PIPELINE: process.env.E2E_PIPELINE || 'off' };
 
 // ---- real sign-in, when asked for: Google's keys and the mail service are stand-ins, so nothing leaves this machine ----
 const SIGNUP = !!process.env.E2E_SIGNUP, mail = [];

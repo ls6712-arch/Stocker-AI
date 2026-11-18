@@ -556,6 +556,69 @@ async function photoTrials(env, kind, dataUrl, live) {
   return id;
 }
 
+// ---------- find, crop, read: the photo pipeline (shelf and fridge photos) ----------
+// The way shelf-recognition systems work: a detector finds every pack; the phone cuts each one out at full size (so a small
+// label fills the picture); a reader names each cut-out; then the same check by code decides what changes the home and
+// what is asked. The photo is never kept: only the boxes and the names, as text.
+const FIND_MODEL = '@cf/moondream/moondream3.1-9B-A2B';
+const READ_MODEL = '@cf/google/gemma-4-26b-a4b-it';
+const MAX_BOXES = 16;
+function pipelineOn(env, owner) {
+  const m = String(env.PHOTO_PIPELINE || 'off');
+  return m === 'all' || (m === 'owner' && !!owner);
+}
+// a box from the detector, whatever shape it comes in, as fractions of the photo (0 to 1)
+function boxOf(o, w, h) {
+  if (!o || typeof o !== 'object') return null;
+  const a = Array.isArray(o.bbox) ? o.bbox : Array.isArray(o.box) ? o.box : null;
+  let x0, y0, x1, y1;
+  if (a && a.length === 4) [x0, y0, x1, y1] = a.map(Number);
+  else if ('x_min' in o) [x0, y0, x1, y1] = [o.x_min, o.y_min, o.x_max, o.y_max].map(Number);
+  else if ('x' in o && 'width' in o) [x0, y0, x1, y1] = [Number(o.x), Number(o.y), Number(o.x) + Number(o.width), Number(o.y) + Number(o.height)];
+  else return null;
+  if (![x0, y0, x1, y1].every(Number.isFinite)) return null;
+  // pixels, not fractions: divide by the photo's own size
+  if (Math.max(x0, y0, x1, y1) > 1.5) { if (!(w > 0 && h > 0)) return null; x0 /= w; x1 /= w; y0 /= h; y1 /= h; }
+  const c = (v) => Math.min(1, Math.max(0, v));
+  const l = c(Math.min(x0, x1)), r = c(Math.max(x0, x1)), t = c(Math.min(y0, y1)), b = c(Math.max(y0, y1));
+  return r > l && b > t ? { x: l, y: t, w: r - l, h: b - t } : null;
+}
+function iou(a, b) {
+  const ix = Math.max(0, Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x)), iy = Math.max(0, Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y));
+  const inter = ix * iy, u = a.w * a.h + b.w * b.h - inter;
+  return u > 0 ? inter / u : 0;
+}
+// the boxes worth reading: not a speck, not the whole fridge, not the same pack twice (non-maximum suppression at 0.5), at most 16
+function cleanBoxes(raw, w, h) {
+  const boxes = [];
+  for (const o of Array.isArray(raw) ? raw : []) {
+    const b = boxOf(o, w, h);
+    if (!b) continue;
+    const area = b.w * b.h;
+    if (area < 0.002 || area > 0.6) continue;
+    const sc = Number(o.score ?? o.confidence);
+    b.score = Number.isFinite(sc) ? sc : 1;
+    boxes.push(b);
+  }
+  boxes.sort((a, b) => b.score - a.score || b.w * b.h - a.w * a.h);
+  const kept = [];
+  for (const b of boxes) if (!kept.some((k) => iou(k, b) > 0.5)) kept.push(b);
+  // reading order: top to bottom, then left to right, so the card follows the photo
+  return kept.slice(0, MAX_BOXES).sort((a, b) => (Math.abs(a.y - b.y) < 0.06 ? a.x - b.x : a.y - b.y))
+    .map((b, i) => ({ id: 'b' + (i + 1), x: +b.x.toFixed(4), y: +b.y.toFixed(4), w: +b.w.toFixed(4), h: +b.h.toFixed(4) }));
+}
+async function findBoxes(env, dataUrl, w, h) {
+  const r = await env.AI.run(env.FIND_MODEL || FIND_MODEL, { task: 'detect', image: dataUrl, target: 'food package, bottle, jar, carton, tub, can, box or bag', max_objects: 40 });
+  const raw = (r && (r.objects || (r.result && r.result.objects))) || [];
+  return cleanBoxes(raw, w, h);
+}
+const READ_ASK = 'This is one product cut out of a photo of a fridge or shelf at home. Answer in one line: name | sure or maybe. Name: the kind of food or product, with the brand when it is printed (for example "Daisy cottage cheese" or "whole milk, 1 gallon"). Write maybe when you are guessing. If it is a container whose contents you cannot tell, write "unlabelled jar" or "unlabelled bag" | maybe. If it is not a product at all (a shelf, a door, a hand), write: none. Ignore people, faces, screens, letters and cards.';
+async function readCrop(env, dataUrl) {
+  const t = await seeWith(env, env.READ_MODEL || READ_MODEL, dataUrl, READ_ASK);
+  const line = String(t || '').split(/\r?\n/).map((x) => x.trim()).find((x) => x && !/^(here|this is|the product|answer)\b/i.test(x)) || '';
+  return scrub(line).replace(/^[^A-Za-z0-9]+/, '').slice(0, 120);
+}
+
 async function hearAudio(env, base64) {
   const r = await env.AI.run(env.SPEECH_MODEL, { audio: base64 });
   return String((r && r.text) || '').trim();
@@ -3607,7 +3670,7 @@ async function api(request, env, url, ctx) {
       const homes = await homeList(env);
       if (homes.length) misses = ((await env.DB.prepare('SELECT COUNT(DISTINCT lower(said)) AS n FROM (' + everyHome(homes, 'turns', 'said, label, outcome, at', '') + ") WHERE label IS NULL AND outcome IN ('down','undo','rejected','corrected','repeated','missed') AND at >= ?1").bind(addDays(today, -27)).first().catch(() => null)) || { n: misses }).n;
     }
-    return json({ items, log, extras, me, spend, waste: (binned && binned.n) || 0, profile, learnt, review: owner ? misses : 0, owner, signup: !!home.acct, shelf, saved, shops, handoff, shop });
+    return json({ items, log, extras, me, spend, waste: (binned && binned.n) || 0, profile, learnt, review: owner ? misses : 0, owner, signup: !!home.acct, shelf, saved, shops, handoff, shop, pipe: pipelineOn(env, owner) });
   }
   // The list was handed to a store (the person tapped a store's link). Only the store's name and the day are kept, so Today can ask
   // for the order screen when it arrives. Nothing is sent anywhere by this.
@@ -3985,6 +4048,61 @@ async function api(request, env, url, ctx) {
   if (path === '/api/agree' && method === 'POST') {
     try { await env.AI.run(env.VISION_MODEL, { prompt: 'agree' }); } catch (e) { /* the agreement call itself reports as an error once accepted */ }
     return json({ ok: true });
+  }
+
+  // ---- the photo pipeline: find the packs, then read the cut-outs the phone sends back ----
+  if (path === '/api/scan/shelf/find' && method === 'POST') {
+    if (!pipelineOn(env, owner)) return json({ error: 'not_found' }, 404);
+    if (!(await aiBudget(env))) return limited(env);
+    const body = await request.json().catch(() => ({}));
+    if (typeof body.image !== 'string' || !body.image.startsWith('data:image/') || body.image.length > 6_000_000) return json({ error: 'bad_image' }, 400);
+    const t0 = Date.now();
+    try { return json({ boxes: await findBoxes(env, body.image, Number(body.w) || 0, Number(body.h) || 0), ms: Date.now() - t0 }); }
+    catch (e) { console.error('find failed', String((e && e.message) || e)); return json({ boxes: [], failed: true }); } // the phone falls back to one reading of the whole photo
+  }
+  if (path === '/api/scan/shelf/read' && method === 'POST') {
+    if (!pipelineOn(env, owner)) return json({ error: 'not_found' }, 404);
+    if (!(await aiBudget(env))) return limited(env);
+    const body = await request.json().catch(() => ({}));
+    const crops = (Array.isArray(body.crops) ? body.crops : []).filter((c) => c && typeof c.image === 'string' && c.image.startsWith('data:image/') && c.image.length <= 1_500_000 && /^b\d{1,2}$/.test(String(c.id))).slice(0, MAX_BOXES);
+    const boxes = (Array.isArray(body.boxes) ? body.boxes : []).filter((b) => b && /^b\d{1,2}$/.test(String(b.id)) && [b.x, b.y, b.w, b.h].every((v) => Number.isFinite(Number(v)) && Number(v) >= 0 && Number(v) <= 1))
+      .slice(0, MAX_BOXES).map((b) => ({ id: String(b.id), x: Number(b.x), y: Number(b.y), w: Number(b.w), h: Number(b.h) }));
+    if (!crops.length) return json({ error: 'no_crops' }, 400);
+    const t0 = Date.now();
+    // every cut-out is read at once; one that fails is left out, never guessed
+    const reads = await Promise.all(crops.map(async (c) => { try { return { id: String(c.id), line: await readCrop(env, c.image) }; } catch (e) { return { id: String(c.id), line: '', failed: true }; } }));
+    const marks = [], lines = [];
+    for (const r of reads) {
+      const f = r.line.split('|').map((x) => x.trim());
+      const name = (f[0] || '').replace(/^"|"$/g, ''), maybe = /maybe/i.test(f[1] || '') || /\?\s*$/.test(name);
+      const none = !name || /^none\b/i.test(name);
+      marks.push({ id: r.id, name: none ? '' : name.replace(/\s*\?$/, ''), maybe: !none && maybe, failed: !!r.failed });
+      if (!none) lines.push(name + ' | 1 | ' + (maybe ? 'maybe' : 'sure'));
+    }
+    const seen = checkSeen(lines.join('\n'));
+    const profile = await getProfile(env);
+    const known = (await env.DB.prepare('SELECT name, qty, unit FROM items ORDER BY name').all()).results.map((r) => r.name + ' (' + Math.round(r.qty * 100) / 100 + ' ' + r.unit + ')');
+    let out = { intent: 'update', store: '', bought: '', currency: '', actions: [] };
+    if (seen.text) {
+      out = sanitize(await structure(env, 'shelf', seen.text, today, known, profile), 'shelf');
+      const k = keepSeen(out.actions, seen.names); out.actions = k.actions; out.unseen = k.dropped;
+      out.actions.forEach((a) => enrich(a, profile, seen.text)); await learnFacts(env, out.actions);
+    }
+    if (!restricted(profile)) out.actions.forEach((a) => { a.warn = ''; });
+    const ms = Date.now() - t0;
+    // the owner's photos are also read the old way, in the background, so the two can be compared on the same photo
+    if (owner && String(env.PHOTO_TRIAL || '') === 'on' && typeof body.image === 'string' && body.image.startsWith('data:image/') && body.image.length <= 6_000_000) {
+      const p = (async () => {
+        const at = new Date().toISOString(), id = crypto.randomUUID().slice(0, 8);
+        const keep = (model, prompt, txt, took, err) => env.DB.prepare('INSERT INTO photo_trials (photo, at, kind, model, prompt, text, ms, err) VALUES (?, ?, ?, ?, ?, ?, ?, ?)').bind(id, at, 'shelf', model, prompt, scrub(String(txt || '')).slice(0, 4000), took, err ? String(err).slice(0, 200) : null).run();
+        await keep((env.FIND_MODEL || FIND_MODEL) + ' + ' + (env.READ_MODEL || READ_MODEL), 'pipeline (live)', JSON.stringify({ boxes, reads: marks }), ms, null);
+        const t1 = Date.now();
+        try { await keep(env.VISION_MODEL, 'v1 (shadow)', await seeImage(env, body.image, 'shelf'), Date.now() - t1, null); }
+        catch (e) { await keep(env.VISION_MODEL, 'v1 (shadow)', '', Date.now() - t1, (e && e.message) || e); }
+      })().catch((e) => console.error('photo trial failed', String((e && e.message) || e)));
+      if (ctx && ctx.waitUntil) ctx.waitUntil(p); else await p;
+    }
+    return json({ kind: 'shelf', heard: '', label: null, read: seen.text.slice(0, 2000), ...out, doubts: seen.doubts, boxes, marks, calls: crops.length + (seen.text ? 1 : 0), ms });
   }
 
   if (path.startsWith('/api/scan/') && (method === 'POST' || method === 'GET')) {
