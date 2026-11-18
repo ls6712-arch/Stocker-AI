@@ -574,3 +574,19 @@ Not measured: the live app, the real model after this change, a real phone.
 - **New: Tote never sends anyone anywhere.** `noLures` in `guardReply` drops any model-written sentence with a link, web address, email address or phone number, or a "verify / sign in again / your account is locked" lure. A model can be steered by text it reads (a receipt, a note, a photo of a sign); this is what stops it from passing a phishing message on. Stores are reached only through the buttons code builds. Opposites: ordinary answers pass whole; "1.5 kg" is not a web address.
 - Already in place (unchanged, checked elsewhere): private details are removed before the model and before anything is kept (guard.mjs), allergy claims are checked by code, the page never renders text as HTML (no `innerHTML` in `app.js`), a model plan's changes to things already at home are capped, and every change has Undo.
 - Known and disclosed, Sushmitha's choice: the owner can read what friends type to Tote, with private details removed (privacy notice, "Who can read it").
+
+## Subscriber walk-through (18 Nov 2026, branch `tote-sub-1`)
+
+A walk through every tab as a busy parent on a paid plan found trust-breaking defects. Each real one is pinned in `evals/subscriber.mjs` (`npm run test:sub`, part of `npm test`), in both directions, and the screen side in `evals/subscriber-audit.cjs` (phone-sized, against `evals/e2e/server.mjs 8799`).
+
+- **Units are never mixed.** `apply` converts an added amount into the unit the thing is already kept in (`convert`); pieces onto packs count dozens as packs, otherwise one pack, marked a guess; packs of eggs onto pieces use `PACK_OF` (a box of eggs is 12), marked a guess so no price per piece is kept; weight against count counts as what was bought last time. Before: 1 kg of rice and 500 g was "501 g"; 1 pack of eggs and "2 dozen eggs" was 25. The code reader keeps `dozen` on a piece so "2 dozen eggs" onto packs is 2 packs without the model.
+- **Eggs with no count are a dozen** (my guess), not one egg.
+- **A typed allergy with a spelling slip is corrected** when it is one letter off a food Tote knows (two in a long word, same first letter): `spellFood` in `chipList`, so "Avacado" reads and shows as Avocado and guacamole is caught. Real foods not on any list (lychee, garlic) and short words (kiwi) are left as typed.
+- **"Can Leo have X and Y?" checks every food asked about**, not only the first, and names each clash, then "check the label".
+- **Non-food never lands in the kitchen by default**: something `NOT_FOOD` that the glossary or the staples put in another room goes there, unless the person picked the room by hand. The item panel has a room-and-kind picker (`PATCH /api/items/:id` with `area` and `category`, both checked against `ROOM_CATS`; logged as "moved X to Room").
+- **The freezer is offered only for things that freeze well** (`freezes` in the app): not lettuce, salad, cucumber, whole pears or apples, eggs, yogurt.
+- **Each thing counts once on the bell**, on its most pressing card. **Misses waiting for review are no longer a household to-do**: the owner's menu ("How Tote is doing") says how many there are and opens the review.
+- **The shopping list**: a typed lower-case name is written with a capital ("Dish soap"; "iPhone charger" keeps its spelling); each line carries its kind for its icon; adding "Yogurt" while Greek Yogurt is at home says so and still adds the line.
+- **Header and kits**: the household line names every kind of home and says "2 adults and 1 child"; the dorm-room and flat-share kits are not "For you" in a home with children.
+
+Checked and left alone: "used in time" counts things marked finished by hand in their last three days, by design; the two different counts the tester saw were taken before and after two more things were finished. An undone change already gets its own "took back the change" line in the activity.

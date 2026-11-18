@@ -146,14 +146,17 @@ const URL = 'http://127.0.0.1:8799/';
   check('The conversation is still there after visiting another page', /out of chicken/i.test(kept) && /Which one/i.test(kept), kept.slice(0, 200));
   await closeAll();
 
-  // ---- bug 10: "I got N things wrong lately" then "Show me" opens the review
+  // ---- bug 10, changed by the subscriber walk-through of 18 Nov: misses to review are the owner's work, never one of the home's
+  // to-dos. The bell does not list them; the owner's menu says how many there are and opens the review.
   await api('POST', '/api/chat', { text: 'add bananas to the list' });
   await api('POST', '/api/feedback', { kind: 'down', said: 'add bananas to the list', reply: 'x', route: 'update' });
   await p.reload(); await wait(1000); await p.click('#bell'); await p.waitForSelector('#nudgeDlg[open]');
-  const wrong = p.locator('#nudgeList .nudge', { hasText: /wrong lately/ });
-  const hasWrong = await wrong.count();
-  if (hasWrong) { await wrong.locator('button', { hasText: 'Show me' }).click(); await wait(1500); }
-  check('"Show me" on "I got things wrong lately" opens the review page', hasWrong === 1 && /\/evals(\.html)?#real/.test(p.url()), [hasWrong, p.url()]);
+  const hasWrong = await p.locator('#nudgeList .nudge', { hasText: /wrong lately/ }).count();
+  await closeAll();
+  await p.click('#menuBtn'); await p.waitForSelector('#menuDlg[open]');
+  const sub = await p.textContent('#menuScoreS');
+  await p.click('#menuScore'); await wait(1500);
+  check('Misses to review are not in the bell; the owner\'s menu counts them and opens the review page', hasWrong === 0 && /\d+ miss(es)? to review/.test(sub) && /\/evals(\.html)?#real/.test(p.url()), [hasWrong, sub, p.url()]);
   await p.goto(URL); await wait(1000);
 
   // ---- bugs 15, 16: profile

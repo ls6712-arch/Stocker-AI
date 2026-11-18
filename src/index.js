@@ -88,12 +88,34 @@ const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 // free text the household typed: letters, numbers and light punctuation only, short, never markup
 const word = (v, n) => String(v || '').replace(/[^\p{L}\p{N} .'&\/-]/gu, ' ').replace(/\s+/g, ' ').trim().slice(0, n);
 // a chip group: known options plus a few the household added themselves
+// A typed allergy with a spelling slip ("Avacado") is the food it was meant to be, or nothing would ever match it. Only a near
+// miss of a food I know is corrected (one letter off, or two in a long word, same first letter); anything else stays as typed.
+const FOOD_WORDS = ['strawberry', 'banana', 'kiwi', 'mango', 'pineapple', 'coconut', 'chickpea', 'lentil', 'gluten', 'oat', 'pork', 'beef', 'chicken', 'garlic', 'onion', 'lychee', 'cashew', 'almond', 'walnut', 'pistachio', 'hazelnut', 'pecan', 'shrimp', 'crab', 'lobster', 'peach', 'apple', 'cherry', 'orange', 'lemon', 'gelatin', 'cinnamon', 'chocolate', 'lupin'];
+function editGap(a, b) {
+  if (Math.abs(a.length - b.length) > 2) return 9;
+  const d = Array.from({ length: a.length + 1 }, (_, i) => [i].concat(Array(b.length).fill(0)));
+  for (let j = 1; j <= b.length; j++) d[0][j] = j;
+  for (let i = 1; i <= a.length; i++) for (let j = 1; j <= b.length; j++) {
+    d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) d[i][j] = Math.min(d[i][j], d[i - 2][j - 2] + 1);
+  }
+  return d[a.length][b.length];
+}
+function spellFood(v) {
+  const k = allergyKey(v);
+  if (k.length < 5 || /\s/.test(k)) return v;
+  const known = ALLERGENS.map(allergyKey).concat(Object.keys(HIDDEN_IN), FOOD_WORDS);
+  if (known.includes(k)) return v;
+  let best = '', gap = 9;
+  for (const w of known) { if (w[0] !== k[0]) continue; const g = editGap(k, w); if (g < gap) { gap = g; best = w; } }
+  return best && (gap === 1 || (gap === 2 && k.length >= 8)) ? (ALLERGENS.find((x) => allergyKey(x) === best) || capFirst(best)) : v;
+}
 function chipList(list, from, max) {
   if (!Array.isArray(list)) return [];
   const out = [];
   for (const raw of list) {
     const known = from.find((x) => x.toLowerCase() === String(raw || '').toLowerCase().trim());
-    const v = known || word(raw, 24);
+    const v = known || (from === ALLERGENS ? spellFood(word(raw, 24)) : word(raw, 24));
     if (!known && v.replace(/[^\p{L}\p{N}]/gu, '').length < (/[\u0000-\u024f]/.test(v.replace(/[^\p{L}\p{N}]/gu, '').charAt(0)) ? 3 : 1)) continue;
     if (v && !out.some((x) => x.toLowerCase() === v.toLowerCase())) out.push(v);
     if (out.length >= max) break;
@@ -2094,9 +2116,16 @@ function allergyAnswer(t, rows, profile) {
     }
   }
   const c = (row && clashOf(row.name, scope, 'Kitchen')) || clashOf(said, scope, 'Kitchen');
+  // "a peanut butter sandwich and some guacamole": every food asked about is checked, not only the first
+  const more = [];
+  for (const part of said.split(/,|\band\b|\bwith\b|\bplus\b|\//)) {
+    const c2 = clashOf(part, scope, 'Kitchen');
+    if (c2 && c2.kind === 'allergy' && (!c || c2.what !== c.what) && !more.some((x) => x.what === c2.what)) more.push({ ...c2, thing: (part.match(/[a-z][a-z ]*/) || [''])[0].replace(/^(?:can|could|should|i|we|pack|put|give|have|eat|a|an|some|the|in|his|her|lunchbox|tomorrow|today|[a-z]+'s)\s+/g, '').replace(/\s+(?:in|for|to|at)\b.*$/, '').trim() });
+  }
   if (c && c.kind === 'allergy') {
     const thing = row ? lname(row.name) : 'that';
-    return (c.who && !named.length ? 'Not for ' + c.who + '. ' : 'No. ') + (c.who || 'Your home') + ' is marked no ' + c.what + ', and ' + thing + (c.word ? ' has ' + c.word + ' in the name' : ' usually contains ' + c.what) + '. Check the label to be sure.';
+    const why = (x, t, also) => (x.who || (also ? 'your home' : 'Your home')) + ' is marked no ' + x.what + ', and ' + t + (x.word && allergyKey(x.word).startsWith(allergyKey(x.what).slice(0, 4)) ? ' has ' + x.word + ' in the name' : ' usually contains ' + x.what) + '.';
+    return (c.who && !named.length ? 'Not for ' + c.who + '. ' : 'No. ') + why(c, thing).slice(0, -1) + '. ' + more.map((x) => 'Also, ' + why(x, x.thing || 'the ' + (x.word || 'other one'), true)).join(' ') + (more.length ? ' ' : '') + 'Check the label to be sure.';
   }
   if (!row) return '';
   const who = named.filter((m) => m.allergies.length);
@@ -2110,6 +2139,8 @@ const UNIT_WORDS = { kg: 'kg', kgs: 'kg', kilo: 'kg', kilos: 'kg', kilogram: 'kg
 const MULTI = /^(packs?|packets?|box(es)?|bags?|cartons?)$/; // these hold many of a thing: "2 cartons of eggs" is not 2 eggs
 const PACKS = { pack: 'pack', packs: 'pack', packet: 'pack', packets: 'pack', box: 'pack', boxes: 'pack', bag: 'pack', bags: 'pack', carton: 'pack', cartons: 'pack', bottle: 'pcs', bottles: 'pcs', can: 'pcs', cans: 'pcs', tin: 'pcs', tins: 'pcs', jar: 'pcs', jars: 'pcs', loaf: 'pcs', loaves: 'pcs', bunch: 'pcs', bunches: 'pcs', tub: 'pcs', tubs: 'pcs', roll: 'pcs', rolls: 'pcs', bar: 'pcs', bars: 'pcs', head: 'pcs', heads: 'pcs', piece: 'pcs', pieces: 'pcs', tube: 'pcs', tubes: 'pcs' };
 const NOT_A_THING = /^(it|its|them|that|this|those|these|thing|things|stuff|everything|anything|something|all|some|more|is|are|was|were|be|been|i|we|you|me|us|my|our|your|to|from|with|at|in|on|off|list|today|now|too|also|again|please|already|just|still|left|will|would|can|could|should|have|has|had|got|get|need|and|or|the|of|for|up|out|down|over|week|day|morning|night|time|home|store|shop)$/;
+// things sold in a box of a known size: a box of eggs is a dozen
+const PACK_OF = { eggs: 12, egg: 12 };
 function convert(q, from, to) {
   if (from === to) return q;
   const f = { g: ['kg', 0.001], kg: ['kg', 1], ml: ['L', 0.001], L: ['L', 1], oz: ['lb', 1 / 16], lb: ['lb', 1], gal: ['L', 3.79] };
@@ -2128,14 +2159,15 @@ function readPiece(phrase) {
   if (n0 && /^\d+(\.\d+)?$/.test(n0)) { qty = Number(n0); w.shift(); }
   else if (n0 && /^\d+(\.\d+)?[a-z]+$/.test(n0)) { const m = n0.match(/^(\d+(?:\.\d+)?)([a-z]+)$/); if (!UNIT_WORDS[m[2]]) return null; qty = Number(m[1]); unit = UNIT_WORDS[m[2]]; w.shift(); }
   else if (n0 && NUMS[n0] !== undefined) { qty = NUMS[n0]; w.shift(); if (n0 === 'couple' && w[0] === 'of') w.shift(); }
-  if (w[0] === 'dozen') { qty = (qty || 1) * 12; w.shift(); }
+  let dozen = 0;
+  if (w[0] === 'dozen') { dozen = qty || 1; qty = dozen * 12; unit = 'pcs'; w.shift(); }
   const six = w[0] && w[0].match(/^(\d+)-pack$/);
   if (six) { qty = (qty || 1) * Number(six[1]); unit = 'pcs'; w.shift(); }
   if (!unit && w[0] && UNIT_WORDS[w[0]] && w.length > 1) { unit = UNIT_WORDS[w[0]]; w.shift(); if (qty === null) qty = 1; }
   else if (!unit && w[0] && PACKS[w[0]] && w.length > 1) { unit = PACKS[w[0]]; pack = MULTI.test(w[0]); w.shift(); if (qty === null) qty = 1; }
   while (w.length && /^(of|the|new|fresh|big|small|large|extra|more|some)$/.test(w[0])) w.shift();
   if (!w.length || w.length > 4 || w.some((x) => !/^[a-z][a-z'-]*$/.test(x) || NOT_A_THING.test(x))) return null;
-  return { qty, unit, pack, name: w.join(' ') };
+  return { qty, unit, pack, dozen, name: w.join(' ') };
 }
 // verbs, and what each means for the home. Each verb covers the things after it, up to the next verb.
 const VERB_RE = new RegExp('\\b(?:' + [
@@ -2224,7 +2256,7 @@ async function quickParse(env, raw, rows, profile, history, ai) {
       if (kind === 'list' && !findRow(it.name, rows) && !STAPLES.has(normKey(it.name)) && !stapleFor(it.name) && !/^(add|put|pop|stick)$/.test(verbOf.get(obj0) || '') && !LIST_TO.test(obj0)) return null;
       const r = findRow(it.name, rows);
       if (r === 'many' || (r && it.pack && r.unit !== 'pack' && kind !== 'list' && kind !== 'unlist')) return null;
-      const qIn = (to) => (it.qty === null ? null : it.unit && it.unit !== 'pcs' && it.unit !== 'pack' ? convert(it.qty, it.unit, to) : it.unit && it.unit !== to ? null : it.qty);
+      const qIn = (to) => (it.qty === null ? null : it.dozen && to === 'pack' ? it.dozen : it.unit && it.unit !== 'pcs' && it.unit !== 'pack' ? convert(it.qty, it.unit, to) : it.unit && it.unit !== to ? null : it.qty);
       if (kind === 'unlist') { acts.push({ action: 'unlist', name: r ? r.name : titleCase(it.name) }); continue; }
       if (kind === 'list') { acts.push({ action: 'list', name: r ? r.name : (it.qty && it.qty > 1 ? it.qty + ' ' : '') + titleCase(it.name) }); continue; }
       if (kind === 'low') { acts.push(r ? { action: 'low', name: r.name } : { action: 'list', name: titleCase(it.name) }); continue; }
@@ -2685,7 +2717,26 @@ async function apply(env, body, today, source, who) {
       const last = await env.DB.prepare('SELECT qty, unit FROM purchases WHERE name_key = ? AND qty > 0 ORDER BY bought DESC LIMIT 1').bind(key).first();
       if (last && last.unit === row.unit) { a.quantity = last.qty; a.unit = row.unit; }
     }
-    // added by hand without choosing a room: what I know about the thing decides where it goes, the same as in chat
+    // eggs bought with no count are a box of a dozen (my guess), not one egg
+    if (a.action === 'add' && a.sure === false && a.unit === 'pcs' && a.quantity === 1 && PACK_OF[key]) a.quantity = PACK_OF[key];
+    // an amount in another unit is never added as it is: 1 kg of rice and 500 g is 1.5 kg, and 2 dozen eggs onto a pack of eggs
+    // is two more packs, not 25 of something. What cannot be converted counts as what this home bought last time, marked a guess.
+    if (row && row.qty > 0 && a.action === 'add' && a.unit !== row.unit) {
+      const c = convert(a.quantity, a.unit, row.unit);
+      if (c !== null) a.quantity = c;
+      else if (row.unit === 'pack' && a.unit === 'pcs') { a.quantity = a.quantity >= 12 ? Math.round(a.quantity / 12) : 1; a.sure = false; }
+      else if (row.unit === 'pcs' && a.unit === 'pack' && PACK_OF[key]) { a.quantity = a.quantity * PACK_OF[key]; a.sure = false; }
+      else if (!((row.unit === 'pcs' || row.unit === 'pack') && (a.unit === 'pcs' || a.unit === 'pack'))) {
+        const last = await env.DB.prepare('SELECT qty FROM purchases WHERE name_key = ? AND unit = ? AND qty > 0 ORDER BY bought DESC LIMIT 1').bind(key, row.unit).first();
+        a.quantity = last ? last.qty : row.unit === 'pcs' || row.unit === 'pack' ? 1 : row.qty; a.sure = false;
+      }
+      a.unit = row.unit;
+    }
+    // added by hand without choosing a room: what I know about the thing decides where it goes, the same as in chat.
+    // Something that is not food and that I know lives in another room (diapers, dish soap) never lands in the kitchen by default.
+    const g0 = !row ? itemInfo(a.name) || stapleFor(a.name) : null;
+    const misfiled = !!g0 && a.action === 'add' && (a.area || 'Kitchen') === 'Kitchen' && g0.area !== 'Kitchen' && AREAS.includes(g0.area) && NOT_FOOD.test(a.name) && !(source === 'hand' && body.auto === false);
+    if (misfiled) { a.area = g0.area; a.category = ROOM_CATS[g0.area].includes(g0.category) ? g0.category : 'Other'; }
     if (!row && body.auto) {
       const g = itemInfo(a.name), f = g ? { area: g.area, category: g.category, shelfLifeDays: g.keep } : await factFor(env, a.name);
       if (f && AREAS.includes(f.area)) { a.area = f.area; a.category = ROOM_CATS[f.area].includes(f.category) ? f.category : 'Other'; if (!a.expiry && !a.shelfLifeDays && f.shelfLifeDays) a.shelfLifeDays = f.shelfLifeDays; if (f.finishDays) a.finishDays = clamp(f.finishDays, 4, 365); }
@@ -3649,6 +3700,8 @@ async function api(request, env, url, ctx) {
     const items = (await env.DB.prepare('SELECT * FROM items ORDER BY name').all()).results;
     const log = (await env.DB.prepare('SELECT at, source, summary, who FROM log ORDER BY id DESC LIMIT 12').all()).results;
     const extras = (await env.DB.prepare('SELECT id, text, who FROM extras ORDER BY added').all()).results;
+    // each line on the list carries its kind, so a typed "dish soap" sits with the dishes, not under "Other"
+    for (const x of extras) { const k = itemInfo(bareEntry(x.text)) || stapleFor(bareEntry(x.text)); if (k && k.category) { x.kind = k.category; x.area = k.area; } }
     const byArea = (await env.DB.prepare('SELECT COALESCE(area, ?) AS area, SUM(amount) AS amount FROM spend WHERE day >= ? GROUP BY 1 ORDER BY 2 DESC').bind('Kitchen', today.slice(0, 8) + '01').all()).results;
     const cur = await env.DB.prepare('SELECT currency FROM spend WHERE currency IS NOT NULL ORDER BY id DESC LIMIT 1').first();
     const spend = { total: byArea.reduce((t, r) => t + r.amount, 0), byArea, currency: (cur && cur.currency) || '' };
@@ -3713,6 +3766,14 @@ async function api(request, env, url, ctx) {
     const logIt = (summary) => env.DB.prepare('INSERT INTO log (at, source, summary, who) VALUES (?, ?, ?, ?)').bind(new Date().toISOString(), 'hand', summary, me || null).run();
     if (body.undo || body.takeBack) await logIt('took back the change to ' + cur.name); // an undone change shows in the activity log as undone
     // off the list by hand: it stays at home as it is, and comes back on the list the next time it runs out
+    // moved by hand to another room and kind: only rooms and kinds the app knows
+    if (body.area !== undefined) {
+      const cat = body.category === undefined ? 'Other' : body.category;
+      if (AREAS.includes(body.area) && ROOM_CATS[body.area].concat('Other').includes(cat) && (body.area !== cur.area || cat !== cur.category)) {
+        await env.DB.prepare('UPDATE items SET area = ?, category = ?, warn = ? WHERE id = ?').bind(body.area, cat, homeWarn(cur.name, await getProfile(env), body.area) || null, m[1]).run();
+        await logIt('moved ' + cur.name + ' to ' + body.area);
+      }
+    }
     if (body.offList !== undefined) await env.DB.prepare(body.offList ? 'UPDATE items SET low = 0, nolist = 1 WHERE id = ?' : 'UPDATE items SET nolist = 0 WHERE id = ?').bind(m[1]).run();
     if (body.qty !== undefined) {
       const q = clamp(num(body.qty, 0), 0, MAX_QTY[cur.unit] || 1000);
@@ -3907,7 +3968,8 @@ async function api(request, env, url, ctx) {
 
   if (path === '/api/extras' && method === 'POST') {
     const sent = (await request.json().catch(() => ({}))) || {};
-    const tidy = (v) => scrub(String(v || '')).replace(/[<>]/g, ' ').replace(/\s+/g, ' ').replace(/\s*\u00d7\s*\d+$/, '').trim().slice(0, 76);
+    // "dish soap" is written "Dish soap"; a name spelled with a capital inside ("iPhone charger") keeps its spelling
+    const tidy = (v) => { const t = scrub(String(v || '')).replace(/[<>]/g, ' ').replace(/\s+/g, ' ').replace(/\s*\u00d7\s*\d+$/, '').trim().slice(0, 76); return /^[a-z][a-z]*(?:[^A-Za-z]|$)/.test(t) && !/^[a-z]+[A-Z]/.test(t) ? t.charAt(0).toUpperCase() + t.slice(1) : t; };
     const all = (await env.DB.prepare('SELECT id, text FROM extras ORDER BY added').all()).results, lc = (v) => String(v).toLowerCase();
     const find = (v) => all.find((x) => lc(x.text) === lc(v) || lc(x.text).replace(/ \u00d7\d+$/, '') === lc(v));
     // "2 gallons whole milk, birthday candles and size 5 diapers" is three things to buy, so it becomes three rows
@@ -3937,7 +3999,9 @@ async function api(request, env, url, ctx) {
     if (n && n.n >= 100) return json({ error: 'full' }, 400);
     const id = crypto.randomUUID();
     await env.DB.prepare('INSERT INTO extras (id, text, who, added) VALUES (?, ?, ?, ?)').bind(id, text, me || null, new Date().toISOString()).run();
-    return json({ ok: true, id, text });
+    // already at home under a longer name ("Yogurt" while there are 2 packs of Greek Yogurt): said, and the line stays on the list
+    const at = (await env.DB.prepare('SELECT name, qty, unit FROM items WHERE qty > 0').all()).results.filter((i) => boughtCovers(bareEntry(text), i.name)).sort((a, b) => a.name.length - b.name.length)[0];
+    return json(at ? { ok: true, id, text, have: { name: at.name, qty: at.qty, unit: at.unit } } : { ok: true, id, text });
   }
   const x = path.match(/^\/api\/extras\/([0-9a-f-]{36})$/);
   // rename a row, or change how many: the count lives at the end of the text, as "Milk ×2"
