@@ -115,7 +115,7 @@ const invite = async (owner, name) => (await owner.call('POST', '/api/homes', { 
   // every query in the code, when run for a friend's home, names only that home's own tables
   if (built) {
     const src = fs.readFileSync(path.join(ROOT, 'src/index.js'), 'utf8').split('\n// GROCERY-START')[0];
-    const sqls = [...src.matchAll(/(["'`])((?:SELECT|INSERT|UPDATE|DELETE|CREATE|ALTER)\b[^"'`]*?)\1/g)].map((m) => m[2]).filter((s) => !/\b(homes|accounts|waitlist|signin_codes)\b/.test(s)); // the owner's own tables are never run for a home: see the refusals below
+    const sqls = [...src.matchAll(/(["'`])((?:SELECT|INSERT|UPDATE|DELETE|CREATE|ALTER)\b[^"'`]*?)\1/g)].map((m) => m[2]).filter((s) => !/\b(homes|accounts|waitlist|signin_codes|photo_trials)\b/.test(s)); // the owner's own tables are never run for a home: see the refusals below
     const bare = new RegExp('\\b(?:FROM|INTO|UPDATE|JOIN|TABLE(?:\\s+IF\\s+NOT\\s+EXISTS)?|ON)\\s+(?:' + TABLES.join('|') + ')\\b', 'i');
     const leaks = sqls.filter((s) => bare.test(A.scopeSql(s, 'abc123'))), pointed = sqls.filter((s) => /h_abc123_/.test(A.scopeSql(s, 'abc123'))).length;
     check('every query in the code is pointed at the friend\'s own tables (' + pointed + ' queries read)', pointed > 150 && !leaks.length, leaks.slice(0, 3));
@@ -124,6 +124,10 @@ const invite = async (owner, name) => (await owner.call('POST', '/api/homes', { 
     check('a friend\'s home can never read the list of homes or codes', refused, null);
     const shut = ['SELECT * FROM accounts', 'SELECT email FROM waitlist', 'DELETE FROM signin_codes', 'select * from Accounts a join homes h on 1'].filter((q) => { try { A.scopeSql(q, 'abc123'); return false; } catch (e) { return true; } });
     check('nor who signed up, who is waiting, or a sign-in code on its way', shut.length === 4, shut);
+    const closed = ['INSERT INTO photo_trials (photo) VALUES (1)', 'SELECT * FROM notes_new_feature', 'select * from items join Some_Shared_Table on 1'].filter((q) => { try { A.scopeSql(q, 'abc123'); return false; } catch (e) { return true; } });
+    check('fail closed: a table that is not a home table (the owner\'s photo trials, a new feature\'s table nobody listed) is refused for a home, not read or written in the shared database', closed.length === 3, closed);
+    let upsert = ''; try { upsert = A.scopeSql("INSERT INTO settings (k, v) VALUES ('a', 1) ON CONFLICT(k) DO UPDATE SET v = excluded.v", 'abc123'); } catch (e) { upsert = 'refused: ' + e.message; }
+    check('opposite: an ordinary home query that updates on conflict still runs, pointed at the home', /INTO h_abc123_settings/.test(upsert) && /DO UPDATE SET v/.test(upsert), upsert);
   } else { check('every query in the code is pointed at the friend\'s own tables', false, 'not built'); check('and it makes no difference how a query is typed (small letters, extra spaces)', false, 'not built'); check('a friend\'s home can never read the list of homes or codes', false, 'not built'); }
   const cols = (t) => w.db.prepare('PRAGMA table_info(' + t + ')').all().map((c) => c.name + ':' + c.type + ':' + c.notnull + ':' + c.pk).sort().join(',');
   const mine = w.db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name LIKE 'h\\_%\\_items' ESCAPE '\\'").all().map((t) => t.name.replace(/items$/, ''));

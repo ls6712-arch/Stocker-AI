@@ -314,7 +314,14 @@ const homePrefix = (id) => { if (!/^[a-z0-9]{6,16}$/.test(String(id))) throw new
 function scopeSql(sql, id) {
   const pre = homePrefix(id);
   if (/\b(homes|accounts|waitlist|signin_codes)\b|sqlite_|\bh_[a-z0-9]+_/i.test(sql)) throw new Error('not for a home');
-  return sql.replace(/\b(INDEX(?:\s+IF\s+NOT\s+EXISTS)?\s+)(\w+)(?=\s+ON\b)/gi, '$1' + pre + '$2').replace(SCOPE_RE, '$1$2' + pre + '$3');
+  const out = sql.replace(/\b(INDEX(?:\s+IF\s+NOT\s+EXISTS)?\s+)(\w+)(?=\s+ON\b)/gi, '$1' + pre + '$2').replace(SCOPE_RE, '$1$2' + pre + '$3');
+  // Fail closed: every table a home's query names must now be that home's own. A table nobody added to HOME_TABLES (a new
+  // feature's table, or a shared one) is refused here instead of being read or written in the shared database.
+  for (const m of out.matchAll(/\b(?:FROM|INTO|UPDATE|JOIN|TABLE(?:\s+IF\s+NOT\s+EXISTS)?)\s+([A-Za-z_]\w*)/gi)) {
+    if (/^set$/i.test(m[1])) continue; // "ON CONFLICT ... DO UPDATE SET"
+    if (!m[1].startsWith(pre)) throw new Error('not for a home: ' + m[1]);
+  }
+  return out;
 }
 const homeDB = (db, id) => ({ prepare: (sql) => db.prepare(scopeSql(sql, id)), batch: (list) => db.batch(list) });
 const forHome = (env, id) => (id ? { ...env, DB: homeDB(env.DB, id), ROOT: env.DB, HOME: id } : env);
@@ -1019,6 +1026,19 @@ function meter(env) {
   return m;
 }
 const limited = async (env) => json({ error: (await quotaOut(env)) ? 'ai_quota' : 'slow_down' }, 429);
+// Tote never sends anyone anywhere: no links, web addresses, email addresses or phone numbers, and no "verify your account".
+// A model can be steered by text it reads (a receipt, a note, a photo of a sign), so any sentence that does either is dropped
+// by code before it is shown. Stores are reached through the app's own buttons, which code builds, never through the model.
+const LURE_RE = /\baccount (?:is|has been|was) (?:locked|suspended|disabled|on hold|closed)\b|\b(?:verify|confirm|unlock|restore|reactivate|re-?enter|log ?in|sign ?in|re-?login)\b[^.!?]{0,60}\b(?:account|details|identity|password|card|payment|again)\b/i;
+const LINK_RE = /\bhttps?:\/\/|\bwww\.|\b[a-z0-9-]+(?:\.[a-z0-9-]+)*\.(?:com|net|org|io|app|co|in|uk|us|dev|xyz|info|biz|me|link|site|online|shop|store|ly|gg|ai)\b|[^\s@]+@[^\s@]+\.[a-z]{2,}/i;
+const PHONE_RE = /\+?\d[\d ().-]{6,}\d/g;
+const hasPhone = (x) => (x.match(PHONE_RE) || []).some((m) => m.replace(/\D/g, '').length >= 9);
+function noLures(text) {
+  const parts = String(text || '').split(/(?<=[.!?])\s+/);
+  const kept = parts.filter((x) => !LURE_RE.test(x) && !LINK_RE.test(x) && !hasPhone(x));
+  if (kept.length === parts.length) return text;
+  return (kept.join(' ').trim() || 'I can help with what is at home and what is on your list.');
+}
 // the reply is checked after the model writes it, because a prompt alone is not a guarantee
 function guardReply(text, profile) {
   let out = String(text || '').replace(/[*_#`<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, 500);
@@ -1040,6 +1060,7 @@ function guardReply(text, profile) {
     out = out.split(/(?<=[.!?])\s+/).filter((x) => !vouch(x)).join(' ').trim();
     out = (out ? out + ' ' : '') + "With an allergy or a health condition I can't vouch for any food, so please check the label.";
   }
+  out = noLures(out);
   out = scrub(out).replace(/\b(20\d\d)-(\d\d)-(\d\d)\b/g, (m, y, mo, d) => Number(d) + ' ' + (MONTHS[Number(mo) - 1] || mo)).replace(/\s+/g, ' ').trim();
   // it must never ask anyone for private or payment details
   if (/(card number|credit card|debit card|\bcvv\b|security code|bank account|routing number|password|passcode|social security|\bssn\b|date of birth|home address|your address|phone number|email address)/i.test(out) && /(\?|please (share|send|enter|provide|give|type|tell)|what is your|what's your|can you (share|give|send|tell))/i.test(out))

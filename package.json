@@ -8,7 +8,7 @@
     "deploy": "wrangler deploy",
     "db:init": "wrangler d1 execute pantry-keeper --remote --file=schema.sql",
     "golive": "wrangler deploy && wrangler secret put APP_PIN",
-    "test": "node evals/households.mjs && node evals/conversations.mjs && node --no-warnings evals/learning.mjs && node --no-warnings evals/measure.mjs && node --no-warnings evals/quickpath.mjs && node --no-warnings evals/delegate.mjs && node --no-warnings evals/acceptance.mjs && node --no-warnings evals/compete.mjs && node --no-warnings evals/less.mjs && node --no-warnings evals/rules.mjs && node --no-warnings evals/allergy.mjs && node --no-warnings evals/guard.mjs && node --no-warnings evals/homes.mjs && node --no-warnings evals/signup.mjs && node --no-warnings evals/learn.mjs && node --no-warnings evals/scan.mjs && node --no-warnings evals/pipeline.mjs && node --no-warnings evals/security.mjs && node --no-warnings evals/world.mjs --check",
+    "test": "node evals/households.mjs && node evals/conversations.mjs && node --no-warnings evals/learning.mjs && node --no-warnings evals/measure.mjs && node --no-warnings evals/quickpath.mjs && node --no-warnings evals/delegate.mjs && node --no-warnings evals/acceptance.mjs && node --no-warnings evals/compete.mjs && node --no-warnings evals/less.mjs && node --no-warnings evals/rules.mjs && node --no-warnings evals/allergy.mjs && node --no-warnings evals/guard.mjs && node --no-warnings evals/homes.mjs && node --no-warnings evals/signup.mjs && node --no-warnings evals/learn.mjs && node --no-warnings evals/scan.mjs && node --no-warnings evals/pipeline.mjs && node --no-warnings evals/security.mjs && node --no-warnings evals/ai-safety.mjs && node --no-warnings evals/world.mjs --check",
     "test:heldout": "node evals/conversations.mjs --corpus=evals/heldout",
     "track": "node --no-warnings evals/track.mjs",
     "test:pace": "node evals/pace.mjs",
@@ -39,6 +39,7 @@
     "test:motion": "E2E_SIGNUP=1 node --no-warnings evals/e2e/server.mjs 8813 & sleep 2; node evals/motion-audit.cjs; s=$?; kill %1; exit $s",
     "test:scan": "node --no-warnings evals/scan.mjs",
     "test:scan:browser": "node --no-warnings evals/e2e/server.mjs 8814 & sleep 2; node evals/scan-audit.cjs; s=$?; kill %1; exit $s",
+    "test:ai-safety": "node --no-warnings evals/ai-safety.mjs",
     "test:security": "node --no-warnings evals/security.mjs",
     "test:pipeline": "node --no-warnings evals/pipeline.mjs",
     "test:pipeline:browser": "E2E_PIPELINE=owner node --no-warnings evals/e2e/server.mjs 8815 & sleep 2; node evals/pipeline-audit.cjs; s=$?; kill %1; exit $s"
