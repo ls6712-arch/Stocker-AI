@@ -1153,6 +1153,8 @@ body{overflow-x:clip}
     if(rows&&rows.length){var box=el('div','rows');rows.forEach(function(r){box.append(r)});card.append(box)}if(primary){var acts=el('div','acts');acts.append(primary);card.append(acts)}return card}
   function itemLine(it,pill,line,action){var r=el('div','row'),g=el('div','grow'),top=el('div','row');top.style.gap='8px';top.style.flexWrap='wrap';
     top.append(el('span','name',it.name));if(pill)top.append(el('span','when pill '+pill[0],pill[1]));g.append(top);if(line)g.append(el('div','sub',line));r.append(iconFor(it),g);if(action)r.append(action);return r}
+  /* a "How many?" the card after a scan is already asking is not asked a second time on the same screen */
+  function asking(it){return !!doneInfo&&done.some(function(c){return c.id===it.id&&c.unsure})}
   function todayCards(use,buy){var cards=[],kit=items.filter(function(i){return areaOf(i)==='Kitchen'&&i.qty>0}).length>=2;
     if(use.length){var urgent=use.filter(function(i){return expiry(i).d<=0}),kitUse=use.filter(function(i){return areaOf(i)==='Kitchen'&&expiry(i).d>=0});
       var rows=use.slice(0,4).map(function(it){var e=expiry(it);return itemLine(it,whenPill(it),'',e.d<0?btn('mini','Threw it away',function(){return binIt(it)}):btn('mini','Used it all',function(){return useUp(it)}))});
@@ -1164,7 +1166,7 @@ body{overflow-x:clip}
       outE.slice(0,3).forEach(function(it){rr.push(itemLine(it,['bad','Out'],'An essential. It is on your list.'))});
       low.slice(0,3).forEach(function(it){rr.push(itemLine(it,['warn','My guess'],it.learned?'You buy it about every '+every(it.finish_days):'May be running low',btn('mini','Add',function(){return remindAnswer([it],'add')})))});
       cards.push(groupCard('Running out',outE.length?"Don't run out":'These may be running low',listN?'Your list has '+listN+(listN===1?' thing.':' things.'):'',rr,listN?btn('btn primary block','Open my list',function(){go('list')}):null))}
-    var warn=items.filter(function(i){return i.warn&&i.qty>0}),many=items.filter(function(i){return i.unsure&&i.qty>0});
+    var warn=items.filter(function(i){return i.warn&&i.qty>0}),many=items.filter(function(i){return i.unsure&&i.qty>0&&!asking(i)});
     if(warn.length||many.length){var cr=[];
       many.slice(0,2).forEach(function(it){var w=el('div');w.style.padding='8px 0';w.append(itemLine(it,['warn','How many?'],it.source==='shelf'?'I could not count these in your photo.':'You did not say how many.'),howMany(it.id,it.name,function(){refresh().catch(function(){})}));cr.push(w)});
       warn.slice(0,3).forEach(function(it){cr.push(itemLine(it,['bad','Check label'],cap(it.warn)+'.',btn('mini','Show',function(){showItem(it)})))});

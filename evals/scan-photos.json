@@ -1,0 +1,22 @@
+{
+  "about": "Real photos of a home, written down by hand: what is really in each one, and what Tote said when it was scanned. The photos themselves stay out of the repo. 'readable' things are ones a person can name from the photo; 'fair to miss' ones are hidden or unlabelled. 'confirm' marks what Sushmitha has not yet confirmed.",
+  "photos": [
+    {
+      "id": "fridge-door-2026-11-17",
+      "what": "Fridge door, Sushmitha's home, 17 Nov 2026",
+      "readable": [
+        { "thing": "Whole milk, one gallon jug (bowl & basket)", "match": "\\bmilk\\b", "count": 1 },
+        { "thing": "bowl & basket tub: yogurt or sour cream", "match": "yogh?urt|sour cream", "count": 1, "confirm": true },
+        { "thing": "Daisy cottage cheese", "match": "cottage", "count": 1 },
+        { "thing": "bowl & basket heavy whipping cream", "match": "whipping|heavy cream", "count": 1 },
+        { "thing": "Sargento cheese", "match": "^(?!.*cottage).*(cheese|cheddar|sargento)", "count": 1 },
+        { "thing": "Trader Joe's bag on the top shelf", "match": "granola|seed|nut|trail", "count": 1, "confirm": true },
+        { "thing": "Clear bag of seeds on the top shelf", "match": "seed|sunflower|pumpkin|granola", "count": 1, "confirm": true }
+      ],
+      "fair_to_miss": ["glass jar with pale contents", "jar with a black lid", "small jar with a gingham lid", "green bag", "brown paper bag", "small boxes on the left shelf"],
+      "tote": {
+        "2026-11-17": { "model": "@cf/meta/llama-3.2-11b-vision-instruct", "said": [ { "name": "Granola", "count": 1 }, { "name": "Milk", "count": null }, { "name": "Yogurt", "count": null } ] }
+      }
+    }
+  ]
+}

@@ -2564,7 +2564,8 @@ async function apply(env, body, today, source, who) {
         .bind(id, a.name, key, a.quantity, a.unit, a.category, day || null, today, store || null, expiry, est, finish, learned, source, a.area, a.area === 'Kids' || a.area === 'Health' ? 1 : 0, kept || null).run();
       changes.push({ id, name: a.name, action: 'add', created: true, prevQty: 0, qty: a.quantity, added: a.quantity, unit: a.unit, category: a.category, area: a.area, expiry, est, warn: a.warn });
     }
-    if (!a.sure) { await env.DB.prepare('UPDATE items SET unsure = 1 WHERE id = ?').bind(itemId).run(); changes[changes.length - 1].unsure = true; }
+    // a photo of the fridge or a shelf never asks "how many" (product rule 1): each thing seen is one, a guess the card can take back
+    if (!a.sure && source !== 'shelf') { await env.DB.prepare('UPDATE items SET unsure = 1 WHERE id = ?').bind(itemId).run(); changes[changes.length - 1].unsure = true; }
     if (a.price > 0) await env.DB.prepare('INSERT INTO spend (item_id, day, area, amount, currency) VALUES (?, ?, ?, ?, ?)').bind(itemId, day || today, a.area, a.price, currency).run();
     try { const pn = await notePrice(env, key, a, day, store, currency); if (pn) { changes[changes.length - 1].price = pn; priceNotes.push(priceLine(row ? row.name : a.name, pn)); } } catch (e) { console.error('price not noted', String((e && e.message) || e)); }
     if (learnt) changes[changes.length - 1].learnt = learnt;
