@@ -936,6 +936,7 @@ function sanitize(raw, kind) {
       shelfLifeDays: clamp(Math.round(num(a.shelfLifeDays, 0)), 0, 3650),
       price: use ? 0 : Math.round(clamp(num(a.price, 0), 0, 100000) * 100) / 100,
       finishDays: clamp(Math.round(num(a.daysToFinish, 14)), 4, 365),
+      each: use ? 0 : clamp(Math.round(num(a.each, 0)), 0, 60),
     });
   }
   return {
@@ -1250,6 +1251,12 @@ function enrich(a, profile, text) {
   // the amount printed on the receipt line wins over the model's reading of it: "2.1LB", "1GAL", "500 ml x 4", "52 FL OZ"
   const amt = line ? lineAmount(line) : null;
   if (amt && a.action === 'add') { a.quantity = amt.quantity; a.unit = amt.unit; }
+  // the pack size printed on the line ("18CT", "Pack of 6", "Tray of 30"): kept with the purchase, and eggs are counted by the egg
+  const per = !amt && line && a.action === 'add' ? (' ' + line.toLowerCase() + ' ').match(/\b(?:pack|tray|box|carton|crate)\s+of\s+(\d{1,2})\b|\b(\d{1,2})\s*(?:ct|count|pk|pcs?|pieces?|nos)\b|\b(dz|doz|dozen)\b/) : null;
+  if (per) {
+    const n = per[3] ? 12 : Number(per[1] || per[2]), times = Number(((' ' + line.toLowerCase()).match(/(?:\bx\s*|×\s*)(\d{1,2})\b|\bqty:?\s*(\d{1,2})\b/) || []).slice(1).find(Boolean) || 1);
+    if (n >= 2 && n <= 60 && times <= 24) { a.each = n; if (PACK_OF[keyOf(a.name)]) { a.quantity = n * times; a.unit = 'pcs'; } }
+  }
   if (/^[^a-z]*$/.test(a.name) && /[A-Z]{3}/.test(a.name)) a.name = a.name.toLowerCase().replace(/\b\p{L}/gu, (c) => c.toUpperCase());
   if (it && a.action !== 'list') {
     a.area = it.area; a.category = FROZEN.test(normItem(a.name + ' ' + line)) && it.area === 'Kitchen' ? 'Frozen' : it.category;
@@ -2154,20 +2161,23 @@ function convert(q, from, to) {
 function readPiece(phrase) {
   let w = phrase.replace(/\bhalf a dozen\b/g, '6').replace(/\ba couple(?: of)?\b/g, '2').replace(/(\d)\s*-?\s*pack\b(?=\s+of\b)/g, '$1-pack').replace(/(\d)\s*-\s*pack\b/g, '$1-pack').trim().split(/\s+/).filter(Boolean);
   while (w.length && /^(some|more|the|my|our|any|extra|new|fresh|of)$/.test(w[0])) w.shift();
-  let qty = null, unit = null, pack = false;
+  let qty = null, unit = null, pack = false, each = 0;
+  // the size of the pack said in words: "a tray of 30 eggs" is 30 eggs, "2 packs of 18 eggs" is 36, with 30 or 18 to a pack
+  const sized = w.join(' ').match(/^(?:(\d+|a|an|one|two|three|four|five|six)\s+)?(?:trays?|packs?|packets?|cartons?|box(?:es)?|crates?)\s+of\s+(\d{1,2})\b\s*/);
+  if (sized && Number(sized[2]) >= 2) { each = Number(sized[2]); qty = (sized[1] ? (NUMS[sized[1]] ?? Number(sized[1])) : 1) * each; unit = 'pcs'; w = w.join(' ').slice(sized[0].length).split(/\s+/).filter(Boolean); }
   const n0 = w[0];
   if (n0 && /^\d+(\.\d+)?$/.test(n0)) { qty = Number(n0); w.shift(); }
   else if (n0 && /^\d+(\.\d+)?[a-z]+$/.test(n0)) { const m = n0.match(/^(\d+(?:\.\d+)?)([a-z]+)$/); if (!UNIT_WORDS[m[2]]) return null; qty = Number(m[1]); unit = UNIT_WORDS[m[2]]; w.shift(); }
   else if (n0 && NUMS[n0] !== undefined) { qty = NUMS[n0]; w.shift(); if (n0 === 'couple' && w[0] === 'of') w.shift(); }
   let dozen = 0;
-  if (w[0] === 'dozen') { dozen = qty || 1; qty = dozen * 12; unit = 'pcs'; w.shift(); }
+  if (w[0] === 'dozen') { dozen = qty || 1; qty = dozen * 12; unit = 'pcs'; each = 12; w.shift(); }
   const six = w[0] && w[0].match(/^(\d+)-pack$/);
-  if (six) { qty = (qty || 1) * Number(six[1]); unit = 'pcs'; w.shift(); }
+  if (six) { each = Number(six[1]); qty = (qty || 1) * each; unit = 'pcs'; w.shift(); }
   if (!unit && w[0] && UNIT_WORDS[w[0]] && w.length > 1) { unit = UNIT_WORDS[w[0]]; w.shift(); if (qty === null) qty = 1; }
   else if (!unit && w[0] && PACKS[w[0]] && w.length > 1) { unit = PACKS[w[0]]; pack = MULTI.test(w[0]); w.shift(); if (qty === null) qty = 1; }
   while (w.length && /^(of|the|new|fresh|big|small|large|extra|more|some)$/.test(w[0])) w.shift();
   if (!w.length || w.length > 4 || w.some((x) => !/^[a-z][a-z'-]*$/.test(x) || NOT_A_THING.test(x))) return null;
-  return { qty, unit, pack, dozen, name: w.join(' ') };
+  return { qty, unit, pack, dozen, each, name: w.join(' ') };
 }
 // verbs, and what each means for the home. Each verb covers the things after it, up to the next verb.
 const VERB_RE = new RegExp('\\b(?:' + [
@@ -2275,16 +2285,17 @@ async function quickParse(env, raw, rows, profile, history, ai) {
       }
       if (kind === 'add') {
         if (r) {
-          const q = it.qty === null ? 1 : qIn(r.unit);
+          // a pack size was said ("a tray of 30 eggs") for something kept in packs: the pieces go to the apply step with the size
+          const q = it.each && r.unit === 'pack' && it.unit === 'pcs' ? it.qty : it.qty === null ? 1 : qIn(r.unit);
           if (q === null) return null;
           // a new purchase keeps as long as this kind of thing keeps: what I know about it, or the span its last purchase had
           const f = await factFor(env, r.name), span = r.expiry && r.bought && r.expiry > r.bought ? dayGap(r.bought, r.expiry) : 0;
-          acts.push({ action: 'add', name: r.name, quantity: q, unit: r.unit, sure: it.qty !== null, area: r.area || 'Kitchen', category: r.category || '', shelfLifeDays: (f && f.shelfLifeDays) || span, finishDays: r.finish_days || (f && f.finishDays) || 14 }); continue;
+          acts.push({ action: 'add', name: r.name, quantity: q, unit: it.each && r.unit === 'pack' && it.unit === 'pcs' ? 'pcs' : r.unit, each: it.each || 0, sure: it.qty !== null, area: r.area || 'Kitchen', category: r.category || '', shelfLifeDays: (f && f.shelfLifeDays) || span, finishDays: r.finish_days || (f && f.finishDays) || 14 }); continue;
         }
         const f = await factFor(env, it.name);
         if (!f && ai && restricted(profile)) return null; // something new to a home with allergies: let the model look at it
         const unit = it.unit === 'gal' ? 'L' : it.unit || (it.qty === null && f ? f.unit : 'pcs');
-        acts.push({ action: 'add', name: f && normKey(f.name) === normKey(it.name) ? f.name : titleCase(it.name), quantity: it.unit === 'gal' ? convert(it.qty, 'gal', 'L') : it.qty === null ? 1 : it.qty, unit, sure: it.qty !== null, fact: f });
+        acts.push({ action: 'add', name: f && normKey(f.name) === normKey(it.name) ? f.name : titleCase(it.name), quantity: it.unit === 'gal' ? convert(it.qty, 'gal', 'L') : it.qty === null ? 1 : it.qty, unit, each: it.each || 0, sure: it.qty !== null, fact: f });
         continue;
       }
       return null;
@@ -2305,7 +2316,7 @@ function mkActions(acts, profile) {
         sure: a.sure !== false, unit: UNITS.includes(a.unit) ? a.unit : (f && f.unit) || 'pcs', area: AREAS.includes(area) ? area : 'Kitchen',
         category: ROOM_CATS[AREAS.includes(area) ? area : 'Kitchen'].includes(a.category || (f && f.category)) ? a.category || f.category : 'Other',
         warn: a.action === 'add' || a.action === 'set' ? homeWarn(a.name, profile, AREAS.includes(area) ? area : 'Kitchen') : '', expiry: '',
-        shelfLifeDays: clamp(Math.round(a.shelfLifeDays ?? (f ? f.shelfLifeDays || 0 : 0)), 0, 3650), price: 0, finishDays: clamp(Math.round(a.finishDays ?? (f ? f.finishDays || 14 : 14)), 4, 365),
+        shelfLifeDays: clamp(Math.round(a.shelfLifeDays ?? (f ? f.shelfLifeDays || 0 : 0)), 0, 3650), price: 0, each: clamp(Math.round(num(a.each, 0)), 0, 60), finishDays: clamp(Math.round(a.finishDays ?? (f ? f.finishDays || 14 : 14)), 4, 365),
       };
     }),
   };
@@ -2456,7 +2467,7 @@ function quickReceipt(text, rows, profile) {
   for (const line0 of orderLines(src)) {
     const line = line0.toLowerCase().replace(/(\d),(\d{3})\b/g, '$1$2').replace(/\s+/g, ' ').trim();
     if (!line || NOT_ITEM.test(line)) continue;
-    let rest = line, price = 0, mult = 1, qty = 1, unit = '', sized = false;
+    let rest = line, price = 0, mult = 1, qty = 1, unit = '', sized = false, each = 0;
     const marked = [...rest.matchAll(MONEY_RX)];
     if (marked.length) { price = Number(marked[marked.length - 1][1]); rest = rest.replace(MONEY_RX, ' ').replace(/\s+/g, ' ').trim(); }
     else { const m = rest.match(/(-?\d+\.\d{2})\s*[a-z]?$/); if (m) { if (Number(m[1]) < 0) continue; price = Number(m[1]); rest = rest.replace(/(-?\d+\.\d{2})\s*[a-z]?$/, '').trim(); } }
@@ -2465,10 +2476,10 @@ function quickReceipt(text, rows, profile) {
     if (q) { mult = Number(q[1]) || 1; rest = rest.replace(q[0], ' ').replace(/\s+/g, ' ').trim(); }
     const n = rest.match(new RegExp('^(\\d+)\\s*@?\\s+(?!(?:' + SIZE_WORDS + '|ct|pk|pack|pcs?|pieces?|dz|doz|dozen)\\b)'));
     if (n) { if (Number(n[1]) <= 24) mult *= Number(n[1]); rest = rest.slice(n[0].length); }
-    const ct = rest.match(/\b(\d+)\s*(?:ct|pk|pack|pcs?|pieces?|nos)\b/); if (ct) { qty = Number(ct[1]); sized = true; rest = rest.replace(ct[0], ' '); }
+    const ct = rest.match(/\b(?:pack|tray|box|carton|crate)\s+of\s+(\d{1,3})\b/) || rest.match(/\b(\d+)\s*(?:ct|count|pk|pack|pcs?|pieces?|nos)\b/); if (ct) { qty = Number(ct[1]); each = qty; sized = true; unit = 'pcs'; rest = rest.replace(ct[0], ' '); }
     const wt = rest.match(new RegExp('\\b(\\d+(?:\\.\\d+)?)\\s*(' + SIZE_WORDS + ')\\b')); if (wt) { qty = Number(wt[1]); unit = UNIT_WORDS[wt[2]] || ({ ltr: 'L', kgs: 'kg', gm: 'g', gms: 'g' })[wt[2]] || (/^lit/.test(wt[2]) ? 'L' : wt[2]); sized = true; rest = rest.replace(wt[0], ' '); }
     rest = rest.replace(/\b(dz|doz)\b/, 'dozen').replace(/[^a-z ]+/g, ' ').replace(/\s+/g, ' ').trim();
-    if (/\bdozen\b/.test(rest)) { qty = 12 * (qty || 1); rest = rest.replace(/\bdozen\b/, '').trim(); }
+    if (/\bdozen\b/.test(rest)) { qty = 12 * (qty || 1); each = qty; unit = 'pcs'; rest = rest.replace(/\bdozen\b/, '').trim(); }
     if (mult > 1) { qty *= mult; if (unit === 'ml' && qty >= 1000) { qty /= 1000; unit = 'L'; } else if (unit === 'g' && qty >= 1000) { qty /= 1000; unit = 'kg'; } }
     const f = stapleFor(rest), r = findRow(f ? f.name : rest, rows), tracked = r && r !== 'many';
     // a world grocery code knows ("toor dal", "paneer") counts too, but only on a line that looks like an item: it has a price or a size
@@ -2477,7 +2488,7 @@ function quickReceipt(text, rows, profile) {
     const fact = f || (g ? { name: g.name, area: g.area, category: g.category, shelfLifeDays: g.keep } : null);
     const name = tracked ? r.name : fact.name;
     const u = unit === 'gal' ? 'L' : unit || (tracked ? r.unit : 'pcs');
-    actions.push({ action: 'add', name, quantity: unit === 'gal' ? convert(qty, 'gal', 'L') : qty, unit: u, sure: true, fact, price: price || 0 });
+    actions.push({ action: 'add', name, quantity: unit === 'gal' ? convert(qty, 'gal', 'L') : qty, unit: u, each: each <= 60 ? each : 0, sure: true, fact, price: price || 0 });
   }
   const out = mkActions(actions.slice(0, 40), profile); // allergy and diet warnings come from code here too
   out.actions.forEach((a, i) => { a.price = actions[i].price || 0; });
@@ -2635,6 +2646,7 @@ async function apply(env, body, today, source, who) {
   const restock = new Set((Array.isArray(body.actions) ? body.actions : []).filter((a) => a && a.restock).map((a) => keyOf(String(a.name || ''))));
   // an empty pack that was scanned: its brand and size stay with the thing, so the list says exactly what to buy again
   const packs = new Map((Array.isArray(body.actions) ? body.actions : []).filter((a) => a && a.pack).map((a) => [keyOf(String(a.name || '')), word(scrub(a.pack), 40)]));
+  const eachOf = new Map((Array.isArray(body.actions) ? body.actions : []).filter((a) => a && a.each > 1).map((a) => [keyOf(String(a.name || '')), clamp(Math.round(num(a.each, 0)), 0, 60)]));
   const priceNotes = [];
   for (const a of clean) {
     if (a.action === 'unlist') {
@@ -2717,15 +2729,28 @@ async function apply(env, body, today, source, who) {
       const last = await env.DB.prepare('SELECT qty, unit FROM purchases WHERE name_key = ? AND qty > 0 ORDER BY bought DESC LIMIT 1').bind(key).first();
       if (last && last.unit === row.unit) { a.quantity = last.qty; a.unit = row.unit; }
     }
-    // eggs bought with no count are a box of a dozen (my guess), not one egg
-    if (a.action === 'add' && a.sure === false && a.unit === 'pcs' && a.quantity === 1 && PACK_OF[key]) a.quantity = PACK_OF[key];
-    // an amount in another unit is never added as it is: 1 kg of rice and 500 g is 1.5 kg, and 2 dozen eggs onto a pack of eggs
-    // is two more packs, not 25 of something. What cannot be converted counts as what this home bought last time, marked a guess.
+    // Pack sizes. Things counted one by one (eggs) are kept as single pieces. The size of a pack comes from what was read
+    // ("18 CT", "Pack of 6", "a tray of 30"), then from what this home bought last time, then from the usual box (12), and only
+    // that last one is a guess. A size that was read is remembered for this home.
+    const each = a.action === 'add' ? a.each || eachOf.get(key) || 0 : 0;
+    if (PACK_OF[key] && a.action === 'add') {
+      const kept = await env.DB.prepare('SELECT v FROM settings WHERE k = ?').bind('each:' + key).first();
+      const known = kept ? clamp(Math.round(num(kept.v, 0)), 0, 60) : 0, usual = known || PACK_OF[key];
+      if (row && row.unit === 'pack') {
+        const n = Math.round(row.qty * usual);
+        await env.DB.prepare("UPDATE items SET qty = ?, unit = 'pcs' WHERE id = ?").bind(n, row.id).run();
+        row.qty = n; row.unit = 'pcs';
+      }
+      if (a.unit === 'pack') { a.quantity = Math.round(a.quantity * (each || usual)); a.unit = 'pcs'; if (!each && !known) a.sure = false; }
+      else if (a.unit === 'pcs' && a.sure === false && a.quantity === 1) a.quantity = usual;
+    }
+    if (each >= 2 && a.unit === 'pcs') await env.DB.prepare('INSERT INTO settings (k, v) VALUES (?, ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v').bind('each:' + key, String(each)).run();
+    // an amount in another unit is never added as it is: 1 kg of rice and 500 g is 1.5 kg, and 42 pods read off a receipt onto a
+    // thing kept in packs is the 42-pod pack it came in. What cannot be converted counts as what this home bought last time, a guess.
     if (row && row.qty > 0 && a.action === 'add' && a.unit !== row.unit) {
       const c = convert(a.quantity, a.unit, row.unit);
       if (c !== null) a.quantity = c;
-      else if (row.unit === 'pack' && a.unit === 'pcs') { a.quantity = a.quantity >= 12 ? Math.round(a.quantity / 12) : 1; a.sure = false; }
-      else if (row.unit === 'pcs' && a.unit === 'pack' && PACK_OF[key]) { a.quantity = a.quantity * PACK_OF[key]; a.sure = false; }
+      else if (row.unit === 'pack' && a.unit === 'pcs') { a.quantity = each ? Math.max(1, Math.round(a.quantity / each)) : 1; if (!each) a.sure = false; }
       else if (!((row.unit === 'pcs' || row.unit === 'pack') && (a.unit === 'pcs' || a.unit === 'pack'))) {
         const last = await env.DB.prepare('SELECT qty FROM purchases WHERE name_key = ? AND unit = ? AND qty > 0 ORDER BY bought DESC LIMIT 1').bind(key, row.unit).first();
         a.quantity = last ? last.qty : row.unit === 'pcs' || row.unit === 'pack' ? 1 : row.qty; a.sure = false;

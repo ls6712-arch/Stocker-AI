@@ -22,7 +22,7 @@ function d1(db) {
 const results = [];
 const check = (name, pass, detail) => results.push([!!pass, name, pass ? '' : JSON.stringify(detail ?? '').slice(0, 400)]);
 const DAY = '2026-11-18';
-const A = await loadAgent(['cleanProfile', 'homeWarn']);
+const A = await loadAgent(['cleanProfile', 'homeWarn', 'quickReceipt', 'enrich']);
 
 async function home() {
   const db = new DatabaseSync(':memory:');
@@ -49,13 +49,13 @@ async function home() {
   await h.add('Eggs', { qty: 1, unit: 'pack', sure: true });
   await h.say('bought 2 dozen eggs');
   const e = await h.item('Eggs');
-  check('"2 dozen eggs" onto 1 pack of eggs is 3 packs, not 25', e.unit === 'pack' && e.qty === 3, e);
+  check('"2 dozen eggs" onto 1 box of eggs is 36 eggs, counted one by one, not 25', e.unit === 'pcs' && e.qty === 36, e);
 
   const h2 = await home();
   await h2.add('Eggs', { qty: 1, unit: 'pack', sure: true });
   await h2.apply([{ action: 'add', name: 'Eggs', quantity: 24, unit: 'pcs', sure: true }]);
   const e2 = await h2.item('Eggs');
-  check('24 eggs from the model onto 1 pack is 3 packs, the count stays in packs', e2.unit === 'pack' && e2.qty === 3, e2);
+  check('24 eggs from the model onto 1 box is 36 eggs', e2.unit === 'pcs' && e2.qty === 36, e2);
 
   const h3 = await home();
   await h3.add('Eggs', { qty: 12, unit: 'pcs', sure: true });
@@ -89,10 +89,52 @@ async function home() {
   check('"bought eggs" with no count is 12, marked as a guess', e && e.qty === 12 && e.unit === 'pcs', e);
   const h2 = await home();
   await h2.say('bought 6 eggs');
-  check('opposite: "bought 6 eggs" is 6', (await h2.item('Eggs')).qty === 6, await h2.item('Eggs'));
+  check('opposite: "bought 6 eggs" is 6', ((await h2.item('Eggs')) || {}).qty === 6, await h2.item('Eggs'));
   const h3 = await home();
   await h3.say('bought bananas');
   check('opposite: bananas with no count stay 1 (no made-up dozen)', (await h3.item('Bananas')).qty === 1, await h3.item('Bananas'));
+}
+
+
+// ---- 2b. pack sizes are read, not guessed: receipts, order screens and chat ----
+{
+  const egg = (o) => o.actions.find((a) => /egg/i.test(a.name)) || {};
+  const r1 = egg(A.quickReceipt('KROGER\nLG EGGS 18CT 4.99\nTOTAL 4.99', [], null));
+  check('receipt "LG EGGS 18CT" is 18 eggs, 18 to a pack', r1.quantity === 18 && r1.unit === 'pcs' && r1.each === 18, r1);
+  const r2 = egg(A.quickReceipt('Blinkit\nFarm Fresh Eggs (Pack of 6) x 2 ₹130\nDelivery fee ₹25', [], null));
+  check('order "Farm Fresh Eggs (Pack of 6) x 2" is 12 eggs, 6 to a pack', r2.quantity === 12 && r2.unit === 'pcs' && r2.each === 6, r2);
+  const r3 = egg(A.quickReceipt('Zepto\nEggs - Tray of 30 ₹210', [], null));
+  check('order "Eggs - Tray of 30" is 30 eggs', r3.quantity === 30 && r3.each === 30, r3);
+  const r4 = A.quickReceipt('WHOLE FOODS\nORG WHL MILK 1GAL 5.99\nTOTAL 5.99', [], null).actions[0] || {};
+  check('opposite: a gallon of milk is litres, with no pack size', r4.unit === 'L' && !r4.each, r4);
+
+  const m1 = A.enrich({ action: 'add', name: 'Eggs', quantity: 1, unit: 'pcs', area: 'Kitchen', category: 'Dairy', warn: '' }, null, 'LG EGGS 18CT 4.99');
+  check('a receipt read by the model: "LG EGGS 18CT" is 18 eggs, 18 to a pack', m1.quantity === 18 && m1.unit === 'pcs' && m1.each === 18, m1);
+  const m2 = A.enrich({ action: 'add', name: 'Bananas', quantity: 6, unit: 'pcs', area: 'Kitchen', category: 'Produce', warn: '' }, null, 'BANANAS 2.1LB 1.26');
+  check('opposite: bananas by the pound keep their weight and get no pack size', m2.unit === 'lb' && !m2.each, m2);
+
+  const h = await home();
+  await h.say('bought a tray of 30 eggs');
+  check('chat "a tray of 30 eggs" is 30 eggs', ((await h.item('Eggs')) || {}).qty === 30, await h.item('Eggs'));
+  await h.say('bought eggs');
+  check('then "bought eggs" with no count is another 30, the size this home buys', ((await h.item('Eggs')) || {}).qty === 60, await h.item('Eggs'));
+  const h2 = await home();
+  await h2.say('bought 2 packs of 18 eggs');
+  check('chat "2 packs of 18 eggs" is 36 eggs', ((await h2.item('Eggs')) || {}).qty === 36, await h2.item('Eggs'));
+  const h3 = await home();
+  await h3.say('picked up an 18-pack of eggs');
+  check('chat "an 18-pack of eggs" is 18 eggs', ((await h3.item('Eggs')) || {}).qty === 18, await h3.item('Eggs'));
+  const h4 = await home();
+  await h4.add('Eggs', { qty: 1, unit: 'pack', sure: true });
+  await h4.apply([{ action: 'add', name: 'Eggs', quantity: 18, unit: 'pcs', each: 18, sure: true }]);
+  check('a box of 18 onto 1 box kept in packs: the old box counts as 12, the new as 18, 30 eggs', ((await h4.item('Eggs')) || {}).qty === 30 && ((await h4.item('Eggs')) || {}).unit === 'pcs', await h4.item('Eggs'));
+  const h5 = await home();
+  await h5.add('Laundry Pods', { qty: 1, unit: 'pack', sure: true, area: 'Cleaning', category: 'Laundry' });
+  await h5.apply([{ action: 'add', name: 'Laundry Pods', quantity: 42, unit: 'pcs', each: 42, sure: true }]);
+  check('opposite: 42 pods read off a receipt onto pods kept in packs is one more pack, not 43', ((await h5.item('Laundry Pods')) || {}).qty === 2 && ((await h5.item('Laundry Pods')) || {}).unit === 'pack', await h5.item('Laundry Pods'));
+  const h6 = await home();
+  await h6.say('bought 2 packs of tortillas');
+  check('opposite: packs of something with no size stay packs', (await h6.item('Tortillas') || {}).unit === 'pack' && (await h6.item('Tortillas')).qty === 2, await h6.item('Tortillas'));
 }
 
 // ---- 3. a typed allergy with a spelling slip still counts ----
