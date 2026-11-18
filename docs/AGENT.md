@@ -394,6 +394,10 @@ Scores (`npm run test:world`, `evals/world.mjs`): the tuning set (108 lines, 13 
 
 Rules that keep the scores honest: a held-out set used to fix something stops being held out (write a fresh one); tune on `npm run test:pace -- --seed=1` and report seed 2; and a task that fails every trial is first checked for being unfair before Tote is changed.
 
+## Branch builds (Worker Previews)
+
+A push to any branch other than `main` runs `npx wrangler preview` in Workers Builds. Previews inherit nothing from production, so `wrangler.jsonc` has a `previews` block: their own D1 database `pantry-keeper-preview` (the Worker makes its tables on the first request, as everywhere), the same models, `PHOTO_TRIAL` off and a small AI ceiling. No `APP_PIN` secret is set for Previews, so a Preview stays locked; add one with `npx wrangler preview secret put APP_PIN` to try a branch on a phone. Cron triggers run in production only. Before 17 Nov every branch build failed on the missing block; production builds were never affected.
+
 ## Harness
 
 `converse()` is the single entry point for a turn: it decides whether a message is a question, runs the structuring model, applies the guardrails and returns proposed actions. The chat, the MCP tool and the evals all call it, so the evals test the same agent people use.
