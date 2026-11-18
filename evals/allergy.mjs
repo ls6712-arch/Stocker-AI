@@ -31,7 +31,7 @@ async function home(profile, says, items = KITCHEN) {
   const db = new DatabaseSync(':memory:');
   db.exec(fs.readFileSync(path.join(ROOT, 'schema.sql'), 'utf8'));
   const seen = [];
-  const env = { APP_PIN: 'test1234', DB: d1(db), TEXT_MODEL: 'big', DELEGATE: 'off', ASSETS: { fetch: async () => new Response('') },
+  const env = { APP_PIN: 'test1234', TEST_DATES: 'on', DB: d1(db), TEXT_MODEL: 'big', DELEGATE: 'off', ASSETS: { fetch: async () => new Response('') },
     AI: { run: async (model, input) => { seen.push(input); if (says === null) throw new Error('4006: you have used up your daily free allocation of 10,000 neurons'); return { response: typeof says === 'function' ? says(input) : says }; } } };
   let cookie = '';
   const call = async (method, p, body) => {

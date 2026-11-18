@@ -32,7 +32,7 @@ async function home(opts = {}) {
   db.exec(fs.readFileSync(path.join(ROOT, 'schema.sql'), 'utf8'));
   let objects = [], reads = {}, findFails = false, failTags = new Set();
   const calls = [];
-  const env = { APP_PIN: 'test1234', DB: d1(db), TEXT_MODEL: 'big', SMALL_MODEL: 'small', VISION_MODEL: 'vision', DELEGATE: 'off', ASSETS: { fetch: async () => new Response('') }, PHOTO_PIPELINE: 'owner', ...(opts.env || {}),
+  const env = { APP_PIN: 'test1234', TEST_DATES: 'on', DB: d1(db), TEXT_MODEL: 'big', SMALL_MODEL: 'small', VISION_MODEL: 'vision', DELEGATE: 'off', ASSETS: { fetch: async () => new Response('') }, PHOTO_PIPELINE: 'owner', ...(opts.env || {}),
     AI: { run: async (model, input) => {
       calls.push(model);
       if (model === FIND) { if (findFails) throw new Error('detector down'); return { objects }; }

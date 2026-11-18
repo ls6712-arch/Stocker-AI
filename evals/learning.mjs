@@ -69,7 +69,7 @@ async function main() {
   // ---- a home to live in ----
   const db = new DatabaseSync(':memory:');
   db.exec(fs.readFileSync(path.join(ROOT, 'schema.sql'), 'utf8'));
-  const env = { APP_PIN: 'test1234', DB: d1(db), AI: fakeModel(), TEXT_MODEL: 'fake', ASSETS: { fetch: async () => new Response('') } };
+  const env = { APP_PIN: 'test1234', TEST_DATES: 'on', DB: d1(db), AI: fakeModel(), TEXT_MODEL: 'fake', ASSETS: { fetch: async () => new Response('') } };
   const sentPushes = [];
   let pushStatus = 201;
   const realFetch = globalThis.fetch;

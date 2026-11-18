@@ -68,7 +68,7 @@ function world(vars = {}) {
   const db = new DatabaseSync(':memory:');
   db.exec(fs.readFileSync(path.join(ROOT, 'schema.sql'), 'utf8'));
   let calls = 0;
-  const env = { APP_PIN: 'test1234', DB: d1(db), TEXT_MODEL: 'big', DELEGATE: 'off', ASSETS: { fetch: async () => new Response('') }, GOOGLE_CLIENT_ID: CLIENT, MAIL_KEY: 'mail-key-for-tests', MAIL_FROM: 'Tote <tote@stocker.test>',
+  const env = { APP_PIN: 'test1234', TEST_DATES: 'on', DB: d1(db), TEXT_MODEL: 'big', DELEGATE: 'off', ASSETS: { fetch: async () => new Response('') }, GOOGLE_CLIENT_ID: CLIENT, MAIL_KEY: 'mail-key-for-tests', MAIL_FROM: 'Tote <tote@stocker.test>',
     AI: { run: async (model, input) => { calls++; return { response: /You keep an inventory/.test(JSON.stringify(input)) ? plan([], 'question') : 'You have rice at home.' }; } }, ...vars };
   for (const k of Object.keys(env)) if (env[k] === null) delete env[k];
   const person = (ip) => {
@@ -354,7 +354,7 @@ await section('A hundred homes', async () => {
 // ---- 10. the pages people see ----
 await section('Pages', async () => {
   const read = (f) => { try { return fs.readFileSync(path.join(ROOT, 'public', f), 'utf8'); } catch (e) { return ''; } };
-  const app = read('index.html'), priv = read('privacy.html');
+  const app = read('index.html') + read('app.js'), priv = read('privacy.html');
   check('there is a privacy notice', priv.length > 1500, priv.length);
   check('  ...that says what is kept, that the maker can read what is typed, where the AI runs and how to delete everything', /email/i.test(priv) && /can read/i.test(priv) && /Cloudflare/i.test(priv) && /delete/i.test(priv) && /Open Food Facts/i.test(priv), null);
   check('  ...and never promises that a food is safe', !/\bis safe\b|allergy[- ]safe|guarantee/i.test(priv), null);

@@ -1,0 +1,1 @@
+(async function(){try{var r=await fetch('/api/signin/options');var d=r.ok?await r.json():{};if(d.contact&&/^[^\s@<>"']+@[^\s@<>"']+$/.test(d.contact)){var a=document.getElementById('contact');a.textContent=d.contact;a.href='mailto:'+d.contact;document.getElementById('contactBox').hidden=false}}catch(e){}})();

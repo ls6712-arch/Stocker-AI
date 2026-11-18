@@ -1,6 +1,6 @@
 import fs from 'fs';
 import {fileURLToPath} from 'url';const R=fileURLToPath(new URL('../',import.meta.url));
-const src=fs.readFileSync(R+'src/index.js','utf8'),html=fs.readFileSync(R+'public/index.html','utf8');
+const src=fs.readFileSync(R+'src/index.js','utf8'),html=fs.readFileSync(R+'public/index.html','utf8')+fs.readFileSync(R+'public/app.js','utf8');
 // server pieces
 // the privacy filter and the rules it is built from (they sit together, from ADDR_STOP to the end of the `const scrub` line)
 const scrubSrc=src.slice(src.indexOf('const ADDR_STOP ='),src.indexOf('\n',src.indexOf('const scrub =')));

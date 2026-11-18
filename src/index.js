@@ -3622,7 +3622,7 @@ async function api(request, env, url, ctx) {
   let me = '';
   try { me = cleanName(decodeURIComponent(cookie(request, 'who') || '')); } catch (e) {}
   const hdr = request.headers.get('x-today');
-  const today = isDate(hdr) ? hdr : new Date().toISOString().slice(0, 10);
+  const today = isDate(hdr) && (env.TEST_DATES === 'on' || Math.abs(Date.parse(hdr + 'T12:00:00Z') - Date.now()) <= 36 * 3600e3) ? hdr : new Date().toISOString().slice(0, 10);
 
   if (path === '/api/items' && method === 'GET') {
     const items = (await env.DB.prepare('SELECT * FROM items ORDER BY name').all()).results;

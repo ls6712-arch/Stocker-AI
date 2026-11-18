@@ -31,7 +31,7 @@ async function home(items = [], opts = {}) {
   db.exec(fs.readFileSync(path.join(ROOT, 'schema.sql'), 'utf8'));
   let sees = '', actions = [];
   const looked = [];
-  const env = { APP_PIN: 'test1234', DB: d1(db), TEXT_MODEL: 'big', SMALL_MODEL: 'small', VISION_MODEL: 'vision', DELEGATE: 'off', ASSETS: { fetch: async () => new Response('') }, ...(opts.env || {}),
+  const env = { APP_PIN: 'test1234', TEST_DATES: 'on', DB: d1(db), TEXT_MODEL: 'big', SMALL_MODEL: 'small', VISION_MODEL: 'vision', DELEGATE: 'off', ASSETS: { fetch: async () => new Response('') }, ...(opts.env || {}),
     AI: { run: async (model, input) => {
       const pic = input.image || (input.messages || []).some((m) => Array.isArray(m.content) && m.content.some((c) => c.type === 'image_url'));
       if (pic) { looked.push(model); if (opts.fail && opts.fail === model) throw new Error('model unavailable'); if (model !== 'vision') return opts.openai ? { choices: [{ message: { content: model + ' saw milk' } }] } : { response: model + ' saw milk' }; }
@@ -105,7 +105,7 @@ async function home(items = [], opts = {}) {
 
 // ---- 4. the app: Today never asks the same question the card after a scan is asking ----
 {
-  const html = fs.readFileSync(path.join(ROOT, 'public/index.html'), 'utf8');
+  const html = fs.readFileSync(path.join(ROOT, 'public/index.html'), 'utf8') + fs.readFileSync(path.join(ROOT, 'public/app.js'), 'utf8');
   const fn = html.slice(html.indexOf('function todayCards('), html.indexOf('function todayCards(') + 4000);
   check('Today leaves out a "How many?" that the card after a scan is already asking', /many=items\.filter\(function\(i\)\{return i\.unsure&&i\.qty>0&&!asking\(i\)\}\)/.test(fn), fn.match(/many=items\.filter\([^;]+/)?.[0]);
 }

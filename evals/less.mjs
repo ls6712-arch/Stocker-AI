@@ -34,7 +34,7 @@ try { A = await loadAgent(['digest', 'remindText', 'shopGapFrom']); } catch (e) 
 async function home() {
   const db = new DatabaseSync(':memory:');
   db.exec(fs.readFileSync(path.join(ROOT, 'schema.sql'), 'utf8'));
-  const env = { APP_PIN: 'test1234', DB: d1(db), AI: { run: async () => { throw new Error('4006: no credits'); } }, TEXT_MODEL: 'none', ASSETS: { fetch: async () => new Response('') } };
+  const env = { APP_PIN: 'test1234', TEST_DATES: 'on', DB: d1(db), AI: { run: async () => { throw new Error('4006: no credits'); } }, TEXT_MODEL: 'none', ASSETS: { fetch: async () => new Response('') } };
   let cookie = '';
   const call = async (method, p, body, today) => {
     const res = await A.default.fetch(new Request('https://stocker.test' + p, { method, headers: { cookie, 'content-type': 'application/json', origin: 'https://stocker.test', 'x-today': today || DAY }, body: body ? JSON.stringify(body) : undefined }), env, { waitUntil() {} });

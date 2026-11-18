@@ -27,7 +27,7 @@ function world(answer) {
   const db = new DatabaseSync(':memory:');
   db.exec(fs.readFileSync(path.join(ROOT, 'schema.sql'), 'utf8'));
   const asked = [];
-  const env = { APP_PIN: 'test1234', DB: d1(db), TEXT_MODEL: 'big', DELEGATE: 'off', ASSETS: { fetch: async () => new Response('') },
+  const env = { APP_PIN: 'test1234', TEST_DATES: 'on', DB: d1(db), TEXT_MODEL: 'big', DELEGATE: 'off', ASSETS: { fetch: async () => new Response('') },
     AI: { run: async (model, input) => { const said = input.messages[input.messages.length - 1].content; asked.push(said); if (typeof answer === 'function') return answer(said); return { response: JSON.stringify({ words: answer[said] || [] }) }; } } };
   let cookie = '';
   const call = async (method, p, body) => {

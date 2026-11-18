@@ -93,8 +93,6 @@ section{background:var(--surface);border:1px solid var(--line);border-radius:18p
 
 <p class="small">Last changed on 17 November 2026. If what is kept or who can read it changes, this page will say so before the change.</p>
 </main>
-<script>
-(async function(){try{var r=await fetch('/api/signin/options');var d=r.ok?await r.json():{};if(d.contact&&/^[^\s@<>"']+@[^\s@<>"']+$/.test(d.contact)){var a=document.getElementById('contact');a.textContent=d.contact;a.href='mailto:'+d.contact;document.getElementById('contactBox').hidden=false}}catch(e){}})();
-</script>
+<script src="/privacy-page.js"></script>
 </body>
 </html>

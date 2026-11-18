@@ -52,13 +52,15 @@ const AI = {
   },
 };
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.webmanifest': 'application/manifest+json', '.ico': 'image/x-icon', '.txt': 'text/plain' };
+const SITE_HEADERS = Object.fromEntries(fs.readFileSync(path.join(ROOT, 'public/_headers'), 'utf8').split('\n').filter((l) => /^\s+[A-Za-z-]+:/.test(l)).map((l) => { const i = l.indexOf(':'); return [l.slice(0, i).trim(), l.slice(i + 1).trim()]; }));
 const ASSETS = { fetch: async (req) => {
   let p = decodeURIComponent(new URL(req.url).pathname); if (p.endsWith('/')) p += 'index.html';
   const f = path.join(ROOT, 'public', path.normalize(p).replace(/^(\.\.[/\\])+/, ''));
   if (!f.startsWith(path.join(ROOT, 'public')) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) return new Response('not found', { status: 404 });
-  return new Response(fs.readFileSync(f), { headers: { 'content-type': TYPES[path.extname(f)] || 'application/octet-stream' } });
+  // The same headers the live site sends (public/_headers, '/*' block), so every walk runs under the real content policy.
+  return new Response(fs.readFileSync(f), { headers: { ...SITE_HEADERS, 'content-type': TYPES[path.extname(f)] || 'application/octet-stream' } });
 } };
-const env = { APP_PIN: 'test1234', DB, AI, ASSETS, TEXT_MODEL: 'big', SMALL_MODEL: 'small', VISION_MODEL: 'vision', SPEECH_MODEL: 'speech', IMAGE_MODEL: 'image', DELEGATE: 'on', CF_VERSION: { id: 'e2e00000' }, PHOTO_PIPELINE: process.env.E2E_PIPELINE || 'off' };
+const env = { APP_PIN: 'test1234', TEST_DATES: 'on', DB, AI, ASSETS, TEXT_MODEL: 'big', SMALL_MODEL: 'small', VISION_MODEL: 'vision', SPEECH_MODEL: 'speech', IMAGE_MODEL: 'image', DELEGATE: 'on', CF_VERSION: { id: 'e2e00000' }, PHOTO_PIPELINE: process.env.E2E_PIPELINE || 'off' };
 
 // ---- real sign-in, when asked for: Google's keys and the mail service are stand-ins, so nothing leaves this machine ----
 const SIGNUP = !!process.env.E2E_SIGNUP, mail = [];

@@ -551,3 +551,15 @@ Next: score the photo trials as soon as the owner has taken a few photos, then c
 
 Not measured: the live app, the real model after this change, a real phone.
 
+
+## Security round (17 Nov 2026, branch `tote-security-1`)
+
+`npm run test:security` (evals/security.mjs, in `npm test`). Each check has its opposite. On the code before this round 12 of 20 passed; after it, 26 of 26.
+
+- **No inline scripts.** The page scripts now live in `public/app.js`, `evals-page.js`, `privacy-page.js` and `scorecard-page.js`. `script-src` is `'self'` plus Google sign-in only, with no `'unsafe-inline'`, so text that slips into the page can never run as code. Never add a `<script>` block, an `onclick=` attribute, or a `javascript:` link: the checks fail and the browser would block it. Tests that read the page now read `index.html` + `app.js`.
+- **HTTPS only:** `Strict-Transport-Security: max-age=31536000; includeSubDomains` in `public/_headers`.
+- **The phone's date (`x-today`) is believed only within 36 hours of the server's clock.** Anything further is ignored and the server's date is used. The offline harnesses set `TEST_DATES: 'on'` to fix any date; production never sets it (a check makes sure).
+- **The browser walks run under the live headers:** `evals/e2e/server.mjs` reads the `/*` block of `public/_headers`, so a script the policy would block fails a walk before it ships. Walks passing under the policy: welcome 57/57, journey 37/37, sign-in 36/36, motion 38/38, scan 22/22, pipeline 16/16 (owner and all).
+- **CI:** `.github/workflows/test.yml` runs `npm test` on every push and pull request (read-only token, no secrets).
+- Unchanged and checked: the sign-in cookie is HttpOnly, Secure, SameSite=Strict; changes from another site's page are refused (403); nothing is readable without sign-in (401); bodies over 9 MB are refused (413); `npm audit` reports 0 known vulnerabilities.
+- Left for Sushmitha (account settings, not code): make the GitHub repo private, protect `main` (require the tests), turn on two-factor sign-in for GitHub and Cloudflare, and keep `APP_PIN` long.
