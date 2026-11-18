@@ -38,6 +38,34 @@
     "AI_HOME_DAY": "60",
     "AI_ALL_DAY": "2000"
   },
+  // Branch builds run `npx wrangler preview`, which needs its own settings: Previews inherit nothing from production.
+  // They get a database of their own (pantry-keeper-preview, made by the Worker on first request), so a branch never touches
+  // a real home; the same models; no photo trials; and a small AI ceiling. No APP_PIN secret is set for Previews, so a
+  // Preview stays locked unless one is added with `npx wrangler preview secret put APP_PIN`. Cron triggers run production only.
+  "previews": {
+    "vars": {
+      "VISION_MODEL": "@cf/meta/llama-3.2-11b-vision-instruct",
+      "PHOTO_TRIAL": "off",
+      "PHOTO_PIPELINE": "owner",
+      "TEXT_MODEL": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+      "SMALL_MODEL": "@cf/meta/llama-3.1-8b-instruct-fp8-fast",
+      "DELEGATE": "on",
+      "SPEECH_MODEL": "@cf/openai/whisper-large-v3-turbo",
+      "IMAGE_MODEL": "@cf/black-forest-labs/flux-1-schnell",
+      "HOMES_MAX": "5",
+      "AI_HOME_DAY": "60",
+      "AI_ALL_DAY": "100"
+    },
+    "d1_databases": [
+      {
+        "binding": "DB",
+        "database_name": "pantry-keeper-preview",
+        "database_id": "1af6713c-338a-445d-8e56-65e8052524a7"
+      }
+    ],
+    "ai": { "binding": "AI" },
+    "version_metadata": { "binding": "CF_VERSION" }
+  },
   "triggers": { "crons": ["* * * * *"] },
   "version_metadata": { "binding": "CF_VERSION" },
   "observability": { "enabled": true }
