@@ -146,6 +146,20 @@ const box = (x0, y0, x1, y1, score) => ({ x_min: x0, y_min: y0, x_max: x1, y_max
   check('opposite: the old single reading of a photo still works when the pipeline is on', (await h.call('POST', '/api/scan/shelf', { image: crop('whole') })).status === 200, null);
 }
 
+// ---- 4b. a photo read pack by pack is counted against the home's daily AI share ----
+{
+  const h = await home({ env: { PHOTO_PIPELINE: 'all', AI_HOME_DAY: '3' } });
+  const asha = await h.friend();
+  h.set({ objects: Array.from({ length: 8 }, (_, i) => box(0.05 + (i % 4) * 0.24, i < 4 ? 0.1 : 0.55, 0.2 + (i % 4) * 0.24, i < 4 ? 0.4 : 0.9)), reads: { milk: 'Whole milk | sure' } });
+  const big = await h.scan(['milk', 'milk', 'milk', 'milk', 'milk', 'milk', 'milk', 'milk'], asha);
+  check('a friend with a share of 3 a day: finding (1) and reading 8 packs (1 + 2) would take 4, so the reading is refused', big.f.boxes.length === 8 && big.d && big.d.error, big.d);
+  const h2 = await home({ env: { PHOTO_PIPELINE: 'all', AI_HOME_DAY: '3' } });
+  const asha2 = await h2.friend();
+  h2.set({ objects: [box(0.1, 0.5, 0.3, 0.9), box(0.4, 0.5, 0.6, 0.9)], reads: { milk: 'Whole milk | sure' } });
+  const small = await h2.scan(['milk', 'milk'], asha2);
+  check('opposite: the same share takes a photo of 2 packs (1 to find, 1 to read)', small.d && !small.d.error && (small.d.marks || []).length === 2, small.d);
+}
+
 // ---- 5. the owner's photos: the pipeline and the old reading kept side by side, as text only ----
 {
   const h = await home({ env: { PHOTO_TRIAL: 'on' } });

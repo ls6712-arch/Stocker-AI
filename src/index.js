@@ -4068,6 +4068,8 @@ async function api(request, env, url, ctx) {
     const boxes = (Array.isArray(body.boxes) ? body.boxes : []).filter((b) => b && /^b\d{1,2}$/.test(String(b.id)) && [b.x, b.y, b.w, b.h].every((v) => Number.isFinite(Number(v)) && Number(v) >= 0 && Number(v) <= 1))
       .slice(0, MAX_BOXES).map((b) => ({ id: String(b.id), x: Number(b.x), y: Number(b.y), w: Number(b.w), h: Number(b.h) }));
     if (!crops.length) return json({ error: 'no_crops' }, 400);
+    // a photo read pack by pack costs more than one message: it takes one more from the home's daily share for every four packs
+    for (let k = 0; k < Math.floor(crops.length / 4); k++) if (!(await aiBudget(env))) return limited(env);
     const t0 = Date.now();
     // every cut-out is read at once; one that fails is left out, never guessed
     const reads = await Promise.all(crops.map(async (c) => { try { return { id: String(c.id), line: await readCrop(env, c.image) }; } catch (e) { return { id: String(c.id), line: '', failed: true }; } }));

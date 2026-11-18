@@ -23,8 +23,9 @@
     // (photo_trials). Four extra model calls per photo, the owner's home only. Set to "off" to stop.
     "PHOTO_TRIAL": "on",
     // fridge and shelf photos go through find, crop, read (Moondream finds the packs, the phone cuts them out, Gemma 4 reads
-    // each one) for the owner's home only; "all" for every home, "off" for the single reading of the whole photo
-    "PHOTO_PIPELINE": "owner",
+    // each one) for every home; "owner" for the owner's home only, "off" for the single reading of the whole photo.
+    // A photo takes one message from the home's daily AI share, plus one for every four packs read.
+    "PHOTO_PIPELINE": "all",
     "TEXT_MODEL": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
     // everyday jobs go to this cheaper model first; its work is checked by code, and anything it gets wrong goes to TEXT_MODEL.
     // Set DELEGATE to "off" to send everything to TEXT_MODEL.
