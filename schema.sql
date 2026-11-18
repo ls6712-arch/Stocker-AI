@@ -241,3 +241,14 @@ CREATE TABLE IF NOT EXISTS photo_trials (
   ms INTEGER,
   err TEXT
 );
+-- the checklist on every chat turn: Claude's first pass (guess) and the owner's answer (mark), for every home, by turn
+CREATE TABLE IF NOT EXISTS checks (
+  home TEXT NOT NULL DEFAULT '',
+  turn INTEGER NOT NULL,
+  at TEXT NOT NULL,
+  guess TEXT,
+  guessed TEXT,
+  mark TEXT,
+  marked TEXT,
+  PRIMARY KEY (home, turn)
+);
