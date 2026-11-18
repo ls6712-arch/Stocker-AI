@@ -229,3 +229,15 @@ CREATE TABLE IF NOT EXISTS waitlist (
   at TEXT NOT NULL,
   via TEXT
 );
+-- The owner's photo trials: what each vision model read from the same photo, as text. The photo itself is never kept.
+CREATE TABLE IF NOT EXISTS photo_trials (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  photo TEXT NOT NULL,
+  at TEXT NOT NULL,
+  kind TEXT NOT NULL,
+  model TEXT NOT NULL,
+  prompt TEXT NOT NULL,
+  text TEXT,
+  ms INTEGER,
+  err TEXT
+);

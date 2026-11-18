@@ -477,6 +477,85 @@ async function seeImage(env, dataUrl, kind) {
   return String((r && r.response) || '');
 }
 
+// ---------- what a photo of the home really shows: a check by code between the camera and the inventory ----------
+// The vision model lists what it sees; code keeps only lines that name a product, turns a bare "jar" or a "maybe" into a
+// question for the person instead of a change, and later drops anything the reading model adds that the camera never saw.
+const SCENE = new Set('a an the of and with on in at top bottom left right middle side back front inside empty full open closed white clear plastic glass metal steel fridge refrigerator freezer door doors shelf shelves drawer drawers rack racks bin bins compartment crisper cabinet cupboard counter countertop wall floor light window handle magnet person people man woman child hand hands finger face phone screen kitchen'.split(' '));
+const BARE = /^(?:(?:an?|the|some|one|two|small|large|big|tall|short|glass|plastic|metal|steel|clear|white|black|brown|green|red|blue|yellow|paper|unlabell?ed|unknown|unidentified|opaque|round|square)\s+)*(?:jars?|containers?|bottles?|bags?|box(?:es)?|tubs?|cartons?|packets?|packs?|cans?|tins?|pouch(?:es)?|items?|products?|food|things?|dabbas?|boxes)$/i;
+const MAYBE = /\b(maybe|possibly|probably|perhaps|might be|looks like|appears to be|could be|unclear|not sure|uncertain|unknown|unidentified|or)\b|\?/i;
+function checkSeen(text) {
+  const seen = new Map(), doubts = [];
+  let dropped = 0;
+  for (let raw of String(text || '').split(/\r?\n/)) {
+    const line = raw.replace(/^\s*(?:[-*•]|\d+[.)])\s*/, '').replace(/\*\*/g, '').trim();
+    if (!line) continue;
+    const f = line.split('|').map((x) => x.trim());
+    // a sentence around the list ("Here is what I can see:") is not a product
+    if (f.length < 2 && (/:$/.test(line) || line.split(/\s+/).length > 6)) continue;
+    let name = f[0].replace(/\s*\((?:[^)]*)\)\s*$/, (m) => (MAYBE.test(m) ? ' ?' : m)).replace(/\s+/g, ' ').trim();
+    const rest = f.slice(1).join(' | ');
+    if (!name || name.length > 60) { dropped++; continue; }
+    const words = name.toLowerCase().replace(/[^a-z\s]/g, ' ').split(/\s+/).filter((w) => w.length > 1);
+    if (!words.length || words.every((w) => SCENE.has(w))) { dropped++; continue; } // a shelf, a door, a hand: not a product
+    if (BARE.test(name.replace(/\s*\?$/, ''))) { doubts.push({ name: titleCase(name.replace(/\s*\?$/, '').toLowerCase()), why: 'label' }); continue; }
+    if (MAYBE.test(name) || /\b(maybe|unsure about what|not sure what)\b/i.test(rest.replace(/^\s*unsure\s*(\||$)/i, ''))) {
+      doubts.push({ name: titleCase(name.replace(/\s*\?$/, '').replace(/\b(maybe|possibly|probably|perhaps|might be|looks like|appears to be|could be)\b/gi, '').replace(/\s+/g, ' ').trim().toLowerCase()), why: 'maybe' });
+      continue;
+    }
+    const n = /^\s*(\d{1,4})\b/.exec(f[1] || '');
+    const count = n && Number(n[1]) > 0 && Number(n[1]) <= 24 ? Number(n[1]) : null; // more than two dozen of one thing in a photo is a misreading
+    const date = (rest.match(/\b\d{4}-\d{2}-\d{2}\b|\b\d{1,2}[/.]\d{1,2}(?:[/.]\d{2,4})?\b|\b[A-Z][a-z]{2} \d{1,2}(?:,? \d{4})?\b/) || [''])[0];
+    const k = normKey(name);
+    const had = seen.get(k);
+    if (had) { had.count = had.count !== null && count !== null ? Math.min(24, had.count + count) : null; continue; }
+    seen.set(k, { name, count, date });
+  }
+  const list = [...seen.values()];
+  const kept = list.map((x) => x.name + ' | ' + (x.count === null ? 'unsure' : x.count) + ' | ' + x.date).join('\n');
+  const seenDoubts = new Set();
+  return { text: kept, names: list.map((x) => x.name), doubts: doubts.filter((d) => d.name && !seenDoubts.has(normKey(d.name)) && seenDoubts.add(normKey(d.name))).slice(0, 4), dropped };
+}
+// the reading model may only act on what the camera saw: an action that matches no line of the photo is dropped
+function wordsOf(name) { return normKey(String(name || '')).split(' ').filter((w) => w.length >= 3 && !SCENE.has(w)); }
+function keepSeen(actions, names) {
+  const pool = new Set();
+  for (const n of names) {
+    for (const w of wordsOf(n)) pool.add(w);
+    const g = itemInfo(n), st = stapleFor(n);
+    for (const x of [g && g.name, st && st.name]) for (const w of wordsOf(x)) pool.add(w);
+  }
+  const kept = [], dropped = [];
+  for (const a of actions) (wordsOf(a.name).some((w) => pool.has(w) || pool.has(w.replace(/s$/, ''))) ? kept : dropped).push(a);
+  return { actions: kept, dropped: dropped.map((a) => a.name) };
+}
+// Owner-only photo trials: the same photo, read by other vision models with a fuller prompt, kept as text so they can be
+// scored by hand against what is really in the photo. Nothing here changes the home. Switched on by PHOTO_TRIAL=on.
+const SHELF_ASK_V2 = 'This is a photo inside a home: a fridge, a shelf, a cupboard, a counter or an unpacked shopping bag. Go through it part by part (each shelf, door bin and drawer, top to bottom, left to right) and list every product, one per line, as: name | how many | sure or maybe | printed expiry date if you can read one. Name: the kind of food or product, with the brand when it is printed on the pack (for example "Daisy cottage cheese", "whole milk, 1 gallon"). How many: the number of separate packs or containers you can see of it, 1 if one. Write maybe when you are guessing what it is. For a container whose contents you cannot tell, write "unlabelled jar" or "unlabelled bag" with maybe. List only what is visible. Ignore people, faces, screens, letters, cards and any other personal details; never describe or copy them.';
+const TRIAL_MODELS = ['@cf/meta/llama-3.2-11b-vision-instruct', '@cf/meta/llama-4-scout-17b-16e-instruct', '@cf/google/gemma-4-26b-a4b-it', '@cf/mistralai/mistral-small-3.1-24b-instruct'];
+async function seeWith(env, model, dataUrl, ask) {
+  const sys = { role: 'system', content: 'You read grocery receipts and pantry photos accurately and never invent items.' };
+  const input = /llama-3\.2-11b-vision/.test(model)
+    ? { messages: [sys, { role: 'user', content: ask }], image: dataUrl, max_tokens: 1024 }
+    : { messages: [sys, { role: 'user', content: [{ type: 'text', text: ask }, { type: 'image_url', image_url: { url: dataUrl } }] }], max_tokens: 1024, ...(/gemma-4/.test(model) ? { chat_template_kwargs: { enable_thinking: false } } : {}) };
+  const r = await env.AI.run(model, input);
+  if (r && typeof r.response === 'string') return r.response;
+  const c = r && r.choices && r.choices[0] && r.choices[0].message && r.choices[0].message.content;
+  return String(c || (r && typeof r.response === 'object' ? JSON.stringify(r.response) : '') || '');
+}
+async function photoTrials(env, kind, dataUrl, live) {
+  const at = new Date().toISOString(), id = crypto.randomUUID().slice(0, 8);
+  const keep = (model, prompt, text, ms, err) => env.DB.prepare('INSERT INTO photo_trials (photo, at, kind, model, prompt, text, ms, err) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+    .bind(id, at, kind, model, prompt, scrub(String(text || '')).slice(0, 4000), ms, err ? String(err).slice(0, 200) : null).run();
+  await keep(env.VISION_MODEL, 'v1 (live)', live.text, live.ms, null);
+  const models = String(env.PHOTO_TRIAL_MODELS || '').split(',').map((x) => x.trim()).filter(Boolean);
+  await Promise.all((models.length ? models : TRIAL_MODELS).slice(0, 5).map(async (model) => {
+    const t0 = Date.now();
+    try { await keep(model, 'v2', await seeWith(env, model, dataUrl, SHELF_ASK_V2), Date.now() - t0, null); }
+    catch (e) { await keep(model, 'v2', '', Date.now() - t0, (e && e.message) || e).catch(() => {}); }
+  }));
+  return id;
+}
+
 async function hearAudio(env, base64) {
   const r = await env.AI.run(env.SPEECH_MODEL, { audio: base64 });
   return String((r && r.text) || '').trim();
@@ -2742,7 +2821,7 @@ async function mcp(request, env) {
 // ---------- storage that newer versions need ----------
 // Run once per start-up and per home: adds what is missing and never touches what is there. A new home starts with no tables
 // at all, so the first step makes every table from the same list schema.sql is written from.
-const SCHEMA = 9;
+const SCHEMA = 10;
 const BASE_SCHEMA = [
   "CREATE TABLE IF NOT EXISTS items (id TEXT PRIMARY KEY, name TEXT NOT NULL, name_key TEXT NOT NULL, qty REAL NOT NULL DEFAULT 1, unit TEXT NOT NULL DEFAULT 'pcs', category TEXT, bought TEXT, added TEXT NOT NULL, store TEXT, expiry TEXT, expiry_est INTEGER NOT NULL DEFAULT 0, finish_days INTEGER NOT NULL DEFAULT 14, learned INTEGER NOT NULL DEFAULT 0, source TEXT, area TEXT, essential INTEGER NOT NULL DEFAULT 0, low INTEGER NOT NULL DEFAULT 0, warn TEXT, note TEXT, owner TEXT, frozen INTEGER NOT NULL DEFAULT 0, unsure INTEGER NOT NULL DEFAULT 0, nolist INTEGER NOT NULL DEFAULT 0)",
   "CREATE UNIQUE INDEX IF NOT EXISTS items_name_key ON items(name_key)",
@@ -2771,6 +2850,8 @@ const ROOT_SCHEMA = [
   'CREATE TABLE IF NOT EXISTS accounts (id TEXT PRIMARY KEY, email TEXT NOT NULL UNIQUE, sub TEXT, home TEXT NOT NULL, made TEXT NOT NULL, seen TEXT, epoch INTEGER NOT NULL DEFAULT 0, agreed TEXT, via TEXT)',
   'CREATE TABLE IF NOT EXISTS signin_codes (email TEXT PRIMARY KEY, code_hash TEXT NOT NULL, expires INTEGER NOT NULL, tries INTEGER NOT NULL DEFAULT 0)',
   'CREATE TABLE IF NOT EXISTS waitlist (email TEXT PRIMARY KEY, at TEXT NOT NULL, via TEXT)',
+  // the owner's photo trials: what each vision model read from the same photo, as text (the photo itself is never kept)
+  'CREATE TABLE IF NOT EXISTS photo_trials (id INTEGER PRIMARY KEY AUTOINCREMENT, photo TEXT NOT NULL, at TEXT NOT NULL, kind TEXT NOT NULL, model TEXT NOT NULL, prompt TEXT NOT NULL, text TEXT, ms INTEGER, err TEXT)',
 ];
 const readyFor = new Map();
 function migrate(env) {
@@ -3347,7 +3428,7 @@ async function scorecard(env, today, runId) {
   return { runs: runs.map((r) => ({ ...r, caseStats: undefined })), byVersion: byVersion.map((v) => ({ ...v, cases: undefined })), diff, graduate, flaky, run: show || null, trials, health: await health(env, today), allowance: { evalPerDay: EVAL_DAY, usedToday: Number(((await env.DB.prepare('SELECT v FROM settings WHERE k = ?').bind('evalcalls:' + utcDay()).first()) || {}).v || 0) } };
 }
 
-async function api(request, env, url) {
+async function api(request, env, url, ctx) {
   const path = url.pathname, method = request.method;
   if (!env.APP_PIN) return json({ error: 'setup', message: 'Set a passcode first: npx wrangler secret put APP_PIN' }, 503);
   // only this app's own pages may change anything, and no request may be unreasonably large
@@ -3913,11 +3994,18 @@ async function api(request, env, url) {
     if (!ai && (kind === 'bill' || kind === 'shelf' || kind === 'voice' || !(await quotaOut(env)))) return limited(env);
     const known = (await env.DB.prepare('SELECT name, qty, unit FROM items ORDER BY name').all()).results.map((r) => r.name + ' (' + Math.round(r.qty * 100) / 100 + ' ' + r.unit + ')');
     try {
-      let text = '', heard = '', product = null;
+      let text = '', heard = '', product = null, seen = null;
       if (kind === 'bill' || kind === 'shelf') {
         const body = await request.json();
         if (typeof body.image !== 'string' || !body.image.startsWith('data:image/') || body.image.length > 6_000_000) return json({ error: 'bad_image' }, 400);
+        const t0 = Date.now();
         text = await seeImage(env, body.image, kind);
+        // the owner can have each photo read by other models too, kept as text to score by hand (PHOTO_TRIAL=on)
+        if (kind === 'shelf' && owner && String(env.PHOTO_TRIAL || '') === 'on') {
+          const p = photoTrials(env, kind, body.image, { text, ms: Date.now() - t0 }).catch((e) => console.error('photo trial failed', String((e && e.message) || e)));
+          if (ctx && ctx.waitUntil) ctx.waitUntil(p); else await p;
+        }
+        if (kind === 'shelf') { seen = checkSeen(text); text = seen.text; }
       } else if (kind === 'voice') {
         const body = await request.json();
         if (typeof body.audio !== 'string' || body.audio.length > 8_000_000) return json({ error: 'bad_audio' }, 400);
@@ -3953,7 +4041,8 @@ async function api(request, env, url) {
       if (product) { const f = await factFor(env, product.name || product.text); if (f || !ai) out = mkActions([{ action: 'add', name: (/[a-z]/.test(product.name) ? product.name : titleCase(String(product.name || product.text).toLowerCase())).slice(0, 60), quantity: 1, unit: f ? f.unit : 'pcs', sure: true, fact: f }], profile); }
       if (!out && !ai && kind === 'text') { const rows = (await env.DB.prepare('SELECT name, qty, unit FROM items').all()).results; out = quickReceipt(text, rows, profile); out.offline = true; }
       if (!out) {
-        try { out = sanitize(await structure(env, kind, text, today, known, profile), kind); out.actions.forEach((a) => enrich(a, profile, kind === 'bill' || kind === 'shelf' ? text : '')); await learnFacts(env, out.actions); }
+        if (seen && !seen.text) out = { intent: 'update', store: '', bought: '', currency: '', actions: [] }; // nothing certain to read: only the questions remain
+        else try { out = sanitize(await structure(env, kind, text, today, known, profile), kind); if (seen) { const k = keepSeen(out.actions, seen.names); out.actions = k.actions; out.unseen = k.dropped; } out.actions.forEach((a) => enrich(a, profile, kind === 'bill' || kind === 'shelf' ? text : '')); await learnFacts(env, out.actions); }
         catch (e) {
           // the allowance ran out while reading a pasted receipt or order: code reads the lines it knows, the same as with no credits
           if (kind !== 'text' || !isQuota(e)) throw e;
@@ -3966,7 +4055,7 @@ async function api(request, env, url) {
       // a barcode gives real label data, which beats a guess from the product name
       const label = product ? labelCheck(product, profile) : null;
       if (label) out.actions.forEach((a) => { if (a.action === 'add') a.warn = label.warn; });
-      return json({ kind, heard, label: label ? { status: label.status, text: label.text } : null, read: kind === 'bill' || kind === 'shelf' ? text.slice(0, 2000) : '', ...out });
+      return json({ kind, heard, label: label ? { status: label.status, text: label.text } : null, read: kind === 'bill' || kind === 'shelf' ? text.slice(0, 2000) : '', ...out, ...(seen ? { doubts: seen.doubts } : {}) });
     } catch (e) {
       const msg = String((e && e.message) || e);
       if (/agree/i.test(msg)) return json({ error: 'licence' }, 409);
@@ -3977,10 +4066,10 @@ async function api(request, env, url) {
 }
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
     if (url.pathname.startsWith('/api/')) {
-      try { return await api(request, env, url); }
+      try { return await api(request, env, url, ctx); }
       catch (e) { console.error(e); return json({ error: 'server' }, 500); }
     }
     return env.ASSETS.fetch(request);

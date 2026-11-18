@@ -72,6 +72,61 @@ fs.mkdirSync(SHOTS, { recursive: true });
   await shot('scan-03-after-done');
   check('  ...once the card is closed, Today still asks it, once', (await howMany()) === 1, await howMany());
 
+  const closeCard = async () => { const b = p.locator('main button', { hasText: /^Done$/ }); if (await b.count()) { await b.first().click(); await wait(500); } };
+  await closeCard();
+
+  // ---- 3. edit a line of the card: name and how many ----
+  await script([
+    { when: 'fridge, a shelf', see: 'Muesli | 1 |' },
+    { when: 'Muesli', plan: { actions: [A('add', 'Muesli', 1, true, { category: 'Pantry' })] } },
+  ]);
+  await photo('#shelfFile');
+  const edit = p.locator('main button[aria-label="Edit Muesli"]');
+  check('Each thing in the card after a photo has an Edit button', (await edit.count()) === 1, await p.locator('main').innerText());
+  await edit.click(); await wait(300);
+  await p.locator('main form.editrow input[aria-label="Name"]').fill('Sunflower seeds');
+  await p.locator('main form.editrow input[aria-label="How many"]').fill('2');
+  await shot('scan-04-edit');
+  await p.locator('main form.editrow button[type=submit]').click(); await wait(1200);
+  const sun = await item('Sunflower seeds');
+  check('  ...Save turns "Muesli" into 2 sunflower seeds at home, and muesli is gone', sun && sun.qty === 2 && !(await item('Muesli')), [sun, await item('Muesli')]);
+  check('  ...the card now shows the corrected line', /Sunflower seeds/.test(await p.locator('main').innerText()) && !/Muesli/.test(await p.locator('main').innerText()), (await p.locator('main').innerText()).slice(0, 400));
+  const x2 = p.locator('main button[aria-label^="That\'s wrong, take back Sunflower seeds"]');
+  check('  ...and the corrected line can still be taken back', (await x2.count()) === 1);
+  if (await x2.count()) { await x2.click(); await wait(900); }
+  check('  ...taking it back removes it', !(await item('Sunflower seeds')), await item('Sunflower seeds'));
+  await closeCard();
+
+  // ---- 4. what the camera was unsure of is asked, not added ----
+  await script([
+    { when: 'fridge, a shelf', see: 'Fridge door | 1 |\nWhole milk | 1 |\nGlass jar | 1 | maybe |\nSour cream (maybe) | 1 |' },
+    { when: 'Whole milk', plan: { actions: [A('add', 'Whole Milk', 1, true), A('add', 'Salmon', 1, true, { category: 'Meat' })] } },
+  ]);
+  await photo('#shelfFile');
+  await shot('scan-05-doubts');
+  const t4 = await p.locator('main').innerText();
+  check('A photo with doubts: milk is added, and "Did I see these right?" asks about the rest', /Did I see these right\?/.test(t4) && /Sour cream\?/i.test(t4) && /Glass jar/i.test(t4) && !!(await item('Whole Milk')), t4.slice(0, 600));
+  check('  ...nothing it was unsure of, nor salmon it never saw, is at home yet', !(await item('Sour cream')) && !(await item('Salmon')) && !(await item('Glass jar')), null);
+  await p.locator('main li', { hasText: 'Sour cream?' }).locator('button', { hasText: /^Yes$/ }).click(); await wait(1000);
+  const sc = await item('Sour cream');
+  check('  ...Yes adds sour cream as one', sc && sc.qty === 1 && sc.unsure === 0, sc);
+  await p.locator('main li', { hasText: 'Glass jar' }).locator('button', { hasText: /^Name it$/ }).click(); await wait(300);
+  await p.locator('main form.editrow input').fill('Mango pickle');
+  await p.locator('main form.editrow button[type=submit]').click(); await wait(1000);
+  check('  ...Name it on the jar adds what it really is (mango pickle)', !!(await item('Mango pickle')), (await sql('SELECT name FROM items')).map((x) => x.name));
+  check('  ...and the questions are gone once answered', !/Did I see these right\?/.test(await p.locator('main').innerText()), (await p.locator('main').innerText()).slice(0, 400));
+  await closeCard();
+
+  // ---- 5. a photo with nothing certain asks and changes nothing ----
+  const n5 = (await sql('SELECT COUNT(*) AS n FROM items'))[0].n;
+  await script([{ when: 'fridge, a shelf', see: 'Unlabelled bag | 1 | maybe |' }]);
+  await photo('#shelfFile');
+  const t5 = await p.locator('main').innerText();
+  check('A photo with only doubts says "I need a hand" and asks', /I need a hand/.test(t5) && /Unlabelled bag/i.test(t5), t5.slice(0, 400));
+  check('  ...and nothing at home changed', (await sql('SELECT COUNT(*) AS n FROM items'))[0].n === n5, null);
+  await p.locator('main li', { hasText: 'Unlabelled bag' }).locator('button', { hasText: /^No$/ }).click(); await wait(500);
+  check('  ...No leaves it out', !/Unlabelled bag/i.test(await p.locator('main').innerText()) && (await sql('SELECT COUNT(*) AS n FROM items'))[0].n === n5, null);
+
   check('No script errors on the page', errs.length === 0, errs);
   await b.close();
   const failed = R.filter((r) => !r[0]);

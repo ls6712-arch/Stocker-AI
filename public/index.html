@@ -185,6 +185,8 @@ details.fold .in{display:flex;flex-direction:column;gap:14px;padding-top:8px}
 .people label{display:flex;flex-direction:column;gap:6px;font-size:.8125rem;color:var(--muted)}
 .acts{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .mini{border:1px solid var(--line);background:var(--surface2);border-radius:999px;padding:8px 14px;font-weight:600;font-size:.8438rem;min-height:40px}
+.editrow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;width:100%}.editrow input{flex:1 1 140px;min-height:44px;border:1px solid var(--line);border-radius:12px;padding:8px 12px;font:inherit;background:var(--surface)}.editrow input[type=number]{flex:0 0 76px}
+.doubts{margin-top:12px;border-top:1px solid var(--line);padding-top:12px}.doubts .acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
 .mini[aria-pressed="true"]{background:var(--warn-bg);color:var(--warn);border-color:transparent}
 .mini[disabled]{opacity:.45}
 .talk{display:flex;align-items:center;gap:14px;text-align:left;border:1px solid var(--line);background:var(--surface);border-radius:20px;padding:14px 16px;box-shadow:var(--shadow);width:100%}
@@ -1175,11 +1177,11 @@ body{overflow-x:clip}
       cards.push(groupCard('Dinner idea','What can I cook tonight?','',[dr],btn('btn primary block','See ideas',cookIdeas)))}
     if(!cards.length&&listN)cards.push(groupCard('Your list',listN+(listN===1?' thing to buy':' things to buy'),'',[],btn('btn primary block','Open my list',function(){go('list')})));
     return cards.slice(0,3)}
-  function doneCard(v){if(!doneInfo||!done.length)return;
+  function doneCard(v){if(!doneInfo||(!done.length&&!(doneInfo.doubts&&doneInfo.doubts.length)))return;
     var c=el('div','need'),hd=el('div','row'),g=el('div','grow');hd.append(g);g.append(el('h3','',doneInfo.title),el('div','sub',doneInfo.sub));c.append(hd);
     if(doneInfo.heard){var hp=el('p','heard',doneInfo.heard);c.append(hp)}
-    var ul=el('ul','list');doneRows(ul);c.append(ul);
-    var acts=el('div','acts'),ok=btn('btn primary','Done',function(){doneInfo=null;done=[];renderToday()}),un=btn('btn','Undo all',undoAll);acts.append(ok,un);c.append(acts);v.append(c)}
+    var ul=el('ul','list');doneRows(ul);c.append(ul);doubtRows(c);
+    var acts=el('div','acts'),ok=btn('btn primary','Done',function(){doneInfo=null;done=[];renderToday()}),un=btn('btn','Undo all',undoAll);acts.append(ok);if(done.length)acts.append(un);c.append(acts);v.append(c)}
   function welcome(v){
     var w=el('div','card welcome');
     var sn=el('label','btn primary block filebtn'),fi=el('input');fi.type='file';fi.accept='image/*';fi.setAttribute('aria-label','Photograph your fridge or a shelf');sn.append(icon('M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1zM12 10a3.500 3.500 0 1 0 0 7 3.500 3.500 0 0 0 0-7'),document.createTextNode('Snap your fridge'),fi);
@@ -2133,14 +2135,49 @@ body{overflow-x:clip}
       x.type='button';x.setAttribute('aria-label',"That's wrong, take back "+c.name);x.append(icon('M6 6l12 12M18 6L6 18'));
       x.onclick=async function(){x.disabled=true;try{await takeBack(c);done=done.filter(function(k){return k!==c});if(!done.length)doneInfo=null;await refresh();if(!done.length)toast('Taken back. Nothing was changed.')}
         catch(e){x.disabled=false;if(e.code!=='locked')toast('Could not undo that. Try again.')}};
-      li.append(iconFor(c),g,x);ul.append(li)});
+      var ed=null;if(c.action==='add'){ed=el('button','iconbtn');ed.type='button';ed.setAttribute('aria-label','Edit '+c.name);ed.append(icon('M4 20h4L19 9l-4-4L4 16zM13 7l4 4'));ed.onclick=function(){editDone(c,li)}}
+      li.append(iconFor(c),g);if(ed)li.append(ed);li.append(x);ul.append(li)});
     if(done.length>6){var li2=el('li'),more=btn('link','See all '+done.length+' at home',function(){doneInfo=null;go('pantry')});more.style.minHeight='44px';li2.append(more);ul.append(li2)}
   }
+  /* Edit a line of the card: the name and how many. The old line is taken back and the corrected one saved, so the cross
+     still takes back the corrected one. */
+  function editDone(c,li){
+    var f=el('form','editrow'),nm=el('input'),qn=el('input'),sv=el('button','mini','Save'),cn=el('button','mini','Cancel');
+    nm.value=c.name;nm.setAttribute('aria-label','Name');nm.maxLength=60;nm.autocomplete='off';
+    qn.type='number';qn.min='1';qn.max='999';qn.step='1';qn.inputMode='numeric';qn.value=String(Math.max(1,Math.round(c.added||c.qty||1)));qn.setAttribute('aria-label','How many');
+    sv.type='submit';cn.type='button';cn.onclick=function(){renderToday()};
+    var row=el('div','acts');row.append(sv,cn);f.append(nm,qn,row);li.textContent='';li.append(f);nm.focus();
+    f.addEventListener('submit',async function(ev){ev.preventDefault();var name=nm.value.replace(/\s+/g,' ').trim(),n=Math.round(Number(qn.value));
+      if(!name||!(n>=1)){toast('Give it a name and a number.');return}
+      if(name===c.name&&n===Math.round(c.added||c.qty||1)){renderToday();return}
+      sv.disabled=true;
+      try{await takeBack(c);
+        var r=await api('/api/apply',{method:'POST',body:JSON.stringify({source:(doneInfo&&doneInfo.kind)||'shelf',auto:true,actions:[{action:'add',name:name,quantity:n,unit:c.unit==='pcs'||name!==c.name?'pcs':c.unit,sure:true}]})});
+        var nc=r&&r.changes&&r.changes[0];var i=done.indexOf(c);if(nc&&i>=0)done[i]=nc;else if(i>=0)done.splice(i,1);
+        await refresh();toast('Changed to '+amountName(n,name)+'.')}
+      catch(e){sv.disabled=false;if(e.code!=='locked')toast(why(e,'Could not change that.'));try{await refresh()}catch(er){}}})}
+  function amountName(n,name){return n===1?name:n+' '+name}
+  /* What the camera was not sure of is asked, not added: one tap to keep it, name it, or leave it out. */
+  function doubtRows(c){var ds=(doneInfo&&doneInfo.doubts)||[];if(!ds.length)return;
+    var box=el('div','doubts');box.append(el('div','kicker','Check these'),el('h3','','Did I see these right?'));var ul=el('ul','list');
+    ds.forEach(function(dq){var li=el('li','row'),g=el('div','grow');g.append(el('div','name',dq.why==='label'?dq.name:dq.name+'?'),el('div','sub',dq.why==='label'?'I could not tell what is in it.':'My guess. Is this right?'));li.append(g);
+      var drop=function(){doneInfo.doubts=doneInfo.doubts.filter(function(x){return x!==dq});renderToday()};
+      var keep=async function(name){var r=await api('/api/apply',{method:'POST',body:JSON.stringify({source:(doneInfo&&doneInfo.kind)||'shelf',auto:true,actions:[{action:'add',name:name,quantity:1,unit:'pcs',sure:true}]})});
+        if(r&&r.changes&&r.changes[0])done.push(r.changes[0]);doneInfo.doubts=doneInfo.doubts.filter(function(x){return x!==dq});await refresh();toast('Added '+name+'.')};
+      var acts=el('div','acts');
+      if(dq.why!=='label')acts.append(btn('mini','Yes',function(){return keep(dq.name).catch(function(e){if(e.code!=='locked')toast(why(e,'Could not add that.'))})}));
+      acts.append(btn('mini',dq.why==='label'?'Name it':'Edit',function(){var f=el('form','editrow'),nm=el('input'),sv=el('button','mini','Add');nm.value=dq.why==='label'?'':dq.name;nm.placeholder='What is it?';nm.setAttribute('aria-label','What is it?');nm.maxLength=60;sv.type='submit';
+        f.append(nm,sv);acts.replaceWith(f);nm.focus();f.addEventListener('submit',async function(ev){ev.preventDefault();var v=nm.value.replace(/\s+/g,' ').trim();if(!v)return;sv.disabled=true;try{await keep(v)}catch(e){sv.disabled=false;if(e.code!=='locked')toast(why(e,'Could not add that.'))}})}));
+      acts.append(btn('mini','No',function(){drop()}));
+      g.append(acts);ul.append(li)});
+    box.append(ul);c.append(box)}
   async function undoAll(){
     try{for(var i=0;i<done.length;i++)await takeBack(done[i]);done=[];doneInfo=null;await refresh();toast('Undone. Everything is back to how it was.')}
     catch(e){if(e.code!=='locked')toast('Could not undo everything. Check the At home tab.');try{await refresh()}catch(er){}}
   }
   function showResult(d,r){
+    var dz=(d&&d.doubts)||[];
+    if((!r||!r.changes||!r.changes.length)&&dz.length){done=[];doneInfo={kind:d.kind,title:'I need a hand',sub:'I was not sure of these. Nothing was changed yet.',heard:'',doubts:dz.slice()};go('today');window.scrollTo(0,0);return}
     if(!r||!r.changes||!r.changes.length){
       toast(r&&r.missed&&r.missed.length?"I couldn't find "+r.missed.join(', ')+' in your things.':
         d&&d.kind==='voice'&&d.heard?'I heard “'+d.heard+'” but found nothing to add or use.':"I couldn't find any items in that. Try a clearer photo, or tell me instead.");return}
@@ -2148,7 +2185,7 @@ body{overflow-x:clip}
     var parts=[];if(r.added)parts.push('I added '+r.added+(r.added===1?' thing':' things'));if(r.used||r.low)parts.push((r.added?'updated ':'I updated ')+((r.used||0)+(r.low||0)));
     var title=parts.join(', ')||'Done';
     if(d.empty)title='On your list: '+r.changes[0].name+(d.pack?' ('+d.pack+')':'');
-    doneInfo={title:title,sub:(d.store?'From '+d.store+'. ':'')+'Saved. Tap the cross on anything I got wrong.'+(r.priceNote?' '+r.priceNote:'')+(r.missed&&r.missed.length?" I couldn't find "+r.missed.join(', ')+'.':'')+learntLine(r.changes),
+    doneInfo={kind:d.kind,doubts:dz.slice(),title:title,sub:(d.store?'From '+d.store+'. ':'')+'Saved. Tap the cross on anything I got wrong.'+(r.priceNote?' '+r.priceNote:'')+(r.missed&&r.missed.length?" I couldn't find "+r.missed.join(', ')+'.':'')+learntLine(r.changes),
       heard:d.heard?'“'+d.heard+'”':d.label?d.label.text:''};
     go('today');window.scrollTo(0,0);toast(title+(d.store?' from '+d.store:'')+'.','Undo',undoAll);
   }

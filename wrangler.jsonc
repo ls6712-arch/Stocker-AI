@@ -19,6 +19,9 @@
   ],
   "vars": {
     "VISION_MODEL": "@cf/meta/llama-3.2-11b-vision-instruct",
+    // the owner's fridge and shelf photos are also read by other vision models and kept as text, to score by hand
+    // (photo_trials). Four extra model calls per photo, the owner's home only. Set to "off" to stop.
+    "PHOTO_TRIAL": "on",
     "TEXT_MODEL": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
     // everyday jobs go to this cheaper model first; its work is checked by code, and anything it gets wrong goes to TEXT_MODEL.
     // Set DELEGATE to "off" to send everything to TEXT_MODEL.
