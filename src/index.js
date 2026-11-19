@@ -911,11 +911,19 @@ const LINE_FORM =
   'Write no JSON. Answer in this short form only. First line: "intent: update" (or question, chitchat, other). For a receipt or order, then one line ' +
   '"store: <name>; date: <YYYY-MM-DD>; currency: <code>" with what you can tell. Then one line per action, its fields in this order, separated by " | ":\n' +
   'action | name | quantity | unit | sure or guess | area | category | shelfLifeDays | daysToFinish\n' +
+  'unit is one of ' + UNITS.join(', ') + ' (a cup, can, box, bunch or roll is pcs); area is one of ' + AREAS.join(', ') + '; category is one from the list for its area. ' +
   'sure means quantityKnown is true, guess means it is false. After these, add only the ones that apply, each as one more field: "price <number>", ' +
   '"best by <YYYY-MM-DD>", "warn <a few words>", "note <a few words>", "from dish" (inferred true).\nFor example:\n' +
   'intent: update\nuse | Milk | 0 | L | sure | Kitchen | Dairy | 7 | 5\nadd | Eggs | 24 | pcs | sure | Kitchen | Dairy | 28 | 10 | price 4.49\n' +
   'list | Trash bags, large | 1 | pcs | guess | Cleaning | Bags and wraps | 0 | 30\nuse | Pasta | 250 | g | guess | Kitchen | Pantry | 0 | 0 | from dish\n' +
   'With no actions, write only the intent line. Nothing else: no headings, no explanations.';
+// a unit written in words, back to the ones the JSON allowed: "packs" is pack, "litres" is L, "cups" or "rolls" are pieces
+function lineUnit(u) {
+  const w = String(u || '').trim().toLowerCase().replace(/\.$/, '');
+  const hit = UNITS.find((x) => x.toLowerCase() === w);
+  if (hit) return hit;
+  return /^(packs?|pkts?|packets?|pk)$/.test(w) ? 'pack' : /^(l|lt|ltrs?|lit(?:re|er)s?)$/.test(w) ? 'L' : /^(grams?|gm|gms)$/.test(w) ? 'g' : /^(kgs?|kilos?|kilograms?)$/.test(w) ? 'kg' : /^(lbs|pounds?)$/.test(w) ? 'lb' : /^(ounces?)$/.test(w) ? 'oz' : /^(millilit(?:re|er)s?|mls)$/.test(w) ? 'ml' : 'pcs';
+}
 // the short form back into the fields the JSON had; a line code cannot read is left out (it changes nothing)
 function fromLines(s) {
   const out = { intent: '', store: '', purchaseDate: '', currency: '', actions: [] };
@@ -936,7 +944,7 @@ function fromLines(s) {
     const f = line.split('|').map((x) => x.trim());
     if (f.length < 4 || !ACTIONS.includes(f[0].toLowerCase()) || !f[1]) continue;
     const q = String(f[2] || '').replace(/[^\d.]/g, '');
-    const a = { action: f[0].toLowerCase(), name: f[1], note: '', inferred: false, quantity: q === '' ? 1 : Number(q), quantityKnown: !/^(guess|unsure|maybe|false)/i.test(f[4] || 'sure'), unit: f[3], area: f[5] || '', category: f[6] || '', expiryDate: '', shelfLifeDays: num(f[7], 0), daysToFinish: num(f[8], 14), price: 0, warn: '' };
+    const a = { action: f[0].toLowerCase(), name: f[1], note: '', inferred: false, quantity: q === '' ? 1 : Number(q), quantityKnown: !/^(guess|unsure|maybe|false)/i.test(f[4] || 'sure'), unit: lineUnit(f[3]), area: f[5] || '', category: f[6] || '', expiryDate: '', shelfLifeDays: num(f[7], 0), daysToFinish: num(f[8], 14), price: 0, warn: '' };
     for (const x of f.slice(9)) {
       let m;
       if ((m = x.match(/^price\s*[:=]?\s*(?:[$\u20b9\u00a3\u20ac]|rs\.?|inr|usd)?\s*([\d.,]+)/i))) a.price = Number(m[1].replace(/,/g, ''));

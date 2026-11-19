@@ -34,7 +34,7 @@
     // how the model writes what it read from an update or a receipt: "json" (14 named fields per thing, as before), "owner" (the
     // short form, one line per thing, for the owner's home and the live evals only) or "lines" (the short form for every home).
     // The short form also reads a long receipt in parts at the same time.
-    "UPDATE_SHAPE": "json",
+    "UPDATE_SHAPE": "owner",
     // once per deploy, the same made-up messages are timed in both forms on the real models (photo_trials, kind "speed").
     // About 40 model calls, no person's words. "off" to stop.
     "SPEED_TRIAL": "on",

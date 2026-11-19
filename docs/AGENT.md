@@ -634,3 +634,13 @@ and the trial's scoring in both directions.
 
 **To read the trial:** `SELECT prompt, model, ms, text FROM photo_trials WHERE kind = 'speed' ORDER BY id`.
 Switch to `owner` only if the short form's score matches the JSON's; the next live eval run then measures it on every task.
+
+**First speed trial on the real models (19 Nov, `a40a70f`, round 1, exact):** large model, one update 3.5 to 9.0 s in JSON, 1.0 to
+1.6 s in the short form (writing 113 to 206 tokens against 25 to 56); receipts 23.0 and 25.6 s against 3.9 and 3.3 s (read in two
+parts). Same score on every update, plan and dish (1 of 1 each); receipts 0.67 and 0.44 in JSON, 1.0 and 0.63 in the short form
+(both forms write "Laundry detergent" for Tide Pods and "Diapers" for Pampers; the Target case wants the brand, as
+`receipt-whole-home` does). The small model read nothing right in JSON (0 of 7: it returns no actions), and everything in the short
+form (7 of 7, 0.2 to 0.6 s). The short form wrote units outside the list ("6 cups", "1 bunch"), so the list of units, areas and
+categories is now in `LINE_FORM`, and `lineUnit` reads unit words back (cups and rolls are pieces, packs are pack, litres are L).
+`UPDATE_SHAPE` is now `owner`: the owner's home and the live evals get the short form; friends' homes keep JSON until the next live
+run confirms it.
