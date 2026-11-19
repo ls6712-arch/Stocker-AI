@@ -594,3 +594,13 @@ A walk through every tab as a busy parent on a paid plan found trust-breaking de
 - **Header and kits**: the household line names every kind of home and says "2 adults and 1 child"; the dorm-room and flat-share kits are not "For you" in a home with children.
 
 Checked and left alone: "used in time" counts things marked finished by hand in their last three days, by design; the two different counts the tester saw were taken before and after two more things were finished. An undone change already gets its own "took back the change" line in the activity.
+
+## The checklist (18 Nov 2026, branch `tote-check-1`)
+
+Sushmitha asked for a clear checklist to say whether Tote did right on every real message, and for Claude to keep checking. The review of misses (`/evals.html`) only sees turns Tote flagged itself (undo, "Not right?", said again); on 16 Nov that was 6 of about 13 wrong turns.
+
+- **Four checks on every turn** (`CHECK` in `src/index.js`): Understood; Home right (things at home and the list exactly right afterwards); Reply right (true, helpful, on voice, never claims a change that did not happen); Safe (allergy, diet or health caught, "check the label", no "it is safe", no doses; "na" when none came up). All yes or na is right.
+- **Where:** `/checks.html` (owner's menu, "Check Tote's answers"), every turn from every home for the last 14 days, with what Tote did and said, filters To check, Claude has doubts, Wrong, All, and per home. Numbers: share fully right (owner's answers only), to check, Claude's doubts, agreement between Claude and the owner, safety failures, the check that fails most, per home.
+- **Data:** shared table `checks` (home, turn, at, guess, guessed, mark, marked), in `ROOT_SCHEMA` and `schema.sql`; never reachable from a friend's handle (`scopeSql` refuses it). `guess` is Claude's first pass, written by the scheduled Claude check straight into D1; `mark` is the owner's, through `POST /api/checks`. A wrong mark with "should have" (update, nothing, list) becomes a test in `cases`, the same way the review of misses makes one. `DELETE /api/checks` clears the owner's answer and keeps the guess. All three routes are owner only.
+- **Claude's guess never counts as truth**: the numbers are the owner's answers; the guess only orders what to look at first.
+- Checks: `evals/checks.mjs` (`npm run test:checks`, part of `npm test`), `evals/checks-audit.cjs` (`npm run test:checks:browser`).

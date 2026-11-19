@@ -115,7 +115,7 @@ const invite = async (owner, name) => (await owner.call('POST', '/api/homes', { 
   // every query in the code, when run for a friend's home, names only that home's own tables
   if (built) {
     const src = fs.readFileSync(path.join(ROOT, 'src/index.js'), 'utf8').split('\n// GROCERY-START')[0];
-    const sqls = [...src.matchAll(/(["'`])((?:SELECT|INSERT|UPDATE|DELETE|CREATE|ALTER)\b[^"'`]*?)\1/g)].map((m) => m[2]).filter((s) => !/\b(homes|accounts|waitlist|signin_codes|photo_trials)\b/.test(s)); // the owner's own tables are never run for a home: see the refusals below
+    const sqls = [...src.matchAll(/(["'`])((?:SELECT|INSERT|UPDATE|DELETE|CREATE|ALTER)\b[^"'`]*?)\1/g)].map((m) => m[2]).filter((s) => !/\b(homes|accounts|waitlist|signin_codes|photo_trials|checks)\b/.test(s)); // the owner's own tables are never run for a home: see the refusals below
     const bare = new RegExp('\\b(?:FROM|INTO|UPDATE|JOIN|TABLE(?:\\s+IF\\s+NOT\\s+EXISTS)?|ON)\\s+(?:' + TABLES.join('|') + ')\\b', 'i');
     const leaks = sqls.filter((s) => bare.test(A.scopeSql(s, 'abc123'))), pointed = sqls.filter((s) => /h_abc123_/.test(A.scopeSql(s, 'abc123'))).length;
     check('every query in the code is pointed at the friend\'s own tables (' + pointed + ' queries read)', pointed > 150 && !leaks.length, leaks.slice(0, 3));
