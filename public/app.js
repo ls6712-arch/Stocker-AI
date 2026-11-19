@@ -81,7 +81,8 @@
   function profileLine(){if(!profile)return 'Make it yours';var n=profile.adults+profile.kids,a=everyone('allergies'),r=everyone('rules'),lab=pers().map(function(k){return PERSONA[k][0]}),
       eat=profile.diet.length===1?profile.diet[0]:profile.diet.length?profile.diet.length+' diets':'',
       care=a.length===1?'no '+a[0].toLowerCase():a.length?a.length+' allergies':r.length===1?r[0].toLowerCase():r.length?r.length+' health rules':'';
-    return (lab.length>2?lab[0]+' + '+(lab.length-1)+' more':lab.join(' + '))+', '+n+(n===1?' person':' people')+(eat?', '+eat:'')+(care?', '+care:'')}
+    var who=profile.kids?profile.adults+(profile.adults===1?' adult':' adults')+' and '+profile.kids+(profile.kids===1?' child':' children'):n+(n===1?' person':' people');
+    return lab.join(', ')+' \u00b7 '+who+(eat?', '+eat:'')+(care?', '+care:'')}
   var SVGNS='http://www.w3.org/2000/svg';
   var $=function(id){return document.getElementById(id)};
   function el(t,c,txt){var e=document.createElement(t);if(c)e.className=c;if(txt!=null)e.textContent=txt;return e}
@@ -117,6 +118,7 @@
   /* adding to the list: if it is already there, say so, with one tap to add another (no sheet in the way) */
   async function addToList(text,quiet){var r=await api('/api/extras',{method:'POST',body:JSON.stringify({text:text,whole:!!quiet})});
     if(r.many){if(!quiet)toast(r.added.length+' added to your shopping list.'+(r.kept.length?' '+r.kept.join(', ')+(r.kept.length===1?' was':' were')+' already there.':''));return 'many'}
+    if(!r.already&&r.have&&!quiet){toast(r.text+' is on your list. You have '+amount(r.have.qty,r.have.unit)+(r.have.unit==='pcs'?' ':' of ')+r.have.name+' at home.');return 'asked'}
     if(!r.already)return 'added';if(quiet)return 'kept';
     toast(r.text+' is already on your list.','Add another',async function(){try{await api('/api/extras',{method:'POST',body:JSON.stringify({text:text,again:true})});await refresh();toast(r.text+LISTMSG.again)}catch(e){if(e.code!=='locked')toast(why(e,'Could not add that.'))}});
     return 'asked'}
@@ -171,11 +173,15 @@
   function leaveSheet(fn){return function(){afterClose($('nudgeDlg'),fn)}}
   /* jumping to one item always shows it: any room, kind or filter left over from before is cleared first */
   function showItem(it){cat='All';sub='All';stat='all';query=it.name;$('search').value=it.name;open[it.id]=true;go('pantry')}
+  /* what keeps in the freezer: meat, fish, bread, butter, cheese, berries, bananas, peas, corn, cooked food. Not salad, lettuce,
+     cucumber, whole pears or eggs in the shell, which come out ruined. */
+  function freezes(it){var n=it.name.toLowerCase();if(/lettuce|salad|cucumber|celery|radish|cress|sprout|egg\b|eggs\b|yog|cream cheese|sour cream|mayo|potato(?!es? (?:fries|wedges))|pear|apple|grape|melon|citrus|orange|tomato/.test(n))return false;
+    return it.category==='Meat'||it.category==='Bakery'||it.category==='Frozen'||/berr|banana|mango|peas\b|corn|spinach|butter|cheese|milk|bread|tortilla|soup|stock|broth|sauce|rice|chicken|beef|pork|fish|salmon|shrimp|dumpling|curry|chili|leftover|cooked/.test(n)}
   /* the same thing as a short row, for the bell's sheet */
   function nudgeOf(c){var it=c.it,lc=function(x){return x.toLowerCase()};
     if(c.k==='use'){var e=expiry(it);
       if(e.d<0)return {text:it.name+' is past its date',sub:'Best before '+fmt(it.expiry),label:'Threw it away',fn:function(){return binIt(it)}};
-      return {text:e.d===0?'The '+lc(it.name)+' wants using today':it.name+': '+lc(e.text),sub:areaOf(it)==='Kitchen'?'Use it soon, or put it in the freezer':'Best before '+fmt(it.expiry),label:'Used it up',fn:function(){return useUp(it)}}}
+      return {text:e.d===0?'The '+lc(it.name)+' wants using today':it.name+': '+lc(e.text),sub:areaOf(it)==='Kitchen'&&freezes(it)?'Use it soon, or put it in the freezer':areaOf(it)==='Kitchen'?'Use it soon':'Best before '+fmt(it.expiry),label:'Used it up',fn:function(){return useUp(it)}}}
     if(c.k==='out')return {text:"You're out of "+lc(it.name),sub:'An essential. It is on your list.',label:'Open list',nav:1,fn:function(){go('list')}};
     if(c.k==='many')return {text:'How many '+lc(it.name)+' are there?',sub:it.source==='shelf'?'I could not count them in your photo':'You did not say how many',label:'Answer',nav:1,fn:function(){go('today')}};
     if(c.k==='warn')return {text:'Check the label on '+lc(it.name),sub:cap(it.warn),label:'Show me',nav:1,fn:function(){showItem(it)}};
@@ -332,11 +338,11 @@
     items.filter(function(i){return i.unsure&&i.qty>0}).forEach(function(it){out.push({p:3,it:it,k:'many',id:'many:'+it.id})});
     items.filter(function(i){return i.warn&&i.qty>0}).forEach(function(it){out.push({p:3.5,it:it,k:'warn',id:'warn:'+it.id+':'+it.warn})});
     items.filter(maybeLow).forEach(function(it){out.push({p:5,it:it,k:'low',id:'low:'+it.id})});
-    if(reviewN)out.push({p:4.5,k:'note',id:'review:'+reviewN,text:'I got '+reviewN+(reviewN===1?' thing':' things')+' wrong lately',sub:'Tell me what should have happened, and I am tested on it from then on',label:'Show me',nav:1,fn:function(){location.href='/evals.html#real'}});
+    /* misses waiting for review are the owner's work, not the home's: they live in the household menu, never in this count */
     if(!pushOn&&!onceOff('push')&&(pushCan||(isIOS&&!homeScreen))&&items.some(function(i){return i.learned||i.essential}))out.push({p:5.5,k:'note',id:'push',once:true,text:'Let me remind you on this phone',sub:pushCan?'When something you buy regularly is due. Once a day at most.':'Add Stocker to your Home Screen first: Share, then Add to Home Screen',label:'Turn on',fn:pushEnable});
     if(!profile&&items.length)out.push({p:7,k:'note',id:'profile',text:'Tell me about your home',sub:'Allergies, who lives here, how you eat',label:'Set up',nav:1,fn:openProfile});
     var rest=buy.filter(function(i){return !(i.essential&&i.qty<=0)}).length+extras.length;if(rest)out.push({p:6,k:'list',id:'list',n:rest});
-    return out.sort(function(a,b){return a.p-b.p})}
+    var seen={};return out.sort(function(a,b){return a.p-b.p}).filter(function(c){if(!c.it)return true;if(seen[c.it.id])return false;seen[c.it.id]=1;return true})}
   /* Used up, thrown away, removed: done at once, and always with a way back */
   function restoreItem(copy,binned){return async function(){try{await api('/api/items/restore',{method:'POST',body:JSON.stringify({item:copy,binned:!!binned})});await refresh();toast(copy.name+' is back as it was.')}catch(er){if(er.code!=='locked')toast(why(er,'Could not undo that.'))}}}
   async function useUp(it,quiet){var prev=it.qty,low=!!it.low;await api('/api/items/'+it.id,{method:'PATCH',body:JSON.stringify({qty:0,out:true})});await refresh();
@@ -484,7 +490,11 @@
     binB.onclick=async function(){try{var u=await binIt(it,true);toast('It happens. I have noted the '+it.name.toLowerCase()+' and will not nag you to rebuy it.','Undo',u)}catch(er){if(er.code!=='locked')toast(why(er,'Could not save that.'))}};
     var quiet=learnt.muted.indexOf(it.name_key)>-1,remB=el('button','mini',quiet?'Reminders off':'Reminders on');remB.type='button';remB.setAttribute('aria-pressed',quiet?'true':'false');remB.setAttribute('aria-label',(quiet?'Turn reminders back on for ':'Stop reminders for ')+it.name);
     remB.onclick=async function(){remB.disabled=true;try{await remindAnswer([it],quiet?'start':'stop')}catch(er){remB.disabled=false;if(er.code!=='locked')toast(why(er,'Could not save that.'))}};
-    acts.append(outB,essB);if(areaOf(it)==='Kitchen'&&(it.frozen||['Pantry','Drinks','Snacks'].indexOf(kindOf(it))<0))acts.append(frB);acts.append(binB,remB);panel.append(acts);
+    acts.append(outB,essB);if(areaOf(it)==='Kitchen'&&(it.frozen||(['Pantry','Drinks','Snacks'].indexOf(kindOf(it))<0&&freezes(it))))acts.append(frB);acts.append(binB,remB);panel.append(acts);
+    /* filed in the wrong place: one pick moves it to the right room and kind */
+    var mv=el('select','mini');mv.setAttribute('aria-label','Move '+it.name+' to another room');Object.keys(ROOM_CATS).forEach(function(r){var g=document.createElement('optgroup');g.label=r;ROOM_CATS[r].concat('Other').forEach(function(k){var o=document.createElement('option');o.value=r+'|'+k;o.textContent=r+' \u00b7 '+kindLabel(k);if(areaOf(it)===r&&kindOf(it)===k)o.selected=true;g.append(o)});mv.append(g)});
+    mv.onchange=async function(){var v=mv.value.split('|');try{await api('/api/items/'+it.id,{method:'PATCH',body:JSON.stringify({area:v[0],category:v[1]})});await refresh();toast('Moved '+it.name+' to '+v[0]+', '+kindLabel(v[1]).toLowerCase()+'.')}catch(er){if(er.code!=='locked')toast(why(er,'Could not move that.'))}};
+    var mvr=el('label','sub','Kept in ');mvr.style.display='flex';mvr.style.gap='8px';mvr.style.alignItems='center';mvr.style.marginTop='8px';mvr.append(mv);panel.append(mvr);
     var det=el('div','meta'),nl=el('label','','Size or brand'),ni=el('input');ni.type='text';ni.maxLength=40;ni.value=it.note||'';ni.placeholder='Optional';nl.append(ni);det.append(nl);
     var saveDet=async function(body){try{await api('/api/items/'+it.id,{method:'PATCH',body:JSON.stringify(body)});await refresh();toast('Saved.')}catch(er){if(er.code!=='locked')toast(why(er,'Could not save that.'))}};
     ni.onchange=function(){saveDet({note:ni.value.trim()})};
@@ -634,7 +644,7 @@
     if(extras.length){var se=el('div','sec'),ce=el('div','card tight');se.append(el('p','grp','Added by you'),ce);
       extras.forEach(function(x){var r=el('div','row'),g=el('button','grow rowbtn');g.type='button';g.setAttribute('aria-label','Change or remove '+x.text);r.style.minHeight='64px';g.append(el('div','name',x.text),el('div','sub',(x.who?'Added by '+x.who:'Added by hand')+(x.paid?'. '+cash(x.paid.amount,x.paid.currency)+' last time':'')));
         if(x.warn)g.append(el('span','pill bad','Check label: '+x.warn));g.onclick=function(){openRow(x,null)};
-        r.append(catIcon('Other'),g,tick('Mark '+x.text+' as bought',async function(){try{await api('/api/extras/'+x.id,{method:'DELETE'});await refresh();toast('Ticked off '+x.text+'.','Undo',putBack(x.text))}catch(er){if(er.code!=='locked')toast(why(er,'Could not save that.'))}}));ce.append(r)});
+        r.append(catIcon(x.kind||'Other'),g,tick('Mark '+x.text+' as bought',async function(){try{await api('/api/extras/'+x.id,{method:'DELETE'});await refresh();toast('Ticked off '+x.text+'.','Undo',putBack(x.text))}catch(er){if(er.code!=='locked')toast(why(er,'Could not save that.'))}}));ce.append(r)});
       v.append(se)}
     if(count)v.append(el('p','sub','Tick something when you buy it. Tap its name to change or remove it. Tracked items are restocked at home.'));
   }
@@ -697,7 +707,7 @@
     {t:'School lunchbox week',s:'Five days of lunches, sorted',p:['mom','dad','family4','big'],i:['Bread','Cheese slices','Yogurt','Apples','Carrots','Crackers','Granola bars','Juice boxes','Sandwich bags']},
     {t:'New baby basics',s:'What you reach for ten times a day',p:['mom','dad','newparents'],i:['Diapers','Baby wipes','Diaper cream','Formula','Baby wash','Baby laundry detergent','Infant fever medicine']},
     {t:'Meal-prep Sunday',s:'A week of high-protein meals',p:['gym','fit','pro'],i:['Chicken breast','Rice','Broccoli','Sweet potatoes','Eggs','Oats','Greek yogurt','Frozen berries','Olive oil']},
-    {t:'Dorm room starter',s:'Everything for a first week away',p:['student'],i:['Instant noodles','Cereal','Milk','Coffee','Snacks','Laundry pods','Dish soap','Toilet paper','Trash bags','Paper towels']},
+    {t:'Dorm room starter',solo:1,s:'Everything for a first week away',p:['student'],i:['Instant noodles','Cereal','Milk','Coffee','Snacks','Laundry pods','Dish soap','Toilet paper','Trash bags','Paper towels']},
     {t:'Plant-based pantry',s:'The staples a vegan kitchen runs on',p:['vegan'],i:['Tofu','Lentils','Chickpeas','Oat milk','Nutritional yeast','Quinoa','Peanut butter','Canned tomatoes','Vitamin B12']},
     {t:'Friday taco night',s:'One dinner everyone agrees on',p:['mom','dad','family4','big'],i:['Taco shells','Ground beef','Salsa','Cheese','Lettuce','Tomatoes','Sour cream','Limes']},
     {t:'Sick day kit',s:'So nobody goes out at 9pm',p:[],i:['Fever medicine','Cough syrup','Throat lozenges','Tissues','Electrolyte drink','Chicken soup','Honey','Tea']},
@@ -706,7 +716,7 @@
     {t:'Deep clean day',s:'Every surface, one trip',p:[],i:['All-purpose cleaner','Dish soap','Sponges','Trash bags','Paper towels','Laundry detergent','Toilet cleaner','Glass cleaner']},
     {t:'Storm shelf',s:'Three days without the shops',p:[],i:['Bottled water','Canned soup','Pasta','Peanut butter','Crackers','Batteries','Candles','First aid supplies']},
     {t:'Pet essentials',s:'For the family member who cannot ask',p:['petparent'],i:['Pet food','Pet treats','Poop bags','Cat litter','Flea treatment']},
-    {t:'Flat share staples',s:'The things everyone uses and nobody buys',p:['roommates','student'],i:['Toilet paper','Dish soap','Trash bags','Cooking oil','Rice','Salt','Sponges','Paper towels','Laundry detergent']},
+    {t:'Flat share staples',solo:1,s:'The things everyone uses and nobody buys',p:['roommates','student'],i:['Toilet paper','Dish soap','Trash bags','Cooking oil','Rice','Salt','Sponges','Paper towels','Laundry detergent']},
     {t:'Medicine cabinet check',s:'In date and in stock before you need it',p:['empty','carer','newparents'],i:['Pain reliever','Antacid','Bandages','Antiseptic','Thermometer','Allergy tablets','Cough syrup','Electrolyte drink']},
     {t:'Grandkids are coming',s:'Stocked before they arrive',p:['empty'],i:['Milk','Cereal','Juice boxes','Fruit','Snacks','Pasta','Ice cream','Cheese']},
     {t:'Dinner for friends',s:'A proper meal without a second trip',p:['host','couple'],i:['Olive oil','Pasta','Parmesan','Garlic','Lemons','Butter','Fresh herbs','Sparkling water','Chocolate']},
@@ -737,7 +747,7 @@
   }
   function renderLog(){
     var v=$('v-log');v.textContent='';
-    var ps=pers().map(function(k){return ALIAS[k]||k}),mine=function(k){return k.p.some(function(x){return ps.indexOf(x)>-1})},kits=KITS.filter(function(k){return kitItems(k).length>=3&&(!k.p.length||!ps.length||mine(k)||ps.indexOf('other')>-1)})
+    var ps=pers().map(function(k){return ALIAS[k]||k}),mine=function(k){if(k.solo&&profile&&profile.kids>0)return false;return k.p.some(function(x){return ps.indexOf(x)>-1})},kits=KITS.filter(function(k){return kitItems(k).length>=3&&(!k.p.length||!ps.length||mine(k)||ps.indexOf('other')>-1)})
       .sort(function(a,b){return mine(b)-mine(a)});
     var kn=items.filter(function(i){return i.learned}).sort(function(a,b){return a.finish_days-b.finish_days}),sl=el('div','sec'),cl=el('div','card');
     sl.append(el('h2','','What I have learned'),el('p','sub','Only from what you do: what you buy, what runs out, and how you answer me. Tap Fix on a habit if I have it wrong.'));
@@ -1050,10 +1060,10 @@
   $('bigText').onclick=function(){var on=!document.documentElement.classList.contains('big');setBig(on);try{localStorage.setItem('stocker.big',on?'1':'0')}catch(e){}};
   function initial(){return (me||'?').trim().charAt(0).toUpperCase()||'?'}
   $('menuBtn').onclick=function(){$('menuMe').textContent=initial();$('menuH').textContent=me?me+'’s home':'Your home';$('menuSub').textContent=profileLine();
-    $('menuRemSub').textContent=pushOn?'Reminders are on':'Reminders are off';$('menuHomes').hidden=!owner;$('menuScore').hidden=!owner;$('menuDelete').hidden=owner;var sl=sortLine();$('menuSortSub').textContent=sl.n===sl.of?'Everything is sorted':sl.text;$('menuOutAll').hidden=!signup;$('menuShare').hidden=signup;$('lockBtn').querySelector('b').textContent=signup?'Sign out':'Lock Stocker';$('lockSub').textContent=signup?'On this phone':'Ask for your code again';$('menuDlg').showModal()};
+    $('menuRemSub').textContent=pushOn?'Reminders are on':'Reminders are off';$('menuHomes').hidden=!owner;$('menuScore').hidden=!owner;$('menuScoreS').textContent=reviewN?reviewN+(reviewN===1?' miss':' misses')+' to review, and test scores':'Test scores, week by week';$('menuDelete').hidden=owner;var sl=sortLine();$('menuSortSub').textContent=sl.n===sl.of?'Everything is sorted':sl.text;$('menuOutAll').hidden=!signup;$('menuShare').hidden=signup;$('lockBtn').querySelector('b').textContent=signup?'Sign out':'Lock Stocker';$('lockSub').textContent=signup?'On this phone':'Ask for your code again';$('menuDlg').showModal()};
   $('menuEdit').onclick=openProfile;
   $('menuRemind').onclick=function(){$('menuDlg').close();go('log')};
-  $('menuScore').onclick=function(){location.href='/scorecard.html'};
+  $('menuScore').onclick=function(){location.href=reviewN?'/evals.html#real':'/scorecard.html'};
   /* Friends testing (the owner only): a personal code per friend, and each code opens a home of its own */
   function inviteText(d){return 'Hi '+d.name+', I am building Stocker, an app that keeps track of what you have at home so you do not run out. Would you try it for a few days?\n\n1. Open '+(d.link||location.origin)+' on your phone.\n2. Type your name and this code: '+d.code+'\n3. Add it to your home screen from the Share menu, so it opens like an app.\n\nThree things to try: paste or snap a grocery receipt, tell it what you used ("used 2 eggs", "we are out of rice"), and ask "what should I use first?"\n\nYour home is private: nobody else sees your things. I can see what you type to the app, so I can fix its mistakes. Replies can take 20 seconds for now. If something looks wrong, tap Undo or "Not right?" and send me a screenshot.'}
   function showInvite(d){$('homesNew').style.display='flex';$('homesNewMsg').textContent='Code for '+d.name+': '+d.code+'. I show it only this once, so copy the invitation now.';$('homesInvite').textContent=inviteText(d)}
