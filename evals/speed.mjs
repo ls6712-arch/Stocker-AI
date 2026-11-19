@@ -10,19 +10,16 @@
 //  7. The speed trial's own scoring, both ways.
 //
 //   node --no-warnings evals/speed.mjs
-import fs from 'fs';
-import os from 'os';
-import path from 'path';
-import { execSync } from 'child_process';
+import crypto from 'crypto';
 import { ROOT, loadAgent } from './load.mjs';
 
 const NAMES = ['fromLines', 'sanitize', 'structure', 'shapeFor', 'receiptParts', 'speedScore', 'cleanProfile', 'smallOk', 'LINE_FORM', 'SPEED_CASES'];
 const T = await loadAgent(NAMES);
-// the Worker before this round, to prove the JSON path did not move (TOTE_BEFORE, or main's own copy in git)
-let before = process.env.TOTE_BEFORE;
-if (!before) { try { before = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'tote-b-')), 'before.js'); fs.writeFileSync(before, execSync('git show origin/main:src/index.js', { cwd: ROOT, stdio: ['ignore', 'pipe', 'ignore'] })); } catch (e) { before = null; } }
-let B = null;
-if (before) { const keep = process.env.TOTE_SRC; process.env.TOTE_SRC = before; try { B = await loadAgent(['structure', 'cleanProfile']); } catch (e) { B = null; } if (keep) process.env.TOTE_SRC = keep; else delete process.env.TOTE_SRC; }
+// How the model was called before this round (main at 353629a, 18 Nov), as fingerprints of the model and its whole input, for the
+// six calls in part 3. Pinned here so the check needs no git history (GitHub's checkout has none). A deliberate change to the JSON
+// prompt changes these; update them only on purpose, with the reason in the commit.
+const BEFORE = ['4162668497586383', '1d28c7f264c0c2cb', '40cb4d54f179a8bd', '5423b95ce87ed8cc', '2bb66413f95c315f', '829de54bc4839e72'];
+const print = (c) => crypto.createHash('sha256').update(c.m + '\n' + JSON.stringify(c.inp)).digest('hex').slice(0, 16);
 
 let pass = 0, total = 0;
 const out = [];
@@ -72,16 +69,17 @@ ok('a million of something is not believed in the short form either', (() => { c
 ok('with no intent line, action lines read as an update', T.fromLines('add | Rice | 1 | kg | sure | Kitchen | Pantry | 540 | 30').intent === 'update');
 
 // ---- 3. the JSON path is exactly as before ----
-if (B) {
+{
+  let n = 0;
   for (const [kind, text] of [['voice', 'the bread went stale so I tossed it'], ['bill', 'TARGET\nCREST TOOTHPASTE 3.99\nTIDE PODS 42CT 13.99'], ['voice', 'grabbed yogurt cups, like 6']]) {
     for (const model of [undefined, SMALL]) {
-      const a = [], b = [];
+      const a = [];
       await T.structure(stand('{"intent":"update","actions":[]}', a), kind, text, today, known, profile, [], model);
-      await B.structure(stand('{"intent":"update","actions":[]}', b), kind, text, today, known, B.cleanProfile({ personas: ['family4'], adults: 2, kids: 2 }), [], model);
-      ok('UPDATE_SHAPE unset: the model is called exactly as before (' + kind + (model ? ', small' : ', large') + ')', a.length === 1 && b.length === 1 && JSON.stringify(a[0].inp) === JSON.stringify(b[0].inp) && a[0].m === b[0].m, { now: a.length, before: b.length });
+      ok('UPDATE_SHAPE unset: the model is called exactly as before (' + kind + (model ? ', small' : ', large') + ')', a.length === 1 && print(a[0]) === BEFORE[n], a.length === 1 ? print(a[0]) : a.length);
+      n++;
     }
   }
-} else ok('the Worker before this round could be loaded to compare', false, 'set TOTE_BEFORE to its path');
+}
 {
   const c = [];
   await T.structure({ ...stand('intent: update\nuse | Bread | 0 | pcs | sure | Kitchen | Bakery | 5 | 5', c), UPDATE_SHAPE: 'lines' }, 'voice', 'the bread went stale so I tossed it', today, known, profile, []);
