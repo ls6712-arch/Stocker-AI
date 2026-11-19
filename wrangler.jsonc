@@ -31,6 +31,13 @@
     // Set DELEGATE to "off" to send everything to TEXT_MODEL.
     "SMALL_MODEL": "@cf/meta/llama-3.1-8b-instruct-fp8-fast",
     "DELEGATE": "on",
+    // how the model writes what it read from an update or a receipt: "json" (14 named fields per thing, as before), "owner" (the
+    // short form, one line per thing, for the owner's home and the live evals only) or "lines" (the short form for every home).
+    // The short form also reads a long receipt in parts at the same time.
+    "UPDATE_SHAPE": "json",
+    // once per deploy, the same made-up messages are timed in both forms on the real models (photo_trials, kind "speed").
+    // About 40 model calls, no person's words. "off" to stop.
+    "SPEED_TRIAL": "on",
     "SPEECH_MODEL": "@cf/openai/whisper-large-v3-turbo",
     "IMAGE_MODEL": "@cf/black-forest-labs/flux-1-schnell",
     // real sign-in: every home there is (signed up or by code), a home's daily share of model-using messages,
@@ -51,6 +58,8 @@
       "TEXT_MODEL": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
       "SMALL_MODEL": "@cf/meta/llama-3.1-8b-instruct-fp8-fast",
       "DELEGATE": "on",
+      "UPDATE_SHAPE": "json",
+      "SPEED_TRIAL": "off",
       "SPEECH_MODEL": "@cf/openai/whisper-large-v3-turbo",
       "IMAGE_MODEL": "@cf/black-forest-labs/flux-1-schnell",
       "HOMES_MAX": "5",

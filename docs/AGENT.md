@@ -604,3 +604,33 @@ Sushmitha asked for a clear checklist to say whether Tote did right on every rea
 - **Data:** shared table `checks` (home, turn, at, guess, guessed, mark, marked), in `ROOT_SCHEMA` and `schema.sql`; never reachable from a friend's handle (`scopeSql` refuses it). `guess` is Claude's first pass, written by the scheduled Claude check straight into D1; `mark` is the owner's, through `POST /api/checks`. A wrong mark with "should have" (update, nothing, list) becomes a test in `cases`, the same way the review of misses makes one. `DELETE /api/checks` clears the owner's answer and keeps the guess. All three routes are owner only.
 - **Claude's guess never counts as truth**: the numbers are the owner's answers; the guess only orders what to look at first.
 - Checks: `evals/checks.mjs` (`npm run test:checks`, part of `npm test`), `evals/checks-audit.cjs` (`npm run test:checks:browser`).
+
+## Speed: the short form and the split receipt (18 Nov 2026, branch `tote-speed-1`)
+
+**Where the seconds went (live run 7, read from `eval_trials`):** a reply written by the model takes about a second (0.3 to 1.3 s),
+but reading an update took 4 to 9 s and a receipt 12 to 24 s. Both prompts are about 1,900 to 2,100 tokens, so the difference is
+what the model writes: the update JSON repeats 14 field names for every thing read (about 120 tokens a thing), at roughly 30 tokens
+a second. Two model calls in one turn (the small model's work sent up, or an update then an answer) add their times.
+
+**What changed (behind a switch, off by default):**
+- `UPDATE_SHAPE`: `json` (as before), `owner` (the owner's home and the live evals, which run as the owner) or `lines` (every home).
+  In the short form (`LINE_FORM`) the model writes one line per thing, `action | name | quantity | unit | sure or guess | area |
+  category | shelfLifeDays | daysToFinish`, then only the extras that apply (`price`, `best by`, `warn`, `note`, `from dish`).
+  `fromLines` reads it back into exactly the fields the JSON had, so `sanitize`, the allergy checks and every limit run unchanged.
+  A line code cannot read is left out, so it changes nothing. No JSON schema is asked for; a chat update may write 400 tokens.
+- With the short form, a pasted receipt or bill of more than 8 lines is read in parts of 6 lines at the same time
+  (`receiptParts`; the shop's name goes with each part, every line in exactly one part, at most 7 parts). Voice notes, shelves and
+  the small model are never split.
+- `SPEED_TRIAL=on`: once per deploy, the scheduled job times 9 made-up messages (6 updates, a plan, a dish, two receipts) in both
+  forms on the real models, large and small, one message a minute, `SPEED_ROUNDS` times (default 2), and keeps each reading as
+  text in `photo_trials` (kind `speed`): time, tokens from `usage`, what it read and a score against what it should do
+  (`speedScore`). No person's words are used and no home is touched. About 40 model calls a deploy.
+
+Checks: `evals/speed.mjs` (`npm run test:speed`, part of `npm test`), 61 checks: the short form reads back to what the JSON gave
+(8 cases, voice and receipt), what it cannot read changes nothing (10), with the switch unset the model is called exactly as on
+`main` (6, against `main`'s own code), who gets which form (6), the split receipt (12, including the parts being read at the same
+time and an instruction line never reaching the model), the short form being at least 2.5x shorter (2.8x on five receipt lines),
+and the trial's scoring in both directions.
+
+**To read the trial:** `SELECT prompt, model, ms, text FROM photo_trials WHERE kind = 'speed' ORDER BY id`.
+Switch to `owner` only if the short form's score matches the JSON's; the next live eval run then measures it on every task.
