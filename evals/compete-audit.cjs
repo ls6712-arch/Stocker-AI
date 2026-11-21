@@ -104,7 +104,7 @@ const URL = 'http://127.0.0.1:8799/';
   await p.route('**/api/scan/barcode*', (r) => { asked = r.request().url(); const empty = /empty=1/.test(asked); r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(empty ? { kind: 'barcode', empty: true, pack: 'Kissan 500 g', tracked: false, intent: 'update', store: '', bought: '', currency: '', actions: [{ action: 'list', name: 'Mixed Fruit Jam', note: 'Kissan 500 g', inferred: false, sure: true, quantity: 1, unit: 'pcs', area: 'Kitchen', category: 'Other', warn: '', expiry: '', shelfLifeDays: 0, price: 0, finishDays: 14 }] } : { kind: 'barcode', actions: [], intent: 'update', store: '', bought: '', currency: '' }) }); });
   await p.click('#capEmpty'); await p.waitForSelector('#codeDlg[open]');
   check('Empty pack opens the scanner with its own title', /Scan the empty pack/.test(await p.locator('#codeH').innerText()), await p.locator('#codeH').innerText());
-  await p.fill('#codeInput', '8901030865278'); await p.click('#codeForm button[type=submit]'); await p.waitForTimeout(1500);
+  await p.fill('#codeInput', '8901030865275'); await p.click('#codeForm button[type=submit]'); await p.waitForTimeout(1500);
   check('the scan is sent as an empty pack', /empty=1/.test(asked), asked);
   const s3 = await state();
   check('it is on the list with its brand and size, and nothing was added at home', s3.extras.some((x) => /Mixed Fruit Jam \(Kissan 500 g\)/.test(x.text)) && !s3.items.some((i) => /jam/i.test(i.name)), s3.extras);
@@ -115,7 +115,7 @@ const URL = 'http://127.0.0.1:8799/';
   asked = '';
   await p.click('#capCode'); await p.waitForSelector('#codeDlg[open]');
   check('opposite: Barcode still opens the usual scanner', /Scan a barcode/.test(await p.locator('#codeH').innerText()), await p.locator('#codeH').innerText());
-  await p.fill('#codeInput', '8901030865278'); await p.click('#codeForm button[type=submit]'); await p.waitForTimeout(900);
+  await p.fill('#codeInput', '8901030865275'); await p.click('#codeForm button[type=submit]'); await p.waitForTimeout(900);
   check('opposite: and its scan is not sent as an empty pack', asked && !/empty/.test(asked), asked);
 
   // ---- 5. food used in time ----

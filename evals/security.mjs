@@ -25,7 +25,9 @@ const A = await loadAgent(['cleanProfile']);
 const hdrs = fs.readFileSync(path.join(ROOT, 'public/_headers'), 'utf8');
 const csp = (hdrs.match(/Content-Security-Policy:\s*(.+)/) || [])[1] || '';
 const dir = (name) => ((csp.split(';').map((x) => x.trim()).find((x) => x.startsWith(name + ' ')) || '').split(/\s+/).slice(1));
-check('scripts may come only from the app itself and Google sign-in: no inline scripts, no eval', dir('script-src').length && !dir('script-src').includes("'unsafe-inline'") && !dir('script-src').includes("'unsafe-eval'") && dir('script-src').every((s) => s === "'self'" || s.startsWith('https://accounts.google.com/')), dir('script-src'));
+// 20 Nov 2026: 'wasm-unsafe-eval' lets the page compile WebAssembly (the barcode reader, /vendor/zxing_reader.wasm, from the app
+// itself); it does not allow eval() or new Function() for JavaScript
+check('scripts may come only from the app itself and Google sign-in: no inline scripts, no eval (WebAssembly only)', dir('script-src').length && !dir('script-src').includes("'unsafe-inline'") && !dir('script-src').includes("'unsafe-eval'") && dir('script-src').every((s) => s === "'self'" || s === "'wasm-unsafe-eval'" || s.startsWith('https://accounts.google.com/')), dir('script-src'));
 check('no plug-ins, no other site may frame the app, forms post only to the app, no <base> tricks', dir('object-src').join() === "'none'" && dir('frame-ancestors').join() === "'none'" && dir('form-action').join() === "'self'" && dir('base-uri').join() === "'none'", csp);
 check('the browser is told to use HTTPS only, for a year, including subdomains', /Strict-Transport-Security:\s*max-age=(\d+);\s*includeSubDomains/.test(hdrs) && Number(hdrs.match(/max-age=(\d+)/)[1]) >= 31536000, hdrs);
 check('files are never sniffed as another type, and the app is never shown in a frame', /X-Content-Type-Options:\s*nosniff/.test(hdrs) && /X-Frame-Options:\s*DENY/.test(hdrs), null);

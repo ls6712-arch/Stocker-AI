@@ -51,7 +51,7 @@ const AI = {
     return { response: (r && r.answer) || 'I am not sure about that one.' };
   },
 };
-const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.webmanifest': 'application/manifest+json', '.ico': 'image/x-icon', '.txt': 'text/plain' };
+const TYPES = { '.wasm': 'application/wasm', '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.webmanifest': 'application/manifest+json', '.ico': 'image/x-icon', '.txt': 'text/plain' };
 const SITE_HEADERS = Object.fromEntries(fs.readFileSync(path.join(ROOT, 'public/_headers'), 'utf8').split('\n').filter((l) => /^\s+[A-Za-z-]+:/.test(l)).map((l) => { const i = l.indexOf(':'); return [l.slice(0, i).trim(), l.slice(i + 1).trim()]; }));
 const ASSETS = { fetch: async (req) => {
   let p = decodeURIComponent(new URL(req.url).pathname); if (p.endsWith('/')) p += 'index.html';
@@ -84,11 +84,23 @@ if (SIGNUP) {
   };
 }
 
+// the product database (Open Food Facts) is a stand-in too: POST /__products { code: product } fills it, anything else is not found
+let products = {};
+{
+  const before = globalThis.fetch;
+  globalThis.fetch = async (input, init) => {
+    const u = String(typeof input === 'string' ? input : input.url);
+    const m = u.match(/openfoodfacts\.org\/api\/v2\/product\/(\d+)\.json/);
+    if (m) return products[m[1]] ? new Response(JSON.stringify({ status: 1, product: products[m[1]] })) : new Response(JSON.stringify({ status: 0 }), { status: 404 });
+    return before(input, init);
+  };
+}
 const body = (req) => new Promise((ok) => { const c = []; req.on('data', (d) => c.push(d)); req.on('end', () => ok(Buffer.concat(c))); });
 http.createServer(async (req, res) => {
   const buf = await body(req), url = 'http://127.0.0.1:' + PORT + req.url;
   try {
     if (req.url === '/__script') { const j = JSON.parse(buf.toString() || '{}'); rules = j.rules || []; seen = []; res.end('{"ok":true}'); return; }
+    if (req.url === '/__products') { products = JSON.parse(buf.toString() || '{}'); res.end('{"ok":true}'); return; }
     if (req.url === '/__seen') { res.setHeader('content-type', 'application/json'); res.end(JSON.stringify(seen)); return; }
     if (SIGNUP && req.url.startsWith('/__token')) { res.end(await mint(new URL(url).searchParams.get('email') || 'asha@example.com')); return; }
     if (SIGNUP && req.url === '/__mail') { res.setHeader('content-type', 'application/json'); res.end(JSON.stringify(mail)); return; }

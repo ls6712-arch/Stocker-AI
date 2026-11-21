@@ -1,0 +1,21 @@
+{
+ "note": "First-sight set for the seven new allergens, written by Claude on 20 Nov 2026 after the code was finished. Score it with --fresh; never tune on it. Once anything here is used to fix the code, write a new one.",
+ "warn": {
+  "Lupin": ["Lupin Pasta", "Lupini Snack Beans", "Sweet Lupin Protein Powder"],
+  "Molluscs": ["Baby Clams Can", "Green Lipped Mussels", "Squid Ink Pasta", "Smoked Oysters", "Takoyaki", "Calamari Rings Frozen"],
+  "Buckwheat": ["Cha Soba", "Buckwheat Pancake Mix", "Kuttu Puri Mix", "Buckwheat Honey Crackers"],
+  "Kiwi": ["Kiwi Strawberry Juice", "Golden Kiwifruit Pack"],
+  "Banana": ["Banana Bread", "Plantain Chips", "Kerala Banana Chips", "Dried Banana Slices", "Matooke"],
+  "Peach": ["Canned Peaches", "Peach Rings Gummies", "White Nectarines", "Peach Mango Salsa"],
+  "Coconut": ["Coconut Water", "Toasted Coconut Flakes", "Coconut Yogurt", "Nariyal Burfi", "Thai Curry Coconut Soup", "Buko Pie"]
+ },
+ "quiet": {
+  "Lupin": ["Chickpea Pasta", "Lentil Chips"],
+  "Molluscs": ["Oyster Crackers", "Tiger Prawns", "Mushroom Oyster Stir Fry Kit"],
+  "Buckwheat": ["Udon Noodles", "Ramen Noodles"],
+  "Kiwi": ["Kimchi", "Kidney Bean Curry"],
+  "Banana": ["Banana Pepper Rings", "Sweet Potato Chips"],
+  "Peach": ["Peas", "Pear Juice"],
+  "Coconut": ["Hot Cocoa Mix", "Cocoa Puffs"]
+ }
+}

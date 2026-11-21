@@ -1,0 +1,187 @@
+{
+ "at": "2026-11-21T00:07:24.674Z",
+ "frames": 8,
+ "before": {
+  "right": 65,
+  "wrong": 0,
+  "none": 159
+ },
+ "after": {
+  "right": 134,
+  "wrong": 0,
+  "none": 90
+ },
+ "byDamage": {
+  "pack": {
+   "before": {
+    "right": 9,
+    "wrong": 0,
+    "none": 7
+   },
+   "after": {
+    "right": 16,
+    "wrong": 0,
+    "none": 0
+   }
+  },
+  "blur-soft": {
+   "before": {
+    "right": 0,
+    "wrong": 0,
+    "none": 16
+   },
+   "after": {
+    "right": 2,
+    "wrong": 0,
+    "none": 14
+   }
+  },
+  "blur-shake": {
+   "before": {
+    "right": 0,
+    "wrong": 0,
+    "none": 16
+   },
+   "after": {
+    "right": 0,
+    "wrong": 0,
+    "none": 16
+   }
+  },
+  "tilt-12": {
+   "before": {
+    "right": 6,
+    "wrong": 0,
+    "none": 10
+   },
+   "after": {
+    "right": 16,
+    "wrong": 0,
+    "none": 0
+   }
+  },
+  "tilt-35": {
+   "before": {
+    "right": 1,
+    "wrong": 0,
+    "none": 15
+   },
+   "after": {
+    "right": 1,
+    "wrong": 0,
+    "none": 15
+   }
+  },
+  "angle": {
+   "before": {
+    "right": 5,
+    "wrong": 0,
+    "none": 11
+   },
+   "after": {
+    "right": 16,
+    "wrong": 0,
+    "none": 0
+   }
+  },
+  "dim": {
+   "before": {
+    "right": 0,
+    "wrong": 0,
+    "none": 16
+   },
+   "after": {
+    "right": 10,
+    "wrong": 0,
+    "none": 6
+   }
+  },
+  "glare": {
+   "before": {
+    "right": 4,
+    "wrong": 0,
+    "none": 12
+   },
+   "after": {
+    "right": 10,
+    "wrong": 0,
+    "none": 6
+   }
+  },
+  "can": {
+   "before": {
+    "right": 10,
+    "wrong": 0,
+    "none": 6
+   },
+   "after": {
+    "right": 15,
+    "wrong": 0,
+    "none": 1
+   }
+  },
+  "crumpled": {
+   "before": {
+    "right": 8,
+    "wrong": 0,
+    "none": 8
+   },
+   "after": {
+    "right": 16,
+    "wrong": 0,
+    "none": 0
+   }
+  },
+  "far": {
+   "before": {
+    "right": 0,
+    "wrong": 0,
+    "none": 16
+   },
+   "after": {
+    "right": 0,
+    "wrong": 0,
+    "none": 16
+   }
+  },
+  "thumb": {
+   "before": {
+    "right": 0,
+    "wrong": 0,
+    "none": 16
+   },
+   "after": {
+    "right": 0,
+    "wrong": 0,
+    "none": 16
+   }
+  },
+  "jpeg-low": {
+   "before": {
+    "right": 6,
+    "wrong": 0,
+    "none": 10
+   },
+   "after": {
+    "right": 16,
+    "wrong": 0,
+    "none": 0
+   }
+  },
+  "faded": {
+   "before": {
+    "right": 16,
+    "wrong": 0,
+    "none": 0
+   },
+   "after": {
+    "right": 16,
+    "wrong": 0,
+    "none": 0
+   }
+  }
+ },
+ "seconds": 80,
+ "msPerFrame": 3,
+ "firstSteadyFrame": "2.20"
+}

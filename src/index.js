@@ -41,7 +41,7 @@ const PERSONAS = {
   other: 'a household',
 };
 const DIETS = ['Vegetarian', 'Vegan', 'Pescatarian', 'Eggetarian', 'Halal', 'Kosher', 'Gluten-free', 'Dairy-free', 'High protein', 'Keto', 'Low carb', 'Paleo', 'Mediterranean', 'Jain', 'No onion or garlic', 'No beef', 'No pork', 'Low FODMAP'];
-const ALLERGENS = ['Peanuts', 'Tree nuts', 'Milk', 'Eggs', 'Wheat', 'Soy', 'Fish', 'Shellfish', 'Sesame', 'Mustard', 'Celery', 'Corn', 'Sulphites'];
+const ALLERGENS = ['Peanuts', 'Tree nuts', 'Milk', 'Eggs', 'Wheat', 'Soy', 'Fish', 'Shellfish', 'Sesame', 'Mustard', 'Celery', 'Corn', 'Sulphites', 'Lupin', 'Molluscs', 'Buckwheat', 'Kiwi', 'Banana', 'Peach', 'Coconut'];
 const RULES = {
   'Celiac': 'strictly no gluten for medical reasons: no wheat, barley, rye, malt or ordinary oats, and warn on anything not labelled gluten-free',
   'Lactose intolerant': 'lactose intolerant, so prefer lactose-free dairy',
@@ -712,12 +712,40 @@ async function hearAudio(env, base64) {
   return String((r && r.text) || '').trim();
 }
 
+// A barcode number as the shop's database knows it (20 Nov 2026; the app's public/barcode.js has the same rules). Retail barcodes
+// (EAN-8, UPC-A, EAN-13, GTIN-14) end in a check digit, so a number that does not add up is a slip, never a product. UPC-E (8
+// digits, only ever issued with a leading 0) is written out as its UPC-A. Other lengths go through as before.
+function gtinSum(c) {
+  if (![8, 12, 13, 14].includes(c.length)) return false;
+  let s = 0;
+  for (let i = c.length - 2, k = 0; i >= 0; i--, k++) s += Number(c[i]) * (k % 2 ? 1 : 3);
+  return (10 - (s % 10)) % 10 === Number(c[c.length - 1]);
+}
+function upcEtoA(c) {
+  if (!/^0\d{7}$/.test(c)) return '';
+  const d = c.slice(1, 7), l = d[5];
+  const m = '012'.includes(l) ? d.slice(0, 2) + l + '0000' + d.slice(2, 5) : l === '3' ? d.slice(0, 3) + '00000' + d.slice(3, 5) : l === '4' ? d.slice(0, 4) + '00000' + d[4] : d.slice(0, 5) + '0000' + l;
+  return c[0] + m + c[7];
+}
+function gtinOf(raw) {
+  const c = String(raw || '').replace(/\D/g, '');
+  if (c.length < 6 || c.length > 14) return { code: '', bad: true };
+  if (c.length === 8 && !gtinSum(c)) { const a = upcEtoA(c); return a && gtinSum(a) ? { code: a } : { code: '', bad: true }; }
+  if ([8, 12, 13, 14].includes(c.length)) return gtinSum(c) ? { code: c } : { code: '', bad: true };
+  return { code: c };
+}
+// the same product filed under its other length: a UPC-A is also the EAN-13 with a 0 in front, and the other way round
+const gtinTwin = (c) => (c.length === 12 ? '0' + c : c.length === 13 && c[0] === '0' ? c.slice(1) : '');
 async function lookupBarcode(code) {
-  const r = await fetch('https://world.openfoodfacts.org/api/v2/product/' + code + '.json?fields=product_name,brands,quantity,allergens_tags,traces_tags,ingredients_text_en,ingredients_text,labels_tags,nutriments,categories_tags', {
-    headers: { 'user-agent': 'StockerAI/1.0 (household inventory tracker)' },
-  });
-  if (!r.ok) return null;
-  return productFrom(await r.json());
+  for (const c of [code, gtinTwin(code)].filter(Boolean)) {
+    const r = await fetch('https://world.openfoodfacts.org/api/v2/product/' + c + '.json?fields=product_name,brands,quantity,allergens_tags,traces_tags,ingredients_text_en,ingredients_text,labels_tags,nutriments,categories_tags', {
+      headers: { 'user-agent': 'StockerAI/1.0 (household inventory tracker)' },
+    });
+    if (!r.ok) { if (r.status === 404) continue; return null; }
+    const p = productFrom(await r.json());
+    if (p) return p;
+  }
+  return null;
 }
 // What the product database says, as Tote keeps it. Nutrition is per 100 g and only what the database really has: a missing or
 // impossible figure is left out, never read as zero.
@@ -747,6 +775,7 @@ function productFrom(d) {
 const OFF = {
   Peanuts: ['en:peanuts'], 'Tree nuts': ['en:nuts'], Milk: ['en:milk'], Eggs: ['en:eggs'], Wheat: ['en:gluten'], Soy: ['en:soybeans'], Fish: ['en:fish'],
   Shellfish: ['en:crustaceans', 'en:molluscs'], Sesame: ['en:sesame-seeds'], Mustard: ['en:mustard'], Celery: ['en:celery'], Sulphites: ['en:sulphur-dioxide-and-sulphites'],
+  Lupin: ['en:lupin'], Molluscs: ['en:molluscs'],
 };
 const WORDS = {
   Peanuts: /peanut|groundnut|moongphali|satay|\bpb ?(?:&|and|n) ?j\b|\bpbj\b|\bpb\b/, 'Tree nuts': /almond|walnut|cashew|pecan|hazelnut|pistachio|macadamia|pine ?nuts?|brazil nuts?|\bkaju\b|\bbadam\b|\bpista\b|akhrot|praline|marzipan|nutella|gianduja/,
@@ -756,6 +785,15 @@ const WORDS = {
   Fish: /\bfish|anchov|salmon|tuna|\bcod\b|sprats?\b|sardines?|mackerel|herring|tilapia|trout|haddock|pollock|halibut|bonito|katsuobushi|dashi|\beel\b|caviar|\broe\b|surimi|\bpatis\b|nam pla|saltfish|bacalao/,
   Shellfish: /shrimp|prawn|crab\b|crabs\b|lobster|oyster(?! mushroom)|mussel|clam\b|clams\b|scallops?|squid|octopus|calamari|crayfish|crawfish|langoustine|krill|abalone|cockles?|bagoong|belacan/,
   Sesame: /sesame|tahini|tahina|gingelly|halva|za.?atar|\bbenne\b/, Mustard: /mustard|\bsarson\b|kasundi/, Celery: /celery/, Corn: /\bcorn|maize/, Sulphites: /sulphite|sulfite/,
+  // 20 Nov 2026: the EU list's lupin and molluscs, buckwheat (Japan, Korea, kuttu in India), kiwi, banana and peach (Japan, Korea),
+  // and coconut (a tree nut to the US FDA). Shellfish keeps its molluscs, so a home that chose Shellfish sees no change.
+  Lupin: /lupin|lupini|tremo[cç]os?\b|altramuz|altramuces/,
+  Molluscs: /oyster(?! mushroom)|mussel|\bclams?\b|scallops?|squid(?! brand)|octopus|calamari|abalone|cockles?|whelks?|cuttlefish|escargot|\bsnails?\b|periwinkle|geoduck|conpoy|kanava|koonthal|\bkakka\b|\btako\b/,
+  Buckwheat: /buckwheat|\bsoba\b|\bkuttu|\bkotu\b|\bkasha\b|naengmyeon|grechka|\bmemil|poffertjes|\bpizzoccheri/,
+  Kiwi: /\bkiwis?\b|kiwifruit|kiwi ?berr/,
+  Banana: /banana(?!s? (?:peppers?|shallots?|chil(?:l|e)s?|squash))|plantains?|platanos?\b|\bkela\b|\bkele\b|matooke|\bmaduros?\b|tostones/,
+  Peach: /peach(?:es)?\b|nectarines?|\baadu\b/,
+  Coconut: /coconut|\bcopra\b|nariyal|naariyal|\bkhopra|\bkopra\b|thengai|\bthenga\b|\bsantan\b|nata de coco|macapuno|\bbuko\b/,
 };
 const GLUTEN = /wheat|barley|\brye\b|malt|\boats?\b|spelt|semolina/;
 function labelCheck(prod, p) {
@@ -774,6 +812,8 @@ function labelCheck(prod, p) {
   const note = (text, name) => { const k = text + '|' + name; if (!noted.has(k)) { noted.add(k); notes.push(text + (name ? ', for ' + name : '')); } };
   const miss = (text) => { if (!missing.includes(text)) missing.push(text); };
   const listed = prod.ingredients.replace(LEFT_OUT, ' ');
+  // what the pack says it is free of ("contains no coconut", "nut-free") is not an ingredient; the database's own tags still count
+  const said = prod.ingredients.replace(/\b(?:contains no|does not contain|free (?:from|of)|made without)\s+[^,.;()]*|\b[a-z]+[- ]free\b/g, ' ');
   const house = (key, name) => {
     const h = HOUSE[key];
     if (!h) return;
@@ -794,7 +834,7 @@ function labelCheck(prod, p) {
       const stem = a.toLowerCase().replace(/[^\p{L}\p{N} ]/gu, '').replace(/(es|s)$/, '');
       if (!WORDS[a] && stem.length < 3) continue;
       const word = WORDS[a] || new RegExp('(^|[^\\p{L}])' + stem, 'u');
-      if (has(prod.allergens, OFF[a]) || word.test(prod.ingredients)) say('contains ' + a.toLowerCase(), w.name);
+      if (has(prod.allergens, OFF[a]) || word.test(said)) say('contains ' + a.toLowerCase(), w.name);
       else if (has(prod.traces, OFF[a])) say('may contain ' + a.toLowerCase(), w.name);
     }
     if (w.rules.includes('Celiac')) {
@@ -1256,8 +1296,8 @@ const spentBy = (actions, rows) => { const left = (name) => { const r = (rows ||
 // What Tote knows about things from Indian, Chinese, Japanese, Korean, Southeast Asian, Latin, Middle Eastern, African, Caribbean and
 // Eastern European kitchens, as they appear on receipts, delivery apps and in speech (src/grocery-data.txt). The model reads the
 // receipt; this table fixes where things go and how long they keep, and makes allergy and diet warnings a rule rather than a guess.
-const ALLERGEN_CODE = { Peanuts: 'P', 'Tree nuts': 'T', Milk: 'M', Eggs: 'E', Wheat: 'W', Soy: 'S', Fish: 'F', Shellfish: 'C', Sesame: 'Z', Mustard: 'U' };
-const CODE_WORD = { P: 'peanuts', T: 'tree nuts', M: 'milk', E: 'eggs', W: 'wheat', S: 'soy', F: 'fish', C: 'shellfish', Z: 'sesame', U: 'mustard' };
+const ALLERGEN_CODE = { Peanuts: 'P', 'Tree nuts': 'T', Milk: 'M', Eggs: 'E', Wheat: 'W', Soy: 'S', Fish: 'F', Shellfish: 'C', Sesame: 'Z', Mustard: 'U', Molluscs: 'K', Lupin: 'L', Buckwheat: 'B', Coconut: 'O', Kiwi: 'I', Banana: 'N', Peach: 'H' };
+const CODE_WORD = { P: 'peanuts', T: 'tree nuts', M: 'milk', E: 'eggs', W: 'wheat', S: 'soy', F: 'fish', C: 'shellfish', Z: 'sesame', U: 'mustard', K: 'molluscs', L: 'lupin', B: 'buckwheat', O: 'coconut', I: 'kiwi', N: 'banana', H: 'peach' };
 // receipt shorthand, so "LKK OYSTER FLV SAUCE" reads as "oyster flavored sauce"
 const SHORT = { flv: 'flavored', flvr: 'flavored', flvd: 'flavored', sce: 'sauce', swt: 'sweet', pwd: 'powder', pwdr: 'powder', grn: 'green', blk: 'black', wht: 'white', frz: 'frozen', frzn: 'frozen', chkn: 'chicken', brst: 'breast', veg: 'vegetable', ppr: 'pepper', whl: 'whole', org: 'organic', crm: 'cream', chs: 'cheese', ylw: 'yellow', bns: 'beans', pst: 'paste', vngr: 'vinegar', ndl: 'noodle', ndls: 'noodles', oj: 'orange juice' };
 const normItem = (t) => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/&/g, ' and ').replace(/[^a-z0-9]+/g, ' ').trim().split(' ').map((w) => SHORT[w] || w).join(' ');
@@ -2121,8 +2161,8 @@ function codeWarn(name, p) {
 // worked out when asked, so it always follows the profile as it is now. It can only ever say "check the label", never "safe".
 const NOT_FOOD = /diaper|napp(y|ies)|wipes?\b|soap|detergent|shampoo|conditioner|toothpaste|toothbrush|paper|\bbags?\b|litter|cleaner|sponges?\b|batter(y|ies)|lotion|sunscreen|bandage|medicine|tablets?\b|thermometer|candles?\b|roller|napkin|tissue|\bpods\b|\bwash\b|antiseptic|reliever|antacid|bleach|deodorant|razors?\b|floss|\bfoil\b|cling film|bulbs?\b|\b(?:hand|face|eye|shaving|foot|body|sun|diaper|nappy|rash) (?:cream|lotion|butter)/i;
 const NOT_DAIRY = /butternut|butter ?beans?|buttercup|butterfly|cream of tartar|cream soda|creamed corn|cream crackers?/i;
-const FREE_OF = [[/\b(?:tree )?nuts?[- ]free\b|\bno nuts\b/, ['Peanuts', 'Tree nuts']], [/\bpeanut[- ]free\b/, ['Peanuts']], [/\b(?:gluten|wheat)[- ]free\b/, ['Wheat']], [/\b(?:dairy|milk|lactose)[- ]free\b|\bvegan\b/, ['Milk']], [/\begg[- ]?(?:free|less)\b|\bvegan\b/, ['Eggs']], [/\bsoy[- ]free\b/, ['Soy']], [/\bsesame[- ]free\b/, ['Sesame']]];
-const ALLERGEN_WORD = { Peanuts: 'peanut', 'Tree nuts': 'tree nut', Milk: 'milk', Eggs: 'egg', Wheat: 'wheat', Soy: 'soy', Fish: 'fish', Shellfish: 'shellfish', Sesame: 'sesame', Mustard: 'mustard', Celery: 'celery', Corn: 'corn', Sulphites: 'sulphite' };
+const FREE_OF = [[/\b(?:tree )?nuts?[- ]free\b|\bno nuts\b/, ['Peanuts', 'Tree nuts']], [/\bpeanut[- ]free\b/, ['Peanuts']], [/\b(?:gluten|wheat)[- ]free\b/, ['Wheat']], [/\b(?:dairy|milk|lactose)[- ]free\b|\bvegan\b/, ['Milk']], [/\begg[- ]?(?:free|less)\b|\bvegan\b/, ['Eggs']], [/\bsoy[- ]free\b/, ['Soy']], [/\bsesame[- ]free\b/, ['Sesame']], [/\bcoconut[- ]free\b/, ['Coconut']], [/\blupin[- ]free\b/, ['Lupin']]];
+const ALLERGEN_WORD = { Peanuts: 'peanut', 'Tree nuts': 'tree nut', Milk: 'milk', Eggs: 'egg', Wheat: 'wheat', Soy: 'soy', Fish: 'fish', Shellfish: 'shellfish', Sesame: 'sesame', Mustard: 'mustard', Celery: 'celery', Corn: 'corn', Sulphites: 'sulphite', Lupin: 'lupin', Molluscs: 'mollusc', Buckwheat: 'buckwheat', Kiwi: 'kiwi', Banana: 'banana', Peach: 'peach', Coconut: 'coconut' };
 function clashOf(name, p, area) {
   if (!restricted(p) || (area && area !== 'Kitchen' && area !== 'Kids')) return null;
   const n = String(name || '').replace(/ \u00d7\d+$/, ''), low = n.toLowerCase();
@@ -4457,8 +4497,9 @@ async function api(request, env, url, ctx) {
         text = String((await request.json()).text || '').trim();
         if (!text) return json({ error: 'empty' }, 400);
       } else if (kind === 'barcode') {
-        const code = (url.searchParams.get('code') || '').replace(/\D/g, '');
-        if (code.length < 6 || code.length > 14) return json({ error: 'bad_code' }, 400);
+        const g = gtinOf(url.searchParams.get('code'));
+        if (g.bad) return json({ error: 'bad_code' }, 400);
+        const code = g.code;
         product = await lookupBarcode(code);
         if (!product) return json({ error: 'unknown_product', code }, 404);
         text = 'Bought one of: ' + product.text;
@@ -4532,7 +4573,8 @@ export default {
 // GROCERY-START (generated from src/grocery-data.txt by npm run glossary; do not edit here)
 const GROCERY_TXT = `# World grocery glossary for Tote. One item per line:
 #   aliases (comma separated, lowercase, as they appear on receipts, apps and in speech) ; display name ; Area/Category ; keeps (days from purchase, stored as usual) ; allergens ; tags
-# allergens: P peanuts, T tree nuts, M milk, E eggs, W wheat/gluten, S soy, F fish, C shellfish, Z sesame, U mustard
+# allergens: P peanuts, T tree nuts, M milk, E eggs, W wheat/gluten, S soy, F fish, C shellfish, Z sesame, U mustard,
+#   K molluscs (also C), L lupin, B buckwheat, O coconut, I kiwi, N banana, H peach
 # tags: meat, pork, beef, fish, shellfish, dairy, egg, honey, gelatin, alcohol, allium (onion/garlic), liquid, frozen
 # "Usually contains" is what most versions contain; Tote always says to check the label.
 #
@@ -4621,7 +4663,7 @@ jhinga,prawns,prawn;Prawns;Kitchen/Meat;2;C;shellfish
 # ---- Chinese ----
 soy sauce,light soy,dark soy,shoyu,soya sauce,superior light soy,toyo;Soy sauce;Kitchen/Pantry;730;S,W;liquid
 tamari;Tamari;Kitchen/Pantry;730;S;liquid
-oyster sauce,oyster flavored sauce,oyster flavoured sauce;Oyster sauce;Kitchen/Pantry;540;C,W;shellfish,liquid
+oyster sauce,oyster flavored sauce,oyster flavoured sauce;Oyster sauce;Kitchen/Pantry;540;C,K,W;shellfish,liquid
 hoisin,hoisin sauce;Hoisin sauce;Kitchen/Pantry;540;S,W,Z;liquid
 doubanjiang,toban djan,chili bean paste,broad bean paste,pixian;Doubanjiang (chili bean paste);Kitchen/Pantry;365;S,W;
 chili crisp,chili oil,lao gan ma,laoganma,chiu chow chili oil;Chili crisp;Kitchen/Pantry;365;S;liquid
@@ -4670,7 +4712,7 @@ wakame,kombu,kelp,dashima,hijiki;Seaweed (wakame/kombu);Kitchen/Pantry;365;;
 panko,panko bread crumbs,japanese breadcrumbs;Panko;Kitchen/Pantry;365;W;
 tempura flour,tempura batter mix;Tempura flour;Kitchen/Pantry;365;W;
 udon,udon noodles,sanuki udon;Udon;Kitchen/Pantry;14;W;
-soba,soba noodles,buckwheat noodles;Soba;Kitchen/Pantry;365;W;
+soba,soba noodles,buckwheat noodles;Soba;Kitchen/Pantry;365;W,B;
 ramen,ramen noodles,shin ramyun,ramyun,ramyeon,buldak,samyang,nissin,cup noodles,indomie,mama noodles,mi goreng,instant noodles;Instant ramen;Kitchen/Pantry;270;W;
 sushi rice,calrose,koshihikari,nishiki,japonica rice;Sushi rice;Kitchen/Pantry;730;;
 natto;Natto;Kitchen/Dairy;10;S;
@@ -4696,13 +4738,13 @@ bulgogi,galbi,kalbi,short ribs,beef bulgogi;Bulgogi/galbi beef;Kitchen/Meat;2;S,
 pork belly,samgyeopsal,liempo,sam gyup sal;Pork belly;Kitchen/Meat;2;;meat,pork
 spam,luncheon meat,ma ling;Spam (luncheon meat);Kitchen/Pantry;730;;meat,pork
 yakult;Yakult;Kitchen/Dairy;21;M;dairy,liquid
-banana milk,binggrae;Banana milk;Kitchen/Drinks;30;M;dairy,liquid
+banana milk,binggrae;Banana milk;Kitchen/Drinks;30;M,N;dairy,liquid
 soju;Soju;Kitchen/Drinks;730;;alcohol,liquid
 # ---- Southeast Asian ----
 fish sauce,nam pla,nuoc mam,patis,nuoc cham,three crabs,red boat,squid brand;Fish sauce;Kitchen/Pantry;730;F;fish,liquid
 shrimp paste,belacan,kapi,terasi,bagoong,bagoong alamang,mam tom;Shrimp paste;Kitchen/Pantry;365;C;shellfish
 dried shrimp,hae bee,tom kho;Dried shrimp;Kitchen/Pantry;180;C;shellfish
-coconut milk,coconut cream,santan,gata,chaokoh coconut;Coconut milk;Kitchen/Pantry;730;;liquid
+coconut milk,coconut cream,santan,gata,chaokoh coconut;Coconut milk;Kitchen/Pantry;730;O;liquid
 lemongrass,tanglad,serai,takrai,sereh;Lemongrass;Kitchen/Produce;14;;
 galangal,kha,lengkuas,blue ginger;Galangal;Kitchen/Produce;14;;
 kaffir lime leaves,makrut lime leaves,lime leaves,bai makrut,daun jeruk;Makrut lime leaves;Kitchen/Produce;10;;
@@ -4719,7 +4761,7 @@ longganisa,longaniza,chorizo de bilbao;Longganisa;Kitchen/Meat;30;;meat,pork
 tocino,pork tocino,chicken tocino;Tocino;Kitchen/Frozen;90;;meat,pork,frozen
 ube,ube halaya,purple yam;Ube;Kitchen/Pantry;30;M;dairy
 pancit,bihon pancit,palabok;Pancit noodles;Kitchen/Pantry;365;;
-banana ketchup,jufran,ufc banana ketchup;Banana ketchup;Kitchen/Pantry;365;;liquid
+banana ketchup,jufran,ufc banana ketchup;Banana ketchup;Kitchen/Pantry;365;N;liquid
 lechon sauce,mang tomas,all around sarsa;Lechon sauce;Kitchen/Pantry;365;;liquid
 chicharon,chicharron,chicharrones,pork rinds;Pork rinds (chicharron);Kitchen/Snacks;90;;meat,pork
 jackfruit,langka,nangka;Jackfruit;Kitchen/Produce;5;;
@@ -4739,7 +4781,7 @@ chipotle in adobo,chipotles,chiles chipotles,la costena chipotle,embasa chipotle
 dried chiles,guajillo,ancho,pasilla,chile de arbol,chile ancho,chile guajillo,mulato;Dried chiles;Kitchen/Pantry;365;;
 nopales,nopalitos,cactus paddles;Nopales;Kitchen/Produce;7;;
 chayote,sayote,christophene,choko;Chayote;Kitchen/Produce;21;;
-plantain,plantains,platano,platanos,platano maduro,platano verde,green plantains;Plantains;Kitchen/Produce;7;;
+plantain,plantains,platano,platanos,platano maduro,platano verde,green plantains;Plantains;Kitchen/Produce;7;N;
 yuca,cassava,manioc,kamoteng kahoy;Yuca (cassava);Kitchen/Produce;7;;
 malanga,yautia,eddo,dasheen;Malanga;Kitchen/Produce;14;;
 black beans,frijoles negros,habichuelas negras;Black beans;Kitchen/Pantry;730;;
@@ -4814,7 +4856,8 @@ pierogi,pierogies,varenyky,pelmeni,vareniki;Pierogi;Kitchen/Frozen;180;W,E,M;fro
 kefir;Kefir;Kitchen/Dairy;14;M;dairy,liquid
 tvorog,farmer cheese,farmers cheese,twarog,quark;Farmer cheese (tvorog);Kitchen/Dairy;10;M;dairy
 smetana,sour cream smetana;Smetana;Kitchen/Dairy;14;M;dairy
-buckwheat,kasha,grechka,buckwheat groats;Buckwheat (kasha);Kitchen/Pantry;365;;
+buckwheat,kasha,grechka,buckwheat groats;Buckwheat (kasha);Kitchen/Pantry;365;B;
+kuttu atta,kuttu ka atta,kuttu flour,kotu atta,buckwheat flour,kuttu;Kuttu atta (buckwheat flour);Kitchen/Pantry;90;B;
 sauerkraut,kiszona kapusta,kvashenaya kapusta;Sauerkraut;Kitchen/Dairy;60;;
 pickled herring,herring,shuba,schmaltz herring;Herring;Kitchen/Dairy;30;F;fish
 rye bread,borodinsky,pumpernickel;Rye bread;Kitchen/Bakery;7;W;
@@ -4846,7 +4889,7 @@ century eggs,preserved duck eggs,pidan,salted duck eggs,salted eggs,itlog na maa
 garlic chives,chinese chives,gau choy,nira,buchu;Garlic chives;Kitchen/Produce;5;;allium
 fermented bean curd,fermented tofu,furu,doufu ru,red bean curd,stinky tofu;Fermented bean curd;Kitchen/Pantry;365;S;
 bamboo shoots,bamboo shoot,labong;Bamboo shoots;Kitchen/Pantry;730;;
-dried scallop,dried scallops,conpoy;Dried scallops;Kitchen/Pantry;365;C;shellfish
+dried scallop,dried scallops,conpoy;Dried scallops;Kitchen/Pantry;365;C,K;shellfish
 golden curry,vermont curry,java curry,japanese curry,curry roux,kokumaro;Japanese curry roux;Kitchen/Pantry;365;W,S,M;
 sesame dressing,roasted sesame dressing,goma dressing,deep roasted sesame dressing;Sesame dressing;Kitchen/Pantry;180;Z,E,S,W;egg,liquid
 shirataki,konjac noodles,konnyaku,shirataki noodles;Shirataki noodles;Kitchen/Dairy;90;;

@@ -8,7 +8,7 @@
     "deploy": "wrangler deploy",
     "db:init": "wrangler d1 execute pantry-keeper --remote --file=schema.sql",
     "golive": "wrangler deploy && wrangler secret put APP_PIN",
-    "test": "node evals/households.mjs && node evals/conversations.mjs && node --no-warnings evals/learning.mjs && node --no-warnings evals/measure.mjs && node --no-warnings evals/quickpath.mjs && node --no-warnings evals/delegate.mjs && node --no-warnings evals/acceptance.mjs && node --no-warnings evals/subscriber.mjs && node --no-warnings evals/compete.mjs && node --no-warnings evals/less.mjs && node --no-warnings evals/rules.mjs && node --no-warnings evals/allergy.mjs && node --no-warnings evals/guard.mjs && node --no-warnings evals/homes.mjs && node --no-warnings evals/checks.mjs && node --no-warnings evals/signup.mjs && node --no-warnings evals/learn.mjs && node --no-warnings evals/scan.mjs && node --no-warnings evals/pipeline.mjs && node --no-warnings evals/security.mjs && node --no-warnings evals/ai-safety.mjs && node --no-warnings evals/speed.mjs && node --no-warnings evals/world.mjs --check",
+    "test": "node evals/households.mjs && node evals/conversations.mjs && node --no-warnings evals/learning.mjs && node --no-warnings evals/measure.mjs && node --no-warnings evals/quickpath.mjs && node --no-warnings evals/delegate.mjs && node --no-warnings evals/acceptance.mjs && node --no-warnings evals/subscriber.mjs && node --no-warnings evals/compete.mjs && node --no-warnings evals/less.mjs && node --no-warnings evals/rules.mjs && node --no-warnings evals/allergy.mjs && node --no-warnings evals/allergens2.mjs && node --no-warnings evals/barcode.mjs && node --no-warnings evals/guard.mjs && node --no-warnings evals/homes.mjs && node --no-warnings evals/checks.mjs && node --no-warnings evals/signup.mjs && node --no-warnings evals/learn.mjs && node --no-warnings evals/scan.mjs && node --no-warnings evals/pipeline.mjs && node --no-warnings evals/security.mjs && node --no-warnings evals/ai-safety.mjs && node --no-warnings evals/speed.mjs && node --no-warnings evals/world.mjs --check",
     "test:heldout": "node evals/conversations.mjs --corpus=evals/heldout",
     "track": "node --no-warnings evals/track.mjs",
     "test:pace": "node evals/pace.mjs",
@@ -47,9 +47,15 @@
     "test:sub": "node --no-warnings evals/subscriber.mjs",
     "test:sub:browser": "node --no-warnings evals/e2e/server.mjs 8799 & sleep 2; node evals/subscriber-audit.cjs; s=$?; kill %1; exit $s",
     "test:checks": "node --no-warnings evals/checks.mjs",
-    "test:checks:browser": "node --no-warnings evals/e2e/server.mjs 8799 & sleep 2; node evals/checks-audit.cjs; s=$?; kill %1; exit $s"
+    "test:checks:browser": "node --no-warnings evals/e2e/server.mjs 8799 & sleep 2; node evals/checks-audit.cjs; s=$?; kill %1; exit $s",
+    "test:allergens2": "node --no-warnings evals/allergens2.mjs",
+    "test:barcode": "node --no-warnings evals/barcode.mjs",
+    "test:barcode:photos": "node evals/barcode-audit.cjs",
+    "test:barcode:fresh": "node evals/barcode-audit.cjs --fresh",
+    "test:barcode:walk": "node evals/barcode-walk.cjs"
   },
   "devDependencies": {
+    "bwip-js": "^4.11.4",
     "wrangler": "^4.162.0"
   }
 }

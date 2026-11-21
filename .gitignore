@@ -2,3 +2,5 @@ node_modules
 .wrangler
 .dev.vars
 evals/e2e/shots
+evals/barcode-images/
+evals/barcode-images-fresh/

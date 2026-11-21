@@ -42,7 +42,7 @@ const d=n=>{const x=new Date();x.setDate(x.getDate()+n);return x.getFullYear()+'
  const badge=await p.textContent('#listBadge').catch(()=>''),listN=await p.evaluate(()=>document.querySelectorAll('#app button.check').length);
  check('List badge matches what is on the list',String(badge).trim()===String(listN),'badge "'+badge+'" vs '+listN);
  check('There is one place that gathers everything needing attention',await p.locator('#bell, [aria-label*="otification"], [aria-label*="eeds you"]').count()>0,'no bell or inbox found');
- check('The app icon can show a count (app badge)',await p.evaluate(()=>/setAppBadge/.test(document.documentElement.innerHTML)),'');
+ check('The app icon can show a count (app badge)',await p.evaluate(async()=>/setAppBadge/.test(document.documentElement.innerHTML+await (await fetch('/app.js')).text())),''); // the app's script lives in app.js since 17 Nov
  // --- resilience
  await p.click('[data-tab=pantry]');await c.setOffline(true);await p.locator('.ihead').nth(2).click();await p.locator('.ipanel .acts button',{hasText:'Ran out'}).first().click().catch(()=>{});await p.waitForTimeout(700);
  const msg=await p.textContent('#toastMsg').catch(()=>'');check('Offline action explains itself and does not pretend to save',/offline|connection/i.test(msg),'toast: '+msg);await c.setOffline(false);await p.waitForTimeout(500);

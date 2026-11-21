@@ -1,6 +1,7 @@
 # World grocery glossary for Tote. One item per line:
 #   aliases (comma separated, lowercase, as they appear on receipts, apps and in speech) ; display name ; Area/Category ; keeps (days from purchase, stored as usual) ; allergens ; tags
-# allergens: P peanuts, T tree nuts, M milk, E eggs, W wheat/gluten, S soy, F fish, C shellfish, Z sesame, U mustard
+# allergens: P peanuts, T tree nuts, M milk, E eggs, W wheat/gluten, S soy, F fish, C shellfish, Z sesame, U mustard,
+#   K molluscs (also C), L lupin, B buckwheat, O coconut, I kiwi, N banana, H peach
 # tags: meat, pork, beef, fish, shellfish, dairy, egg, honey, gelatin, alcohol, allium (onion/garlic), liquid, frozen
 # "Usually contains" is what most versions contain; Tote always says to check the label.
 #
@@ -89,7 +90,7 @@ jhinga,prawns,prawn;Prawns;Kitchen/Meat;2;C;shellfish
 # ---- Chinese ----
 soy sauce,light soy,dark soy,shoyu,soya sauce,superior light soy,toyo;Soy sauce;Kitchen/Pantry;730;S,W;liquid
 tamari;Tamari;Kitchen/Pantry;730;S;liquid
-oyster sauce,oyster flavored sauce,oyster flavoured sauce;Oyster sauce;Kitchen/Pantry;540;C,W;shellfish,liquid
+oyster sauce,oyster flavored sauce,oyster flavoured sauce;Oyster sauce;Kitchen/Pantry;540;C,K,W;shellfish,liquid
 hoisin,hoisin sauce;Hoisin sauce;Kitchen/Pantry;540;S,W,Z;liquid
 doubanjiang,toban djan,chili bean paste,broad bean paste,pixian;Doubanjiang (chili bean paste);Kitchen/Pantry;365;S,W;
 chili crisp,chili oil,lao gan ma,laoganma,chiu chow chili oil;Chili crisp;Kitchen/Pantry;365;S;liquid
@@ -138,7 +139,7 @@ wakame,kombu,kelp,dashima,hijiki;Seaweed (wakame/kombu);Kitchen/Pantry;365;;
 panko,panko bread crumbs,japanese breadcrumbs;Panko;Kitchen/Pantry;365;W;
 tempura flour,tempura batter mix;Tempura flour;Kitchen/Pantry;365;W;
 udon,udon noodles,sanuki udon;Udon;Kitchen/Pantry;14;W;
-soba,soba noodles,buckwheat noodles;Soba;Kitchen/Pantry;365;W;
+soba,soba noodles,buckwheat noodles;Soba;Kitchen/Pantry;365;W,B;
 ramen,ramen noodles,shin ramyun,ramyun,ramyeon,buldak,samyang,nissin,cup noodles,indomie,mama noodles,mi goreng,instant noodles;Instant ramen;Kitchen/Pantry;270;W;
 sushi rice,calrose,koshihikari,nishiki,japonica rice;Sushi rice;Kitchen/Pantry;730;;
 natto;Natto;Kitchen/Dairy;10;S;
@@ -164,13 +165,13 @@ bulgogi,galbi,kalbi,short ribs,beef bulgogi;Bulgogi/galbi beef;Kitchen/Meat;2;S,
 pork belly,samgyeopsal,liempo,sam gyup sal;Pork belly;Kitchen/Meat;2;;meat,pork
 spam,luncheon meat,ma ling;Spam (luncheon meat);Kitchen/Pantry;730;;meat,pork
 yakult;Yakult;Kitchen/Dairy;21;M;dairy,liquid
-banana milk,binggrae;Banana milk;Kitchen/Drinks;30;M;dairy,liquid
+banana milk,binggrae;Banana milk;Kitchen/Drinks;30;M,N;dairy,liquid
 soju;Soju;Kitchen/Drinks;730;;alcohol,liquid
 # ---- Southeast Asian ----
 fish sauce,nam pla,nuoc mam,patis,nuoc cham,three crabs,red boat,squid brand;Fish sauce;Kitchen/Pantry;730;F;fish,liquid
 shrimp paste,belacan,kapi,terasi,bagoong,bagoong alamang,mam tom;Shrimp paste;Kitchen/Pantry;365;C;shellfish
 dried shrimp,hae bee,tom kho;Dried shrimp;Kitchen/Pantry;180;C;shellfish
-coconut milk,coconut cream,santan,gata,chaokoh coconut;Coconut milk;Kitchen/Pantry;730;;liquid
+coconut milk,coconut cream,santan,gata,chaokoh coconut;Coconut milk;Kitchen/Pantry;730;O;liquid
 lemongrass,tanglad,serai,takrai,sereh;Lemongrass;Kitchen/Produce;14;;
 galangal,kha,lengkuas,blue ginger;Galangal;Kitchen/Produce;14;;
 kaffir lime leaves,makrut lime leaves,lime leaves,bai makrut,daun jeruk;Makrut lime leaves;Kitchen/Produce;10;;
@@ -187,7 +188,7 @@ longganisa,longaniza,chorizo de bilbao;Longganisa;Kitchen/Meat;30;;meat,pork
 tocino,pork tocino,chicken tocino;Tocino;Kitchen/Frozen;90;;meat,pork,frozen
 ube,ube halaya,purple yam;Ube;Kitchen/Pantry;30;M;dairy
 pancit,bihon pancit,palabok;Pancit noodles;Kitchen/Pantry;365;;
-banana ketchup,jufran,ufc banana ketchup;Banana ketchup;Kitchen/Pantry;365;;liquid
+banana ketchup,jufran,ufc banana ketchup;Banana ketchup;Kitchen/Pantry;365;N;liquid
 lechon sauce,mang tomas,all around sarsa;Lechon sauce;Kitchen/Pantry;365;;liquid
 chicharon,chicharron,chicharrones,pork rinds;Pork rinds (chicharron);Kitchen/Snacks;90;;meat,pork
 jackfruit,langka,nangka;Jackfruit;Kitchen/Produce;5;;
@@ -207,7 +208,7 @@ chipotle in adobo,chipotles,chiles chipotles,la costena chipotle,embasa chipotle
 dried chiles,guajillo,ancho,pasilla,chile de arbol,chile ancho,chile guajillo,mulato;Dried chiles;Kitchen/Pantry;365;;
 nopales,nopalitos,cactus paddles;Nopales;Kitchen/Produce;7;;
 chayote,sayote,christophene,choko;Chayote;Kitchen/Produce;21;;
-plantain,plantains,platano,platanos,platano maduro,platano verde,green plantains;Plantains;Kitchen/Produce;7;;
+plantain,plantains,platano,platanos,platano maduro,platano verde,green plantains;Plantains;Kitchen/Produce;7;N;
 yuca,cassava,manioc,kamoteng kahoy;Yuca (cassava);Kitchen/Produce;7;;
 malanga,yautia,eddo,dasheen;Malanga;Kitchen/Produce;14;;
 black beans,frijoles negros,habichuelas negras;Black beans;Kitchen/Pantry;730;;
@@ -282,7 +283,8 @@ pierogi,pierogies,varenyky,pelmeni,vareniki;Pierogi;Kitchen/Frozen;180;W,E,M;fro
 kefir;Kefir;Kitchen/Dairy;14;M;dairy,liquid
 tvorog,farmer cheese,farmers cheese,twarog,quark;Farmer cheese (tvorog);Kitchen/Dairy;10;M;dairy
 smetana,sour cream smetana;Smetana;Kitchen/Dairy;14;M;dairy
-buckwheat,kasha,grechka,buckwheat groats;Buckwheat (kasha);Kitchen/Pantry;365;;
+buckwheat,kasha,grechka,buckwheat groats;Buckwheat (kasha);Kitchen/Pantry;365;B;
+kuttu atta,kuttu ka atta,kuttu flour,kotu atta,buckwheat flour,kuttu;Kuttu atta (buckwheat flour);Kitchen/Pantry;90;B;
 sauerkraut,kiszona kapusta,kvashenaya kapusta;Sauerkraut;Kitchen/Dairy;60;;
 pickled herring,herring,shuba,schmaltz herring;Herring;Kitchen/Dairy;30;F;fish
 rye bread,borodinsky,pumpernickel;Rye bread;Kitchen/Bakery;7;W;
@@ -314,7 +316,7 @@ century eggs,preserved duck eggs,pidan,salted duck eggs,salted eggs,itlog na maa
 garlic chives,chinese chives,gau choy,nira,buchu;Garlic chives;Kitchen/Produce;5;;allium
 fermented bean curd,fermented tofu,furu,doufu ru,red bean curd,stinky tofu;Fermented bean curd;Kitchen/Pantry;365;S;
 bamboo shoots,bamboo shoot,labong;Bamboo shoots;Kitchen/Pantry;730;;
-dried scallop,dried scallops,conpoy;Dried scallops;Kitchen/Pantry;365;C;shellfish
+dried scallop,dried scallops,conpoy;Dried scallops;Kitchen/Pantry;365;C,K;shellfish
 golden curry,vermont curry,java curry,japanese curry,curry roux,kokumaro;Japanese curry roux;Kitchen/Pantry;365;W,S,M;
 sesame dressing,roasted sesame dressing,goma dressing,deep roasted sesame dressing;Sesame dressing;Kitchen/Pantry;180;Z,E,S,W;egg,liquid
 shirataki,konjac noodles,konnyaku,shirataki noodles;Shirataki noodles;Kitchen/Dairy;90;;

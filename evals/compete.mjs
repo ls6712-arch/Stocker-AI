@@ -169,7 +169,7 @@ await tryIt('empty pack', async () => {
   const realFetch = globalThis.fetch;
   const products = {
     '0818290014276': { product_name: 'Greek Yogurt Plain', brands: 'Chobani', quantity: '32 oz' },
-    '8901030865278': { product_name: 'Kissan Mixed Fruit Jam', brands: 'Kissan', quantity: '500 g' },
+    '8901030865275': { product_name: 'Kissan Mixed Fruit Jam', brands: 'Kissan', quantity: '500 g' },
   };
   globalThis.fetch = async (u) => { const code = String(u).match(/product\/(\d+)\.json/); const p = code && products[code[1]]; return new Response(JSON.stringify(p ? { status: 1, product: p } : { status: 0 }), { status: 200 }); };
   try {
@@ -183,16 +183,16 @@ await tryIt('empty pack', async () => {
     const y = await h.item('Greek Yogurt');
     check('applied: the yogurt is out, so it is on the list once, with its brand and size kept on it', y.qty === 0 && /Chobani/.test(y.note || '') && /32 oz/.test(y.note || '') && !(await h.state()).extras.length, y);
 
-    const n = await h.call('GET', '/api/scan/barcode?code=8901030865278&empty=1');
+    const n = await h.call('GET', '/api/scan/barcode?code=8901030865275&empty=1');
     const li = (n.data.actions || []).find((a) => a.action === 'list');
     check('empty pack of something not tracked: it goes on the list by name, with brand and size as the note', li && /jam/i.test(li.name) && /Kissan/.test(li.note || '') && /500 g/.test(li.note || '') && (n.data.actions || []).length === 1, n.data);
     await h.call('POST', '/api/apply', { source: 'barcode', actions: n.data.actions });
     const s = await h.state();
     check('applied: one list line, nothing added at home', s.extras.length === 1 && /Kissan/.test(s.extras[0].text) && !s.items.some((i) => /jam/i.test(i.name)), s);
 
-    const full = await h.call('GET', '/api/scan/barcode?code=8901030865278');
+    const full = await h.call('GET', '/api/scan/barcode?code=8901030865275');
     check('opposite: the same barcode scanned the usual way still adds one', (full.data.actions || []).some((a) => a.action === 'add') && !full.data.empty, full.data);
-    const none = await h.call('GET', '/api/scan/barcode?code=4000000000001&empty=1');
+    const none = await h.call('GET', '/api/scan/barcode?code=4000000000006&empty=1');
     check('opposite: a barcode nobody knows changes nothing and says so', none.status === 404 && none.data.error === 'unknown_product', none);
   } finally { globalThis.fetch = realFetch; }
 });

@@ -49,11 +49,11 @@
     petparent:['Pet food','Pet treats','Paper towels','Trash bags','Lint roller'],
     other:['Milk','Eggs','Bread','Rice','Coffee','Fruit','Vegetables','Toilet paper','Dish soap','Laundry detergent']};
   var CUISINES=['Indian','Italian','Mexican','Chinese','Thai','Japanese','Mediterranean','American','Middle Eastern','Korean'],DAYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],DAYNAMES=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-  var DIETS=['Vegetarian','Vegan','Pescatarian','Eggetarian','Halal','Kosher','Gluten-free','Dairy-free','High protein','Keto','Low carb','Paleo','Mediterranean','Jain','No onion or garlic','No beef','No pork','Low FODMAP'],ALLERGENS=['Peanuts','Tree nuts','Milk','Eggs','Wheat','Soy','Fish','Shellfish','Sesame','Mustard','Celery','Corn','Sulphites'];
+  var DIETS=['Vegetarian','Vegan','Pescatarian','Eggetarian','Halal','Kosher','Gluten-free','Dairy-free','High protein','Keto','Low carb','Paleo','Mediterranean','Jain','No onion or garlic','No beef','No pork','Low FODMAP'],ALLERGENS=['Peanuts','Tree nuts','Milk','Eggs','Wheat','Soy','Fish','Shellfish','Sesame','Mustard','Celery','Corn','Sulphites','Lupin','Molluscs','Buckwheat','Kiwi','Banana','Peach','Coconut'];
   var RULES=['Celiac','Lactose intolerant','Low salt','Low sugar','Diabetic'],HOUSE=['Less sugar','Less salt','No palm oil','No MSG','No artificial colours','Less fat','Less saturated fat','No artificial sweeteners','No hydrogenated oils','Fewer preservatives'],AVOID=['Mushrooms','Onions','Cilantro','Spicy food','Seafood','Olives','Eggplant'],GOALS=[['waste','Waste less'],['spend','Spend less'],['healthy','Eat healthier'],['time','Save time'],['stock','Never run out']],
     KINDS=[['adult','Adult'],['teen','Teenager'],['child','Child'],['toddler','Toddler'],['baby','Baby'],['older','Older adult'],['visitor','Visits often']];
   var PLANT=/peanut butter|almond butter|oat milk|almond milk|soy milk|coconut milk/i,DAIRY=/milk|yogurt|cheese|butter|cream|whey|parmesan|mozzarella|cheddar|paneer|ghee|custard|pizza|lasagn|chocolate|frozen meals/i,MEAT=/chicken|beef|pork|turkey|salmon|tuna|fish|meat|hot dog|bacon|ham\b/i,WHEAT=/bread|pasta|noodle|cereal|flour|tortilla|pizza|cracker/i;
-  var CLASH={Peanuts:/peanut/i,'Tree nuts':/almond|walnut|cashew|pecan|hazelnut|pistachio/i,Eggs:/\begg/i,Soy:/tofu|soy|edamame|tempeh/i,Fish:/salmon|tuna|fish/i,Shellfish:/shrimp|prawn|crab|lobster/i,Sesame:/sesame|tahini|hummus/i};
+  var CLASH={Peanuts:/peanut/i,'Tree nuts':/almond|walnut|cashew|pecan|hazelnut|pistachio/i,Eggs:/\begg/i,Soy:/tofu|soy|edamame|tempeh/i,Fish:/salmon|tuna|fish/i,Shellfish:/shrimp|prawn|crab|lobster/i,Sesame:/sesame|tahini|hummus/i,Molluscs:/oyster(?! mushroom)|squid|clam|mussel|scallop|octopus|calamari/i,Buckwheat:/buckwheat|soba|kuttu/i,Kiwi:/kiwi/i,Banana:/banana(?! pepper)|plantain/i,Peach:/peach|nectarine/i,Coconut:/coconut/i,Lupin:/lupin/i};
   var FISHY=/salmon|tuna|fish|shrimp|prawn|crab|lobster/i,PORK=/pork|bacon|ham\b|hot dog/i;
   function everyone(key){var out=profile[key].slice();(profile.members||[]).forEach(function(m){m[key].forEach(function(x){if(out.indexOf(x)<0)out.push(x)})});return out}
   function mentions(name,list){var l=' '+name.toLowerCase();return list.some(function(x){var w=x.toLowerCase().replace(/(es|s)$/,'');return w.length>2&&l.indexOf(' '+w)>-1})}
@@ -889,9 +889,9 @@
   function redraw(){if(helloAt>-1)drawHello();else drawProfile();if(mem)drawMember()}
   /* a chip group: suggested options, anything the household added, and a plus chip to add their own */
   /* a food's picture where there is a plain one, and a few words for the names many people do not know (from the 1,000-household test) */
-  var EMO={Peanuts:'\u{1F95C}','Tree nuts':'\u{1F330}',Milk:'\u{1F95B}',Eggs:'\u{1F95A}',Wheat:'\u{1F33E}',Soy:'\u{1FAD8}',Fish:'\u{1F41F}',Shellfish:'\u{1F990}',Corn:'\u{1F33D}',Celery:'\u{1F96C}',Sulphites:'\u{1F377}',
+  var EMO={Peanuts:'\u{1F95C}','Tree nuts':'\u{1F330}',Milk:'\u{1F95B}',Eggs:'\u{1F95A}',Wheat:'\u{1F33E}',Soy:'\u{1FAD8}',Fish:'\u{1F41F}',Shellfish:'\u{1F990}',Corn:'\u{1F33D}',Celery:'\u{1F96C}',Sulphites:'\u{1F377}',Kiwi:'\u{1F95D}',Banana:'\u{1F34C}',Peach:'\u{1F351}',Coconut:'\u{1F965}',Molluscs:'\u{1F991}',
     Vegetarian:'\u{1F966}',Vegan:'\u{1F331}',Pescatarian:'\u{1F41F}',Eggetarian:'\u{1F95A}','High protein':'\u{1F357}',Keto:'\u{1F951}',Mediterranean:'\u{1FAD2}'};
-  var HINT={'Tree nuts':'almonds, cashews',Sesame:'til, tahini',Soy:'tofu',Sulphites:'in wine, dried fruit',Celery:'and celeriac',Pescatarian:'fish, no meat',Eggetarian:'veg and eggs',
+  var HINT={'Tree nuts':'almonds, cashews',Sesame:'til, tahini',Soy:'tofu',Sulphites:'in wine, dried fruit',Celery:'and celeriac',Lupin:'lupin flour, lupini beans',Molluscs:'squid, clams, oyster sauce',Buckwheat:'soba, kuttu atta',Banana:'and plantain',Peach:'and nectarine',Coconut:'nariyal, coconut milk',Pescatarian:'fish, no meat',Eggetarian:'veg and eggs',
     Jain:'no root vegetables',Kosher:'Jewish food laws','Gluten-free':'no wheat',Keto:'very low carb','Low carb':'less bread and rice',Paleo:'no grains, dairy or beans',Mediterranean:'veg, fish, olive oil','Low FODMAP':'for IBS, a sensitive gut'};
   var INDIA=(function(){var z='',l='';try{z=Intl.DateTimeFormat().resolvedOptions().timeZone||''}catch(e){}try{l=(navigator.languages||[navigator.language||'']).join(',')}catch(e){}return /Kolkata|Calcutta/.test(z)||/-IN\b|^(hi|te|ta|kn|mr|bn|gu|ml)\b/.test(l)})();
   /* the usual choices where the phone is, first; the rest keep their order behind "More" */
@@ -1093,7 +1093,7 @@
   var COPY={licence:'I need the vision model\u2019s licence accepted once before I can read photos.',
     ai_failed:'I could not make sense of that one. Nothing was changed. Try again in a moment.',bad_image:'I could not use that photo. Try another, a little closer and flatter.',
     bad_audio:'That recording was too long for me. Keep voice notes under a minute.',silent:"I couldn't hear anything in that. Try again a little closer to the phone.",
-    unknown_product:"I don't know that barcode. Tell me what it is instead, or type it.",bad_code:"That doesn't look like a barcode number.",
+    unknown_product:"I don't know that barcode. Tell me what it is instead, or type it.",bad_code:"That doesn't look like a barcode number. Check the digits under the barcode.",
     ai_quota:'I have used up today\u2019s free AI allowance, so I cannot read photos or listen until it resets at '+new Date(Date.UTC(2000,0,1,0,0)).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})+'. Typed messages like \u201cadd milk\u201d, barcodes, your list and adding by hand still work.',
     slow_down:'That is a lot at once. Give me a few minutes to catch up, then try again.',
     empty:'Write something first.',owner_only:'That part belongs to the person who set Stocker up.',offline:'You seem to be offline. Nothing was changed.',server:'Something went wrong on my side. Nothing was changed. Try again.'};
@@ -1188,23 +1188,51 @@
   $('recGo').onclick=function(){finishVoice(true)};
   $('chatDlg').addEventListener('close',function(){finishVoice(false)});
 
-  /* barcode */
-  var qr=null;
-  async function stopQr(){if(qr){var q=qr;qr=null;try{await q.stop()}catch(e){}try{q.clear()}catch(e){}}}
+  /* barcode (20 Nov 2026): our own camera loop. Each frame's middle band is read by the phone's own barcode reader where it has
+     one, otherwise by ZXing-C++ (WebAssembly); a code is taken only when the same valid number is seen twice (public/barcode.js) */
+  var cam=null;
+  function stopQr(){if(!cam)return;var c=cam;cam=null;clearTimeout(c.timer);try{c.stream.getTracks().forEach(function(t){t.stop()})}catch(e){}$('reader').textContent='';$('codeLight').hidden=true}
   var codeEmpty=false;
   function lookup(code){var em=codeEmpty;$('codeDlg').close();scan(function(){return api('/api/scan/barcode?code='+encodeURIComponent(code)+(em?'&empty=1':''))},em?'Reading the empty pack':'Looking up that product')}
   $('capCode').addEventListener('click',function(){codeEmpty=false;$('codeH').textContent='Scan a barcode'});
   /* the pack is empty: scanning it is not a purchase. It goes on the list with its brand and size. */
   $('capEmpty').onclick=function(){var open=$('capCode').onclick;if(open)open.call($('capCode'));codeEmpty=true;$('codeH').textContent='Scan the empty pack';
-    if(window.Html5Qrcode)$('codeNote').textContent='Point the camera at the barcode before you bin it. I put it on your list with its brand and size.'};
+    if(navigator.mediaDevices&&window.StockerCode)$('codeNote').textContent='Point the camera at the barcode before you bin it. I put it on your list with its brand and size.'};
   $('capCode').onclick=async function(){$('capDlg').close();$('codeDlg').showModal();$('codeNote').textContent='Point the camera at the barcode on the pack.';
-    if(!window.Html5Qrcode){$('codeNote').textContent='Camera scanning is not available here. Type the number under the barcode.';return}
-    try{var F=window.Html5QrcodeSupportedFormats,cfg={verbose:false};if(F)cfg.formatsToSupport=[F.EAN_13,F.EAN_8,F.UPC_A,F.UPC_E];
-      qr=new Html5Qrcode('reader',cfg);
-      await qr.start({facingMode:'environment'},{fps:10,qrbox:{width:260,height:150}},function(text){var code=String(text).replace(/\D/g,'');if(code.length>=6&&qr){stopQr();lookup(code)}},function(){});
-    }catch(e){qr=null;$('codeNote').textContent='The camera could not start. Allow camera access, or type the number under the barcode.'}};
+    if(!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia&&window.StockerCode)){$('codeNote').textContent='Camera scanning is not available here. Type the number under the barcode.';return}
+    stopQr();
+    var me={timer:0,stream:null,steady:StockerCode.Steady(2),busy:false,canvas:document.createElement('canvas'),light:false};cam=me;
+    try{me.stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720},advanced:[{focusMode:'continuous'}]}})}
+    catch(e){if(cam===me)cam=null;$('codeNote').textContent='The camera could not start. Allow camera access, or type the number under the barcode.';return}
+    if(cam!==me){me.stream.getTracks().forEach(function(t){t.stop()});return}
+    var v=document.createElement('video');v.setAttribute('playsinline','');v.setAttribute('aria-label','Camera');v.muted=true;v.srcObject=me.stream;
+    var box=document.createElement('div');box.className='codeBox';box.setAttribute('aria-hidden','true');
+    $('reader').textContent='';$('reader').appendChild(v);$('reader').appendChild(box);
+    try{await v.play()}catch(e){}
+    /* a light, where the phone lets a web page switch it on (most Android phones) */
+    try{var tr=me.stream.getVideoTracks()[0],cap=tr.getCapabilities?tr.getCapabilities():{};if(cap.torch){$('codeLight').hidden=false;$('codeLight').setAttribute('aria-pressed','false');$('codeLight').onclick=function(){me.light=!me.light;tr.applyConstraints({advanced:[{torch:me.light}]}).catch(function(){});$('codeLight').setAttribute('aria-pressed',String(me.light))}}}catch(e){}
+    async function tick(){
+      if(cam!==me)return;
+      if(v.readyState>=2&&v.videoWidth&&!me.busy){
+        me.busy=true;
+        try{
+          /* the middle 90% across and 60% down, as drawn by the box, at most 1280 wide */
+          var w=Math.round(v.videoWidth*0.9),h=Math.round(v.videoHeight*0.6),k=Math.min(1,1280/w),c=me.canvas;c.width=Math.round(w*k);c.height=Math.round(h*k);
+          c.getContext('2d',{willReadFrequently:true}).drawImage(v,(v.videoWidth-w)/2,(v.videoHeight-h)/2,w,h,0,0,c.width,c.height);
+          var got=await StockerCode.read(c);
+          if(cam!==me)return;
+          for(var i=0;i<got.length;i++){var code=me.steady.feed(got[i].text,got[i].format);
+            if(code){stopQr();lookup(code);return}
+            if(me.steady.seen())$('codeNote').textContent='Got '+me.steady.seen()+'. Hold still a moment.'}
+        }catch(e){if(cam===me){stopQr();$('codeNote').textContent='I could not start the barcode reader here. Type the number under the barcode.'}return}
+        me.busy=false}
+      me.timer=setTimeout(tick,90)}
+    tick()};
   $('codeDlg').addEventListener('close',stopQr);
-  $('codeForm').addEventListener('submit',function(ev){ev.preventDefault();var c=$('codeInput').value.replace(/\D/g,'');$('codeInput').value='';if(c)lookup(c)});
+  $('codeForm').addEventListener('submit',function(ev){ev.preventDefault();var raw=$('codeInput').value.replace(/\D/g,'');if(!raw)return;
+    /* a typed number that does not add up is a slip, not an unknown product: say so and keep the sheet open */
+    if(window.StockerCode&&StockerCode.typedWrong(raw)){$('codeNote').textContent='Those digits do not add up. Check the number under the barcode and try again.';$('codeInput').focus();return}
+    $('codeInput').value='';lookup(window.StockerCode&&StockerCode.normal(raw)||raw)});
 
   /* type */
   $('capType').onclick=function(){$('capDlg').close();$('typeDlg').showModal()};
