@@ -14,7 +14,7 @@
     (d.weeks||[]).forEach(function(w,i){var b=el('div');b.append(el('b','',w.turns?Math.round(w.missed/w.turns*100)+'%':'–'),document.createTextNode((i===0?'missed this week':i===1?'last week':i+' weeks ago')+' ('+w.missed+' of '+w.turns+')'));W.append(b)});
     if(!(d.groups||[]).length)G.append(el('p','','Nothing needs a look. Misses from the chat will appear here.'));
     (d.groups||[]).forEach(function(g){G.append(el('h2','',g.title+' ('+g.count+')'),el('p','','Where to look: '+g.fix));
-      g.examples.forEach(function(x){var c=el('div','case'),h=el('h3');h.append(el('span','',OUTCOME[x.outcome]||x.outcome),el('span','pill stretch',String(x.at).slice(0,16).replace('T',' ')+(x.times>1?' ×'+x.times:'')));
+      g.examples.forEach(function(x){var c=el('div','case'),h=el('h3');h.append(el('span','',OUTCOME[x.outcome]||x.outcome),el('span','pill stretch',x.times>1?'said '+x.times+' times: '+(x.ats||[x.at]).slice().reverse().map(function(a){return String(a).slice(5,16).replace('T',' ')}).join(', ')+' (latest shown)':String(x.at).slice(0,16).replace('T',' ')));
         c.append(h,el('div','q',(x.from?x.from+' said: ':'They said: ')+x.said),el('div','q','Tote: '+(x.reply||'(nothing)')+(x.did?'\nWhat I did: '+x.did:'\nWhat I did: changed nothing')+(x.wanted?'\nThey wanted: '+x.wanted:'')));
         var name=el('input');name.type='text';name.maxLength=40;name.placeholder='Which item? Optional';name.setAttribute('aria-label','Which item it should have been about');name.className='item';
         var bar=el('div','verdicts');Object.keys(VERDICT).forEach(function(k){var b=el('button',k===g.suggest?'':'ghost',VERDICT[k]);b.type='button';

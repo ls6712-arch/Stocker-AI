@@ -1236,14 +1236,15 @@
   function chatKeep(){try{var rows=[].slice.call($('chatLog').children).slice(-40).map(function(m){var t=m.firstChild&&m.firstChild.nodeType===3?m.firstChild.textContent:'';return {c:m.classList.contains('me')?'me':'bot',t:t}}).filter(function(r){return r.t});
     sessionStorage.setItem('stocker.chat',JSON.stringify({day:iso(today()),rows:rows,hist:chatHist.slice(-4)}))}catch(e){}}
   function chatBack(){try{var k=JSON.parse(sessionStorage.getItem('stocker.chat')||'null');if(!k||k.day!==iso(today())||!k.rows||!k.rows.length)return false;k.rows.forEach(function(r){bubble(r.c==='me'?'me':'bot',r.t)});chatHist=k.hist||[];return true}catch(e){return false}}
-  function chatChanges(host,changes){changes.forEach(function(c){var row=el('div','chg'),t=el('span','',c.action==='unlist'?'Off your list: '+c.name:c.action==='set'?c.name+': now '+(c.qty<=0?'none':amount(c.qty,c.unit))+' (was '+amount(c.prevQty,c.unit)+')':c.action==='list'?'On your list: '+c.name+(c.note?' ('+c.note+')':''):c.name+': '+(c.action==='low'?'running low':amount(c.prevQty,c.unit)+' \u2192 '+(c.qty<=0?'none':amount(c.qty,c.unit)))),u=el('button','mini','Undo');u.type='button';
+  /* said: the message these changes came from, so an Undo is marked on that turn and not on whatever was said last */
+  function chatChanges(host,changes,said){changes.forEach(function(c){var row=el('div','chg'),t=el('span','',c.action==='unlist'?'Off your list: '+c.name:c.action==='set'?c.name+': now '+(c.qty<=0?'none':amount(c.qty,c.unit))+' (was '+amount(c.prevQty,c.unit)+')':c.action==='list'?'On your list: '+c.name+(c.note?' ('+c.note+')':''):c.name+': '+(c.action==='low'?'running low':amount(c.prevQty,c.unit)+' \u2192 '+(c.qty<=0?'none':amount(c.qty,c.unit)))),u=el('button','mini','Undo');u.type='button';
       u.setAttribute('aria-label','Undo the change to '+c.name);if(c.action==='list'&&!c.created){t.textContent='Already on your list: '+c.name;var more=el('button','mini','Add another');more.type='button';more.setAttribute('aria-label','Add another '+c.name+' to the list');
         more.onclick=async function(){more.disabled=true;try{var r2=await api('/api/extras',{method:'POST',body:JSON.stringify({text:c.name,again:true})});t.textContent='On your list: '+(r2.text||c.name);more.remove();await refresh()}catch(er){more.disabled=false;if(er.code!=='locked')toast(why(er,'Could not add that.'))}};
         row.append(t,more);host.append(row);return}
-      u.onclick=async function(){u.disabled=true;try{await takeBack(c);tell('undo',{said:(lastTurn&&lastTurn.text)||'',reply:t.textContent,route:'update'});cookUsed=cookUsed.filter(function(a){return a.name!==c.name});await refresh();var st=el('s','',t.textContent);t.textContent='';t.append(st);u.textContent='Undone'}catch(er){u.disabled=false;if(er.code!=='locked')toast(why(er,'Could not undo that.'))}};
+      u.onclick=async function(){u.disabled=true;try{await takeBack(c);tell('undo',{said:said!=null?said:(lastTurn&&lastTurn.text)||'',reply:t.textContent,route:'update'});cookUsed=cookUsed.filter(function(a){return a.name!==c.name});await refresh();var st=el('s','',t.textContent);t.textContent='';t.append(st);u.textContent='Undone'}catch(er){u.disabled=false;if(er.code!=='locked')toast(why(er,'Could not undo that.'))}};
       row.append(t,u);host.append(row)})}
   /* suggestions: built from what is at home, the time of day and the last reply, never the same few lines twice */
-  var tipSeen={},lastTurn=null,sent={},pending=null,cookUsed=[],wanted=null;
+  var tipSeen={},lastTurn=null,sent={},pending=null,cookUsed=[];
   function tell(kind,o){try{fetch('/api/feedback',{method:'POST',credentials:'same-origin',headers:{'content-type':'application/json'},body:JSON.stringify(Object.assign({kind:kind},o||{}))}).catch(function(){})}catch(e){}}
   function teachDish(){var dish=sent.__cooked;if(!dish||dish==='it'||!cookUsed.length)return;var seen={},list=cookUsed.filter(function(a){var k=a.name.toLowerCase();if(seen[k])return false;seen[k]=1;return true});
     api('/api/dish',{method:'POST',body:JSON.stringify({dish:dish,items:list})}).catch(function(){});cookUsed=[]}
@@ -1310,7 +1311,7 @@
     pool=pool.filter(function(x){return !sent[key(x.t)]&&!(sent.__cooked&&/^(i'?m cooking|what can i cook tonight|dinner ideas|what can i make in 20)/i.test(x.t))});
     pool.sort(by).slice(0,3).forEach(function(x){tipSeen[x.t]=(tipSeen[x.t]||0)+1;var b=el('button','mini',x.t);b.type='button';b.onclick=function(){chatSend({text:x.t},x.t)};box.append(b)})}
   function buddy(){return profile&&profile.buddy||'Tote'}
-  function openChat(quiet){if($('chatDlg').open)return;if(!$('chatLog').firstChild){sent={};lastTurn=null;pending=null;cookUsed=[];wanted=null}$('chatH').textContent='What changed?';
+  function openChat(quiet){if($('chatDlg').open)return;if(!$('chatLog').firstChild){sent={};lastTurn=null;pending=null;cookUsed=[]}$('chatH').textContent='What changed?';
     if(!$('chatLog').firstChild&&!chatBack())bubble('bot','Hi'+(me?' '+me:'')+", I'm "+buddy()+'. I keep an eye on the house. Tell me what you cooked, used or bought and I will keep everything up to date, or ask me what you have.');
     chatTips();$('chatDlg').showModal();if(window.Tote&&Tote.mount($('toteChat'),84,buddy())){Tote.onTap=null;Tote.mood('happy');Tote.wave()}if(!quiet)$('chatText').focus()}
   $('chatDlg').addEventListener('close',function(){if(window.Tote)Tote.talk(false);render()});
@@ -1323,12 +1324,12 @@
       /* a long message: what I am certain of is done at once, and only the rest waits for the slower read */
       if(payload.text&&!payload.audio&&/[.!?]\s+\S/.test(payload.text)){var f1=null;try{f1=await api('/api/chat',{method:'POST',body:JSON.stringify({text:payload.text,fast:true})})}catch(e1){if(e1.code==='locked')throw e1}
         if(f1&&f1.reply){if(f1.blocked||!f1.rest)r=f1;
-          else{wait.textContent=f1.reply;chatChanges(wait,f1.changes||[]);chatHist.push({role:'user',text:payload.text},{role:'assistant',text:f1.reply});
+          else{wait.textContent=f1.reply;chatChanges(wait,f1.changes||[],payload.text);chatHist.push({role:'user',text:payload.text},{role:'assistant',text:f1.reply});
             if(f1.changes&&f1.changes.length){if(window.Tote)Tote.hop();await refresh()}
             part=true;payload={text:f1.rest,spent:f1.spent,history:chatHist.slice(-4)};wait=bubble('bot','Reading the rest\u2026');$('chatLog').scrollTop=$('chatLog').scrollHeight}}}
       if(!r)r=await api('/api/chat',{method:'POST',body:JSON.stringify(payload)});
       if(r.heard)mine.textContent=r.heard;wait.textContent=r.reply;if(window.Tote)Tote.mood(r.blocked?'oops':'happy');
-      chatChanges(wait,r.changes||[]);
+      chatChanges(wait,r.changes||[],r.heard||payload.text||'');
       if(r.proposal&&r.proposal.length){var pr=r.proposal.slice(),box=el('div');wait.append(box);
         var drawP=function(){box.textContent='';pr.forEach(function(a){var row=el('div','chg'),t=el('span','',a.name+': '+amount(a.quantity,a.unit)),x=el('button','mini','Not this');x.type='button';x.setAttribute('aria-label','I did not use '+a.name);
             x.onclick=function(){tell('rejected',{said:(lastTurn&&lastTurn.text)||'',reply:a.name,route:'update',detail:'not this item'});pr=pr.filter(function(k){return k!==a});drawP();chatTips()};row.append(t,x);box.append(row)});
@@ -1336,7 +1337,7 @@
           yes.onclick=async function(){yes.disabled=no.disabled=true;if(!pr.length){box.textContent='';pending=null;bubble('bot','No problem. What went into it? You can tap one below or tell me.');lastTurn={text:'cooked',reply:'',changes:[]};chatTips();return}
             try{var res=await api('/api/apply',{method:'POST',body:JSON.stringify({source:'text',actions:pr.map(function(a){return {action:'use',name:a.name,quantity:a.quantity,unit:a.unit}})})});
               box.textContent='';pending=null;var out=(res.changes||[]).filter(function(c){return c.qty<=0}).map(function(c){return c.name});
-              var done=bubble('bot','Done, I took those off.'+(out.length?' You are now out of '+out.join(' and ')+', so it is on your list.':'')+' Enjoy your meal.');chatChanges(done,res.changes||[]);if(window.Tote)Tote.hop();
+              var done=bubble('bot','Done, I took those off.'+(out.length?' You are now out of '+out.join(' and ')+', so it is on your list.':'')+' Enjoy your meal.');chatChanges(done,res.changes||[],(lastTurn&&lastTurn.text)||'');if(window.Tote)Tote.hop();
               (res.changes||[]).forEach(function(c){if(c.action==='use')cookUsed.push({name:c.name,quantity:Math.max(0.01,c.prevQty-c.qty)})});teachDish();
               lastTurn={resolved:'yes',out:out,text:'',reply:'',changes:res.changes||[]};await refresh();chatTips()}
             catch(er){yes.disabled=no.disabled=false;if(er.code!=='locked')toast(why(er,'Could not save that.'))}};
@@ -1345,11 +1346,10 @@
       chatHist.push({role:'user',text:r.heard||payload.text||''},{role:'assistant',text:r.reply});
       lastTurn={text:r.heard||payload.text||'',reply:r.reply,changes:r.changes||[]};
       var saidNow=r.heard||payload.text||'';
-      if(wanted){tell('wanted',{said:wanted.said,reply:wanted.reply,route:wanted.route,detail:saidNow});wanted=null}
       if(sent.__cooked)(r.changes||[]).forEach(function(c){if(c.action==='use')cookUsed.push({name:c.name,quantity:Math.max(0.01,c.prevQty-c.qty)})});
       if(/^that'?s (everything|all|it)\b/i.test(saidNow))teachDish();
       if(!(r.proposal&&r.proposal.length)){var fb=el('button','fb','Not right?');fb.type='button';fb.setAttribute('aria-label','Tell '+buddy()+' this reply was not right');
-        fb.onclick=function(){fb.remove();tell('down',{said:saidNow,reply:r.reply,route:r.route||''});wanted={said:saidNow,reply:r.reply,route:r.route||''};bubble('bot','Thanks for telling me. I have noted it so I can do better. What should I have done?');$('chatText').focus()};wait.append(fb)}
+        fb.onclick=function(){fb.remove();tell('down',{said:saidNow,reply:r.reply,route:r.route||''});var ask=bubble('bot','Thanks for telling me. What should I have done?'),opts=el('div','chg');[['Changed nothing','should have changed nothing'],['Put it on my list','should have gone on the list'],['Changed my home differently','should have updated the home'],['Answered differently','only the reply was wrong']].forEach(function(o){var b=el('button','mini',o[0]);b.type='button';b.onclick=function(){tell('wanted',{said:saidNow,reply:r.reply,route:r.route||'',detail:o[1]});opts.remove();bubble('bot','Noted. I will learn from it.');chatKeep()};opts.append(b)});ask.append(opts);$('chatLog').scrollTop=$('chatLog').scrollHeight};wait.append(fb)}
       if(r.changes&&r.changes.length){if(window.Tote)Tote.hop();await refresh()}
     }catch(e){if(window.Tote)Tote.mood('oops');wait.textContent=part&&e.code!=='ai_quota'&&e.code!=='locked'?'I could not read the rest just now. What I listed above is done.':e.code==='ai_quota'?COPY.ai_quota:e.code==='slow_down'?COPY.slow_down:e.code==='silent'?"I couldn't hear anything in that. Try again a little closer to the phone.":e.code==='offline'?'You seem to be offline. Nothing was changed.':e.code==='locked'?'':'I could not work that out just now. Nothing was changed. Try again in a moment.'}
     if(window.Tote)Tote.talk(false);chatBusy=false;$('chatGo').disabled=false;chatTips();chatKeep();$('chatLog').scrollTop=$('chatLog').scrollHeight}

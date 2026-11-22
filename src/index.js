@@ -2630,10 +2630,12 @@ function quickReceipt(text, rows, profile) {
     const fact = f || (g ? { name: g.name, area: g.area, category: g.category, shelfLifeDays: g.keep } : null);
     const name = tracked ? r.name : fact.name;
     const u = unit === 'gal' ? 'L' : unit || (tracked ? r.unit : 'pcs');
-    actions.push({ action: 'add', name, quantity: unit === 'gal' ? convert(qty, 'gal', 'L') : qty, unit: u, each: each <= 60 ? each : 0, sure: true, fact, price: price || 0 });
+    actions.push({ action: 'add', name, quantity: unit === 'gal' ? convert(qty, 'gal', 'L') : qty, unit: u, each: each <= 60 ? each : 0, sure: true, fact, price: price || 0, line: rest });
   }
   const out = mkActions(actions.slice(0, 40), profile); // allergy and diet warnings come from code here too
   out.actions.forEach((a, i) => { a.price = actions[i].price || 0; });
+  // the short name can lose what the line says ("RAW ALMONDS" read as Nuts, "SHRIMP CHIPS" as Chips): an allergy or diet clash on the whole line is still flagged
+  if (restricted(profile)) out.actions.forEach((a, i) => { if (!a.warn && actions[i] && actions[i].line && actions[i].line !== keyOf(a.name)) a.warn = homeWarn(actions[i].line, profile, a.area || 'Kitchen') || ''; });
   out.store = storeOf(src); out.currency = currencyOf(src);
   return out;
 }
@@ -3441,14 +3443,15 @@ async function review(env, today) {
   const rows = (await env.DB.prepare('SELECT * FROM (' + everyHome(homes, 'turns', TURN_COLS, 'at >= ?1') + ') ORDER BY at DESC LIMIT 1500').bind(addDays(today, -27)).all()).results;
   const weeks = [0, 1, 2, 3].map((w) => {
     const from = addDays(today, -7 * w - 6), to = addDays(today, -7 * w), mine = rows.filter((r) => r.at.slice(0, 10) >= from && r.at.slice(0, 10) <= to);
-    return { from, to, turns: mine.length, missed: mine.filter((r) => MISSES.includes(r.outcome)).length };
+    return { from, to, turns: mine.length, missed: mine.filter((r) => MISSES.includes(r.outcome) && r.label !== 'ok').length }; // a miss the owner called "not a mistake" is not counted
   });
   const groups = {};
   for (const r of rows.filter((x) => MISSES.includes(x.outcome) && !x.label)) {
     const k = missKind(r), g = groups[k] || (groups[k] = { kind: k, title: MISS_KINDS[k][0], fix: MISS_KINDS[k][1], suggest: MISS_KINDS[k][2], count: 0, examples: [] });
     g.count++;
     const twin = g.examples.find((e) => e.said.toLowerCase() === r.said.toLowerCase());
-    if (twin) twin.times++; else if (g.examples.length < 12) g.examples.push({ id: r.id, home: r.home || '', from: r.home ? nameOf[r.home] || 'a friend' : '', at: r.at, said: r.said, reply: r.reply, did: r.did, outcome: r.outcome, wanted: r.wanted || '', route: r.route, times: 1 });
+    // the same words said again are one card; every time they were said is kept, so two turns a minute apart never look like one logged twice
+    if (twin) { twin.times++; twin.ats.push(r.at); } else if (g.examples.length < 12) g.examples.push({ id: r.id, home: r.home || '', from: r.home ? nameOf[r.home] || 'a friend' : '', at: r.at, ats: [r.at], said: r.said, reply: r.reply, did: r.did, outcome: r.outcome, wanted: r.wanted || '', route: r.route, times: 1 });
   }
   const cases = (await env.DB.prepare('SELECT id, at, said, expect, name FROM cases ORDER BY id DESC LIMIT 200').all()).results;
   return { weeks, groups: Object.values(groups).sort((a, b) => b.count - a.count), cases };

@@ -8640,6 +8640,452 @@
      "maxCalls": 1
     }
    ]
+  },
+  {
+   "id": "receipt-costco",
+   "group": "Reading receipts",
+   "suite": "capability",
+   "kind": "receipt",
+   "text": "COSTCO WHOLESALE #482\n1234567 KS ORG EGGS 24CT 8.99\n987654 KS BUTTER 4/1LB 13.99\n111222 ROTISSERIE CHKN 4.99\n333444 KS PAPER TOWEL 12RL 22.99\n0000 INSTANT SAVINGS 3.00-\nSUBTOTAL 47.97\nTAX 1.84\n**** TOTAL 49.81",
+   "checks": [
+    {
+     "has": {
+      "action": "add",
+      "name": "egg",
+      "amount": [
+       24,
+       24
+      ]
+     }
+    },
+    {
+     "has": {
+      "action": "add",
+      "name": "butter",
+      "category": "Dairy"
+     }
+    },
+    {
+     "has": {
+      "action": "add",
+      "name": "chicken",
+      "category": "Meat"
+     }
+    },
+    {
+     "has": {
+      "action": "add",
+      "name": "paper towel"
+     }
+    },
+    {
+     "hasNot": {
+      "name": "saving|subtotal|tax|total"
+     }
+    },
+    {
+     "count": [
+      4,
+      4
+     ]
+    }
+   ],
+   "note": "added 22 Nov: a new kind of receipt: item codes in front, savings written as 3.00-"
+  },
+  {
+   "id": "receipt-kroger-weighed",
+   "group": "Reading receipts",
+   "suite": "capability",
+   "kind": "receipt",
+   "text": "KROGER\nRED ONIONS\n  1.82 lb @ 1.49 /lb 2.71\nBANANAS\n  2.40 lb @ 0.59 /lb 1.42\nKRO 2% MILK HALF GAL 2.79\n2 @ 3.99\nCHOBANI GREEK YOGURT 32OZ 7.98\nKROGER PLUS SAVINGS 1.00-\nBALANCE DUE 13.90",
+   "checks": [
+    {
+     "has": {
+      "action": "add",
+      "name": "onion",
+      "unit": "lb",
+      "amount": [
+       1.82,
+       1.82
+      ]
+     }
+    },
+    {
+     "has": {
+      "action": "add",
+      "name": "banana",
+      "unit": "lb",
+      "amount": [
+       2.4,
+       2.4
+      ]
+     }
+    },
+    {
+     "has": {
+      "action": "add",
+      "name": "milk",
+      "unit": "L",
+      "amount": [
+       1.7,
+       2
+      ]
+     }
+    },
+    {
+     "has": {
+      "action": "add",
+      "name": "yogurt"
+     }
+    },
+    {
+     "hasNot": {
+      "name": "saving|balance"
+     }
+    },
+    {
+     "count": [
+      4,
+      4
+     ]
+    }
+   ],
+   "note": "added 22 Nov: a new kind of receipt: the weight and the '2 @' count sit on their own lines"
+  },
+  {
+   "id": "receipt-cvs",
+   "group": "Reading receipts",
+   "suite": "capability",
+   "kind": "receipt",
+   "text": "CVS/PHARMACY #10422\nTYLENOL XS 100CT 11.99\nCVS BANDAGES 30CT 3.49\nGATORADE LEMON LIME 28OZ 2.29\nEXTRACARE BUCKS -2.00\nCREST 3D WHITE 4.1OZ 5.99\nTOTAL 21.76",
+   "checks": [
+    {
+     "has": {
+      "action": "add",
+      "name": "tylenol|acetaminophen",
+      "area": "Health"
+     }
+    },
+    {
+     "has": {
+      "action": "add",
+      "name": "bandage",
+      "area": "Health"
+     }
+    },
+    {
+     "has": {
+      "action": "add",
+      "name": "gatorade"
+     }
+    },
+    {
+     "hasNot": {
+      "name": "^limes?$"
+     }
+    },
+    {
+     "has": {
+      "action": "add",
+      "name": "crest|toothpaste",
+      "area": "Bathroom"
+     }
+    },
+    {
+     "hasNot": {
+      "name": "extracare|bucks"
+     }
+    },
+    {
+     "count": [
+      4,
+      4
+     ]
+    }
+   ],
+   "note": "added 22 Nov: a new kind of receipt: a pharmacy, where 'LEMON LIME' is a drink flavour and not limes"
+  },
+  {
+   "id": "receipt-tj-tree-nut-sesame",
+   "group": "Allergies",
+   "suite": "capability",
+   "kind": "receipt",
+   "profile": {
+    "personas": [
+     "family4"
+    ],
+    "allergies": [
+     "Tree nuts",
+     "Sesame"
+    ]
+   },
+   "text": "TRADER JOE'S #552\nEVERYTHING BUT THE BAGEL 2.49\nRAW ALMONDS 16OZ 5.99\nMANDARIN ORANGE CHICKEN 4.99\nBANANA EACH 0.25\nORIGINAL HUMMUS 3.49\nVISA 17.21",
+   "checks": [
+    {
+     "warned": "almond|nut"
+    },
+    {
+     "warned": "bagel|everything|seasoning"
+    },
+    {
+     "warned": "hummus"
+    },
+    {
+     "notWarned": "banana"
+    },
+    {
+     "count": [
+      5,
+      5
+     ]
+    }
+   ],
+   "note": "added 22 Nov: a new kind of receipt: short names hide the allergen (EVERYTHING BUT THE BAGEL is a sesame seasoning)"
+  },
+  {
+   "id": "receipt-aldi-vegan",
+   "group": "Allergies",
+   "suite": "capability",
+   "kind": "receipt",
+   "profile": {
+    "personas": [
+     "couple"
+    ],
+    "diet": [
+     "Vegan"
+    ]
+   },
+   "text": "ALDI\nHAPPY FARMS SHRED CHEDDAR 8OZ 2.29\nSIMPLY NATURE OAT MILK 2.99\nBLACK BEANS 15OZ 0.79\nAPPLEWOOD BACON 12OZ 4.49\nAVOCADOS 4CT 3.49\nTOTAL 14.05",
+   "checks": [
+    {
+     "warned": "cheddar|cheese"
+    },
+    {
+     "warned": "bacon"
+    },
+    {
+     "notWarned": "oat"
+    },
+    {
+     "notWarned": "bean"
+    },
+    {
+     "notWarned": "avocado"
+    },
+    {
+     "count": [
+      5,
+      5
+     ]
+    }
+   ],
+   "note": "added 22 Nov: a new kind of receipt"
+  },
+  {
+   "id": "receipt-weee-shellfish",
+   "group": "World groceries",
+   "suite": "capability",
+   "kind": "receipt",
+   "profile": {
+    "personas": [
+     "family4"
+    ],
+    "allergies": [
+     "Shellfish"
+    ]
+   },
+   "text": "Weee! Order #88213\nDelivered Nov 20\nShrimp Chips 2.99\nLee Kum Kee Oyster Sauce 4.79\nNongshim Shin Ramyun 4pk 5.49\nBok Choy 1.5 lb 2.99\nDelivery fee 0.00\nTip 3.00",
+   "checks": [
+    {
+     "warned": "shrimp"
+    },
+    {
+     "warned": "oyster"
+    },
+    {
+     "notWarned": "bok"
+    },
+    {
+     "hasNot": {
+      "name": "delivery|tip|order"
+     }
+    },
+    {
+     "count": [
+      4,
+      4
+     ]
+    }
+   ],
+   "note": "added 22 Nov: a new kind of receipt: an app order with a fee and a tip"
+  },
+  {
+   "id": "off-receipt-tree-nut-sesame",
+   "group": "Without AI credits",
+   "suite": "regression",
+   "kind": "receipt",
+   "offline": true,
+   "profile": {
+    "personas": [
+     "family4"
+    ],
+    "allergies": [
+     "Tree nuts",
+     "Sesame"
+    ]
+   },
+   "text": "TRADER JOE'S #552\nEVERYTHING BUT THE BAGEL 2.49\nRAW ALMONDS 16OZ 5.99\nMANDARIN ORANGE CHICKEN 4.99\nBANANA EACH 0.25\nORIGINAL HUMMUS 3.49\nVISA 17.21",
+   "checks": [
+    {
+     "warned": "nut|almond"
+    },
+    {
+     "warned": "bagel|everything|seasoning"
+    },
+    {
+     "warned": "hummus"
+    },
+    {
+     "notWarned": "banana"
+    },
+    {
+     "maxCalls": 0
+    }
+   ],
+   "note": "22 Nov: with no model, RAW ALMONDS was read as Nuts and EVERYTHING BUT THE BAGEL as Bagels, and neither was flagged"
+  },
+  {
+   "id": "off-receipt-shellfish",
+   "group": "Without AI credits",
+   "suite": "regression",
+   "kind": "receipt",
+   "offline": true,
+   "profile": {
+    "personas": [
+     "family4"
+    ],
+    "allergies": [
+     "Shellfish"
+    ]
+   },
+   "text": "Weee! Order #88213\nDelivered Nov 20\nShrimp Chips 2.99\nLee Kum Kee Oyster Sauce 4.79\nNongshim Shin Ramyun 4pk 5.49\nBok Choy 1.5 lb 2.99\nDelivery fee 0.00\nTip 3.00",
+   "checks": [
+    {
+     "warned": "chip|shrimp"
+    },
+    {
+     "warned": "oyster"
+    },
+    {
+     "notWarned": "bok"
+    },
+    {
+     "maxCalls": 0
+    }
+   ],
+   "note": "22 Nov: with no model, SHRIMP CHIPS was read as Chips and not flagged for a shellfish allergy"
+  },
+  {
+   "id": "off-receipt-vegan",
+   "group": "Without AI credits",
+   "suite": "regression",
+   "kind": "receipt",
+   "offline": true,
+   "profile": {
+    "personas": [
+     "couple"
+    ],
+    "diet": [
+     "Vegan"
+    ]
+   },
+   "text": "ALDI\nHAPPY FARMS SHRED CHEDDAR 8OZ 2.29\nSIMPLY NATURE OAT MILK 2.99\nBLACK BEANS 15OZ 0.79\nAPPLEWOOD BACON 12OZ 4.49\nAVOCADOS 4CT 3.49\nTOTAL 14.05",
+   "checks": [
+    {
+     "warned": "cheese"
+    },
+    {
+     "warned": "bacon"
+    },
+    {
+     "notWarned": "oat"
+    },
+    {
+     "notWarned": "bean"
+    },
+    {
+     "maxCalls": 0
+    }
+   ]
+  },
+  {
+   "id": "real-list-command-after-out",
+   "group": "From your conversations",
+   "suite": "regression",
+   "kind": "chat",
+   "offline": true,
+   "inventory": [
+    {
+     "name": "Ground Chicken",
+     "qty": 1,
+     "unit": "lb",
+     "category": "Meat"
+    },
+    {
+     "name": "Boneless Skinless Chicken Thighs",
+     "qty": 1,
+     "unit": "pack",
+     "category": "Meat"
+    },
+    {
+     "name": "Whole Milk",
+     "qty": 1,
+     "unit": "L",
+     "category": "Dairy"
+    }
+   ],
+   "list": [
+    "Almond milk",
+    "Bread",
+    "Cheese"
+   ],
+   "turns": [
+    "we're out of chicken",
+    "take everything off my shopping list except cheese"
+   ],
+   "text": "we're out of chicken / take everything off my shopping list except cheese",
+   "checks": [
+    {
+     "notOnList": "almond milk"
+    },
+    {
+     "notOnList": "bread"
+    },
+    {
+     "onList": "cheese"
+    },
+    {
+     "stateQty": [
+      "ground chicken",
+      1,
+      1
+     ]
+    },
+    {
+     "stateQty": [
+      "chicken thighs",
+      1,
+      1
+     ]
+    },
+    {
+     "replyNot": "at home"
+    },
+    {
+     "maxCalls": 0
+    }
+   ],
+   "note": "16 Nov 17:56: the list command right after 'out of chicken' was read against the home and answered 'I couldn't find Ground Chicken at home'"
   }
  ]
 }

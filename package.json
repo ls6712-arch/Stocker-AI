@@ -47,6 +47,7 @@
     "test:sub": "node --no-warnings evals/subscriber.mjs",
     "test:sub:browser": "node --no-warnings evals/e2e/server.mjs 8799 & sleep 2; node evals/subscriber-audit.cjs; s=$?; kill %1; exit $s",
     "test:checks": "node --no-warnings evals/checks.mjs",
+    "test:feedback:browser": "node --no-warnings evals/e2e/server.mjs 8816 & sleep 2; E2E_URL=http://127.0.0.1:8816 node evals/feedback-audit.cjs; s=$?; kill %1; exit $s",
     "test:checks:browser": "node --no-warnings evals/e2e/server.mjs 8799 & sleep 2; node evals/checks-audit.cjs; s=$?; kill %1; exit $s"
   },
   "devDependencies": {
