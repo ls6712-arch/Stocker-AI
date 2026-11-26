@@ -644,3 +644,14 @@ form (7 of 7, 0.2 to 0.6 s). The short form wrote units outside the list ("6 cup
 categories is now in `LINE_FORM`, and `lineUnit` reads unit words back (cups and rolls are pieces, packs are pack, litres are L).
 `UPDATE_SHAPE` is now `owner`: the owner's home and the live evals get the short form; friends' homes keep JSON until the next live
 run confirms it.
+
+## Simulation of 100 messages (26 Nov 2026, branch `tote-sim100-1`)
+
+`evals/sim100.mjs` sends 100 everyday messages through the real `takeTurn` in one made-up home (`evals/sim/home.mjs`: a busy mom, Leo marked no peanuts) with no model. A message code finishes alone is graded on the checklist (home exactly right, reply, safety); one that needs the model is counted and replayed as if the allowance were used up, where it must change nothing wrong. Set 1 (`evals/sim/set1.mjs`) was used for fixing and is in `npm test` (`--check --min=83`: nothing wrong, and code must still read at least 83). Set 2 was scored at first sight and then also used for fixing, so the next honest score needs a fresh set 3.
+
+What changed in the code path, all general rules:
+- **Names.** `findRow` no longer lets a longer name land on a shorter tracked one when the extra words make it another thing (`otherThing`: an allergen word, plant-based, or an everyday thing of its own: "peanut butter" is not Butter, "ice cream" is not Cream). A shortened name matches only one more word, and not when the full name ends in another everyday thing ("egg" is not Egg Noodles, "peanut butter" is not the Peanut Butter Pretzel Sandwich). The made-up home (`simApply`) now applies a purchase by exact name, as the real `apply` does.
+- **Allergy homes.** A new thing whose name already shows the clash ("satay sauce", "peanut m&ms") is added by code with the warning; other new things still go to the model.
+- **Forms code now reads.** "Costco run: …", "X, 6 of them", "X, a box of 80", "X, 12 rolls", "dish soap x2", "both", "used all the X", "the milk is gone", "there are 10 bananas", "added 4 yogurts to the fridge", "the kids ate…", "went through / changed / cooked / boiled N X" (a stated amount of a tracked thing only), "threw out 2 tomatoes, they went bad" (2, not all), "a bag of dog food" (one, for a thing not counted by the piece), "don't forget X", "remember to buy X", "clear X from the list, we don't need it", "purchased X". "1 pack of X" is one pack, not a 1-pack.
+- **Answers by code.** "are we out of butter?", "what's in the bathroom?", and "what's running low?" (things at home only, not the whole list). "we never eat the yogurt" is no longer taken for a correction. A question about food going off is not answered by the allergy rule.
+- **No credits.** A plan gets "That sounds like a plan, so I have not changed anything…", a going-off question gets a plain "I cannot tell…", instead of "only simple questions".

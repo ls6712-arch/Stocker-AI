@@ -1526,7 +1526,7 @@ const unhail = (t, name) => {
   return out;
 };
 const PROBE = /['"‘’“”]\s*(system|assistant|developer|admin|sudo)\s*:|\b(admin|root|superuser) (access|rights|privileges|mode)\b|\bgrant (this|the|me|my) (user|account)\b|\b(vergiss|ignoriere?)\b[\w\s]{0,20}\b(regeln|anweisungen)|\bohne (grenzen|regeln)\b|\b(esque[cç]a|ignore)\b[\w\s]{0,20}\bregras\b|\boublie[sz]?\b[\w\s]{0,20}\b(r[eè]gles|instructions)|\bdimentica\b[\w\s]{0,20}\bregole\b|\b(from|by) the (tote|stocker|stocker ai) (team|developers?|staff|admins?)\b|\b(list|show|give me) (all|every) (accounts?|users?|households?|customers?)\b|\bin this (region|area|city)\b|\brole[- ]?play\b|\bunrestricted\b|\b(no|without (any )?)(rules|restrictions|limits|filters|guardrails)\b|\banswers? (literally )?anything\b|\b(hidden|secret|internal|system|developer|original|initial) (rules|instructions|prompt|guidelines|message|settings)\b|\bverbatim\b|\bdebug(ging)? (purposes|mode)\b|\bprint (out )?your\b|\b(email|send|forward|post|upload) (the |my |our |your )?(full |whole |entire )?(inventory|data|database|list|everything) to\b|^\s*assistant\s*:|'assistant\s*:|\bassistant\s*:\s*(email|send|ignore|delete|clear)|\bignora\b[\w\s]{0,20}\binstruc|\bmu[eé]strame tu (prompt|instrucciones)|^\s*system\b|\n\s*system\b|\b(ignore|disregard|forget|override) (all |your |any |the |previous |prior )*(instructions|rules|prompt|guidelines)|\bignora (todas )?(las )?instrucciones|system prompt|your (instructions|prompt|rules)\b|jailbreak|developer mode|debug mode|admin mode|god mode|\[\s*system\s*\]|^\s*system\s*:|\n\s*system\s*:|new (rule|instruction)s?\s*:|you are now|you're now|\bact as\b|\bpretend (you|to be|ur|u r|u are|you'?re|youre|that you)\b|\bdo what (it|the note|the label|that) says\b|\bwhen you read this\b|\bfollow (the|those|these|its) (instructions|note|steps)\b|\bDAN\b|role\s*"?\s*:\s*"?system|grant admin|dump the (database|db)|every(one|body)'?s (fridge|pantry|list|data|account)|other (users|households|people'?s)|list (every|all) users|\bpasscode\b|\bpassword\b|\bapi key\b/i;
-const ASK = /\b(add|(?:put|pop|stick|chuck|throw|get)\b[^.!?]{0,40}\b(?:on|in|to|onto) (?:the |my |our )?(?:shopping )?(?:list|cart|basket)|get me|grab (?:some|a|me)|(?<!\b(?:do|does|did) (?:we|i|u|you) )\bneed\b(?!\s+(?:them|it|that|this|those|these|to (?:know|check|see|ask|find)|you|help|a minute|a sec))|remind me|take off|remove|cross off|scratch|delete|note that|need to (buy|get|pick up)|we need|i need|need more|need some|we're out|we are out|i'm out|out of|pick up|agrega\w*|añad\w+|ajoute\w*|pon(er|ga|lo|la)?|necesit\w+|comprar|preciso|faut acheter|ilagay|bili\w*|daal do|add karo|lena hai|chahiye)\b/i;
+const ASK = /\b(add|don'?t forget|remember to (?:buy|get|pick up|grab)|(?:put|pop|stick|chuck|throw|get)\b[^.!?]{0,40}\b(?:on|in|to|onto) (?:the |my |our )?(?:shopping )?(?:list|cart|basket)|get me|grab (?:some|a|me)|(?<!\b(?:do|does|did) (?:we|i|u|you) )\bneed\b(?!\s+(?:them|it|that|this|those|these|to (?:know|check|see|ask|find)|you|help|a minute|a sec))|remind me|take off|remove|cross off|scratch|delete|note that|need to (buy|get|pick up)|we need|i need|need more|need some|we're out|we are out|i'm out|out of|pick up|agrega\w*|añad\w+|ajoute\w*|pon(er|ga|lo|la)?|necesit\w+|comprar|preciso|faut acheter|ilagay|bili\w*|daal do|add karo|lena hai|chahiye)\b/i;
 const STRONG = /\b(had|took|taken|grabbed|removed|acab[\wáéíóúãõç]*|termin[\wáéíóúãõç]*|gast[\wáéíóúãõç]*|se acab[\wáéíóúãõç]*|no queda\w*|no hay m[aá]s|plus de|fini|naubos|ubos na|wala nang|no more|none left|all gone|out of|cooked|made|used|ate|eaten|bought|got|finished|ran out|run out|cooking|making|threw|thrown|tossed|binned|picked up|opened|used up|running low|almost out|went bad|gone off|expired|spilled|have \d+|got \d+|se acab|banaya|khatam)\b/i;
 const ASK_START = /^(is|are|was|were|isn'?t|aren'?t|wasn'?t)\b|^(can|could|should|may|will|would|does)\s+[a-z]+\s+(have|eat|drink|try)\b|^(do|does|did|can|could|would|will|have|has|should|shall|may)\s+(we|i|you|they|he|she|it|my|our|the|there|u)\b|^(any|got any|still got|anything)\b/i;
 const WH = /^(what'?s?|whats|which|how|why|who|when|where|whether|kya|kitna|kitne|kahan|qué|que|cuánto|cuanto|cuántos|dónde|donde|hay|est-ce|combien|où|wo you|you mei you|duoshao)\b/i;
@@ -1539,7 +1539,7 @@ const FOLLOW = /^(and|also|plus|oh and|actually|make (it|that|them)|same (for|wi
 const LATER = /\b(thinking (of|about)|planning (to|on)|plan to|going to|gonna|might|maybe|probably will|later today|tomorrow|next week|this weekend)\b|^(if|when) (we|i|you)\b|\bif (we|i) (run|ran|get|are|have)\b/i;
 const DONE = /\b(used|finished|ran out|run out|bought|got|threw|tossed|ate|cooked|made|picked up|opened|spilled|went bad)\b/i;
 const CORRECT_NM = /^(never ?mind|nvm)\b(?![\s,.!]*(that|undo|cancel|scratch|delete|remove))/i;
-const CORRECT = /\b(i meant|meant to say|my bad|my mistake|correction\s*:|that should (be|have been)|wrong (item|one|amount|number))\b|^[\w' -]{2,30} instead of [\w' -]{2,30}$|^(oops|whoops|sorry),?\s|^(undo|undo that|no wait|wait no|scratch that|never ?mind|nvm|that was wrong|that'?s wrong|wrong|not right|no that'?s not right)\b|\b(did not|didn'?t|did NOT|haven'?t|have not|never) (use|used|eat|ate|buy|bought|finish|finished|open|opened|cook|cooked)\b|\bthat was (yesterday|last week|earlier|before)\b|^(no,?\s+)?not\s+\S+(\s+\S+){0,6}$/i;
+const CORRECT = /\b(i meant|meant to say|my bad|my mistake|correction\s*:|that should (be|have been)|wrong (item|one|amount|number))\b|^[\w' -]{2,30} instead of [\w' -]{2,30}$|^(oops|whoops|sorry),?\s|^(undo|undo that|no wait|wait no|scratch that|never ?mind|nvm|that was wrong|that'?s wrong|wrong|not right|no that'?s not right)\b|\b(did not|didn'?t|did NOT|haven'?t|have not) (use|used|eat|ate|buy|bought|finish|finished|open|opened|cook|cooked)\b|\bnever (used|ate|bought|finished|opened|cooked)\b|\bthat was (yesterday|last week|earlier|before)\b|^(no,?\s+)?not\s+\S+(\s+\S+){0,6}$/i;
 const WIPE = /\b(apag\w+|borr\w+|l[oö]sch\w*|efface\w*|cancella|elimina\w*)\b[\w\s]{0,10}\b(tudo|todo|alles|tout|tutto|todos)\b|\b(reset|zero( out)?|wipe|clear( out)?|empty( out)?|nuke|purge)\b[\w\s]{0,25}\b(whole|entire|every|everything|all of|inventory|database|account|pantry|fridge|freezer|house)\b|\b(whole|entire|all|every|everything)\b[\w\s]{0,25}\bto (zero|0|nothing)\b|\b(everything|all|the whole (fridge|freezer|pantry|kitchen|house)|whole (fridge|freezer))\b[\w\s]{0,30}\b(is|are|was|went|has|have|got) (all )?(gone|bad|off|spoiled|ruined|thrown|binned|tossed)\b|\b(wipe|clear|reset|delete|empty|erase|remove)\s+(it|everything|all|the whole|the lot|my (account|inventory|data|list)|all (my|the) (stuff|items|data))\b|\bstart (over|again|fresh|from scratch)\b|\b(everything|all of it|the whole (fridge|freezer|pantry|kitchen|house)) (is|was|went|has) (gone|bad|off|spoiled|ruined)|\b(threw|thrown|tossed|binned) (out |away )?(everything|all of it|the whole)\b|\bborr\w* todo\b|\bnos mudamos\b|\b(sab|sabkuch) (khatam|delete)\b/i;
 const VOCAB = ['ignore', 'pretend', 'debugging', 'never', 'instruction', 'threw', 'hello', 'there', 'thank', 'night', 'morning', 'afternoon', 'evening', 'havent', 'didnt', 'whats', 'allergic', 'reste', 'combien', 'thanks', 'have', 'many', 'much', 'left', 'enough', 'everything', 'anything', 'whole', 'fridge', 'freezer', 'pantry', 'undo', 'regular', 'closed', 'times', 'pretend', 'instructions', 'threw', 'thrown', 'tossed', 'finished', 'bought', 'cooked', 'expired', 'running', 'almost', 'please', 'tomorrow', 'shopping', 'list', 'remove', 'scratch', 'whether', 'would', 'could', 'should', 'what', 'which', 'where', 'when', 'gone', 'used', 'made', 'need'];
 const KEEP = new Set(['throw', 'three', 'their', 'then', 'than', 'them', 'they', 'these', 'those', 'here', 'hers', 'were', 'wear', 'went', 'want', 'with', 'what', 'some', 'same', 'save', 'made', 'make', 'mean', 'meat', 'most', 'must', 'much', 'list', 'lost', 'last', 'lest', 'gone', 'game', 'used', 'user', 'uses', 'need', 'feed', 'seed', 'have', 'hive', 'left', 'lift', 'loft', 'many', 'mane', 'more', 'none']);
@@ -1562,6 +1562,7 @@ function route(raw, name) {
   if (WIPE.test(t)) return 'wipe';
   if (CORRECT.test(t) && !CORRECT_NM.test(t)) return 'correct';
   if (!t) return 'answer';
+  if (/^(?:are|were) (?:we|you) (?:all |nearly |almost |running )?(?:out of|low on|short on)\b[^.!]*\?\s*$/i.test(t)) return 'answer'; // "are we out of butter?" asks, it does not tell
   const opensAsQuestion = WH.test(t) || ASK_START.test(t);
   const asks = opensAsQuestion ? ASK.test(t.replace(/\bneeds?\b/gi, '')) : ASK.test(t), did = STRONG.test(unsaid(t));
   if (HEALTH.test(t) && !asks) return 'answer';
@@ -1569,7 +1570,7 @@ function route(raw, name) {
   if (OFFTOPIC.test(t)) return 'answer';
   if (CHAT.test(t) && !asks && !did) return 'answer';
   if (WH.test(t) && !asks) return 'answer';
-  if (t.split(/\s+/).length <= 3 && !asks && !did && !/\d/.test(t) && !/^(add|need|buy|get|bought|used|finished)\b/i.test(t)) return 'answer';
+  if (t.split(/\s+/).length <= 3 && !asks && !did && !/\d/.test(t) && !/^(add|need|buy|get|bought|purchased|restocked|used|finished)\b/i.test(t)) return 'answer';
   if (ASK_START.test(t) && !asks && !/^(did|have|has) (a|some|the|my) /i.test(t)) return 'answer';
   if ((ASK_INSIDE.test(t) || TAG.test(t) || (/\?\s*$/.test(t) && /^[\x00-\x7f]*$/.test(t) && !/,/.test(t))) && !asks && !did) return 'answer';
   return 'update';
@@ -2089,11 +2090,24 @@ function findRow(name, rows) {
   const tail = keyed.filter(([x]) => x.endsWith(' ' + k));
   if (tail.length === 1) return tail[0][1];
   if (tail.length > 1) return 'many';
-  const head = keyed.filter(([x]) => k.endsWith(' ' + x));
+  const head = keyed.filter(([x]) => k.endsWith(' ' + x) && !otherThing(k, x));
   if (head.length === 1) return head[0][1];
   if (head.length > 1) return 'many';
-  const front = keyed.filter(([x]) => x.startsWith(k + ' '));
+  // a shortened name: "chicken" for Chicken Breast. Not when the rest makes it another thing: "peanut butter" is not the
+  // Peanut Butter Pretzel Sandwich, "tomatoes" are not the Tomato Pasta Sauce, "egg" is not the Egg Noodles.
+  const front = keyed.filter(([x]) => x.startsWith(k + ' ') && x.split(' ').length - k.split(' ').length < 2 && !otherThing(x, k, true));
   return front.length === 1 ? front[0][1] : front.length > 1 ? 'many' : null;
+}
+// "peanut butter" is not the Butter at home, "almond milk" is not the Milk, "ice cream" is not the Cream: words in front that bring in
+// an allergen, make it plant-based, or make it another everyday thing of its own, make it a different thing.
+function otherThing(said, tracked, short) {
+  // a shortened name ("cheddar" for Cheddar Cheese, "chicken" for Chicken Breast) is another thing only when the full name ends in
+  // an everyday thing of its own that the short name is not: Egg Noodles are noodles, Peanut Butter Cookies are cookies
+  if (short) { const whole = stapleFor(said), part = stapleFor(tracked); return !!(whole && whole !== part); }
+  if (Object.keys(WORDS).some((a) => WORDS[a].test(said) !== WORDS[a].test(tracked))) return true;
+  if (FOOD.plant.test(said) !== FOOD.plant.test(tracked)) return true;
+  const s = STAPLES.get(said), t = STAPLES.get(tracked);
+  return !!(s && s !== t);
 }
 const lname = (n) => (/^[A-Z][a-z]/.test(n) && !/\b[A-Z]{2,}\b/.test(n) ? n.toLowerCase() : n);
 const capFirst = (t) => String(t).charAt(0).toUpperCase() + String(t).slice(1);
@@ -2283,7 +2297,7 @@ function allergyAnswer(t, rows, profile) {
 }
 
 // ---- reading an update with code ----
-const NUMS = { a: 1, an: 1, one: 1, single: 1, another: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12, couple: 2 };
+const NUMS = { a: 1, an: 1, one: 1, single: 1, another: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12, couple: 2, both: 2 };
 const UNIT_WORDS = { kg: 'kg', kgs: 'kg', kilo: 'kg', kilos: 'kg', kilogram: 'kg', kilograms: 'kg', g: 'g', gm: 'g', gms: 'g', gram: 'g', grams: 'g', lb: 'lb', lbs: 'lb', pound: 'lb', pounds: 'lb', oz: 'oz', ounce: 'oz', ounces: 'oz', l: 'L', litre: 'L', liter: 'L', litres: 'L', liters: 'L', ltr: 'L', ml: 'ml', gallon: 'gal', gallons: 'gal' };
 const MULTI = /^(packs?|packets?|box(es)?|bags?|cartons?)$/; // these hold many of a thing: "2 cartons of eggs" is not 2 eggs
 const PACKS = { pack: 'pack', packs: 'pack', packet: 'pack', packets: 'pack', box: 'pack', boxes: 'pack', bag: 'pack', bags: 'pack', carton: 'pack', cartons: 'pack', bottle: 'pcs', bottles: 'pcs', can: 'pcs', cans: 'pcs', tin: 'pcs', tins: 'pcs', jar: 'pcs', jars: 'pcs', loaf: 'pcs', loaves: 'pcs', bunch: 'pcs', bunches: 'pcs', tub: 'pcs', tubs: 'pcs', roll: 'pcs', rolls: 'pcs', bar: 'pcs', bars: 'pcs', head: 'pcs', heads: 'pcs', piece: 'pcs', pieces: 'pcs', tube: 'pcs', tubes: 'pcs' };
@@ -2301,7 +2315,10 @@ function convert(q, from, to) {
 }
 // "2 dozen eggs", "a loaf of bread", "500g rice", "a 6-pack of yogurt" -> amount, unit and the thing
 function readPiece(phrase) {
-  let w = phrase.replace(/\bhalf a dozen\b/g, '6').replace(/\ba couple(?: of)?\b/g, '2').replace(/(\d)\s*-?\s*pack\b(?=\s+of\b)/g, '$1-pack').replace(/(\d)\s*-\s*pack\b/g, '$1-pack').trim().split(/\s+/).filter(Boolean);
+  // "dish soap x2", "milk x 3": the amount said after the thing
+  const times = phrase.match(/^(.+?)\s+(?:x\s?(\d{1,2})|(\d{1,2})\s?x)$/);
+  if (times && !/\d/.test(times[1])) phrase = (times[2] || times[3]) + ' ' + times[1];
+  let w = phrase.replace(/\bhalf a dozen\b/g, '6').replace(/\ba couple(?: of)?\b/g, '2').replace(/\b([2-9]|\d\d)\s*-?\s*pack\b(?=\s+of\b)/g, '$1-pack').replace(/(\d)\s*-\s*pack\b/g, '$1-pack').trim().split(/\s+/).filter(Boolean);
   while (w.length && /^(some|more|the|my|our|any|extra|new|fresh|of)$/.test(w[0])) w.shift();
   let qty = null, unit = null, pack = false, each = 0;
   // the size of the pack said in words: "a tray of 30 eggs" is 30 eggs, "2 packs of 18 eggs" is 36, with 30 or 18 to a pack
@@ -2318,21 +2335,21 @@ function readPiece(phrase) {
   if (!unit && w[0] && UNIT_WORDS[w[0]] && w.length > 1) { unit = UNIT_WORDS[w[0]]; w.shift(); if (qty === null) qty = 1; }
   else if (!unit && w[0] && PACKS[w[0]] && w.length > 1) { unit = PACKS[w[0]]; pack = MULTI.test(w[0]); w.shift(); if (qty === null) qty = 1; }
   while (w.length && /^(of|the|new|fresh|big|small|large|extra|more|some)$/.test(w[0])) w.shift();
-  if (!w.length || w.length > 4 || w.some((x) => !/^[a-z][a-z'-]*$/.test(x) || NOT_A_THING.test(x))) return null;
+  if (!w.length || w.length > 4 || w.some((x) => !/^[a-z][a-z'&-]*$/.test(x) || NOT_A_THING.test(x))) return null;
   return { qty, unit, pack, dozen, each, name: w.join(' ') };
 }
 // verbs, and what each means for the home. Each verb covers the things after it, up to the next verb.
 const VERB_RE = new RegExp('\\b(?:' + [
   '(?<list2>(?:need|needs) to (?:buy|get|pick up|grab)|(?:have|got) to (?:buy|get|pick up))',
   '(?<low>(?:running|getting) low on|running out of|low on|almost out of|nearly out of|short on)',
-  '(?<gone>(?:finished|used|had|ate|drank)(?: off| up)? the last of|used up(?: all)?(?: of)?|the last of|finished off|finished|threw (?:out|away)|thrown (?:out|away)|tossed(?: out)?|binned|chucked(?: out)?)',
+  '(?<gone>(?:finished|used|had|ate|drank)(?: off| up)? the last of|used up(?: all)?(?: of)?|(?:used|ate|drank|finished) all(?: of)?(?= (?:the|my|our)\\b)|the last of|finished off|finished|threw (?:out|away)|thrown (?:out|away)|tossed(?: out)?|binned|chucked(?: out)?)',
   '(?<out>ran out of|run out of|all out of|out of|no more)',
-  '(?<add>bought|got|picked up|grabbed|purchased|restocked|stocked up on|came back with)',
-  '(?<use>used|ate|had|drank)',
+  '(?<add>bought|got|picked up|grabbed|purchased|restocked|stocked up on|came back with|added)',
+  '(?<use>used|ate|had|drank|went through|changed|cooked|boiled|grilled)',
   '(?<list>need|needs|add|put|pop|stick|get|buy|pick up|grab)',
 ].join('|') + ')\\b', 'g');
 const LIST_TO = /\s+(?:on|to|onto|in|into)\s+(?:the|my|our)?\s*(?:shopping\s+|grocery\s+)?(?:list|cart)$/;
-const BAIL_WORDS = /\b(if|when|whenever|maybe|might|probably|perhaps|tomorrow|later|tonight|next|soon|not|never|no longer|dont|don't|didnt|didn't|havent|haven't|hasnt|hasn't|wont|won't|cant|can't|isnt|isn't|arent|aren't|wasnt|wasn't|instead|actually|sorry|oops|wait|meant|mean|for|someone|neighbou?r|sister|brother|mum|mom|dad|mother|father|friend|wife|husband|roommate|flatmate|her|his|their|they|cook|cooked|cooking|made|make|making|bake|baked|baking|fry|fried|recipe|dinner|lunch|breakfast|remind|note|freez\w*|because|but|or|either|about|around|roughly|half|most|few|several|enough|each|every|everything|it|them|that|this|those|these|thing|things|stuff|went|gone bad|expired|spilled|spilt|opened|should|would|could|will|shall|can)\b/;
+const BAIL_WORDS = /\b(if|when|whenever|maybe|might|probably|perhaps|tomorrow|later|tonight|next|soon|not|never|no longer|dont|don't|didnt|didn't|havent|haven't|hasnt|hasn't|wont|won't|cant|can't|isnt|isn't|arent|aren't|wasnt|wasn't|instead|actually|sorry|oops|wait|meant|mean|for|someone|neighbou?r|sister|brother|mum|mom|dad|mother|father|friend|wife|husband|roommate|flatmate|her|his|their|they|cook|cooking|made|make|making|bake|baked|baking|fry|fried|recipe|dinner|lunch|breakfast|remind|note|freez\w*|because|but|or|either|about|around|roughly|half|most|few|several|enough|each|every|everything|it|them|that|this|those|these|thing|things|stuff|went|gone bad|expired|spilled|spilt|opened|should|would|could|will|shall|can)\b/;
 async function quickParse(env, raw, rows, profile, history, ai) {
   let t = unhail(fixTypos(scrub(String(raw))), profile && profile.buddy).toLowerCase().replace(/[‘’`]/g, "'").replace(/["“”]/g, '').replace(/[\p{Extended_Pictographic}\u{FE0F}\u{200D}]/gu, ' ').replace(/\s+/g, ' ').trim();
   // "do we have eggs? also add bread to the list": the question is answered afterwards, and code still reads the update
@@ -2341,7 +2358,22 @@ async function quickParse(env, raw, rows, profile, history, ai) {
   for (let i = 0; i < 3; i++) t = t.replace(/^(?:ok(?:ay)?|so|oh|also|and|um+|right|just a heads up|fyi|please|pls|plz|kindly|(?:can|could|would) (?:you|u)(?: please| kindly)?)\b[\s,]*/, '');
   if (/^(?:add|put|pop|stick)\b[^?]*\?$/.test(t)) t = t.slice(0, -1).trim(); // "can you add eggs?" is a request, not a question
   // where and when it happened does not change what happened: "picked up bleach on the way home", "6 cans of tuna in the pantry now"
-  for (let i = 0; i < 2; i++) t = t.replace(/\s+(?:now|right now|on the way home|this morning|earlier|today|just now|(?:at|from) (?:the )?[a-z' ]{2,24}(?:store|shop|market|mart|pharmacy|butcher|bakery|costco|target|walmart|aldi|lidl|tesco|kroger|trader joe'?s)|in the (?:fridge|freezer|pantry|cupboard|cabinet|bathroom))$/, '').trim();
+  for (let i = 0; i < 2; i++) t = t.replace(/\s+(?:now|right now|on the way home|this morning|earlier|today|just now|(?:at|from) (?:the )?[a-z' ]{2,24}(?:store|shop|market|mart|pharmacy|butcher|bakery|costco|target|walmart|aldi|lidl|tesco|kroger|trader joe'?s)|(?:in|to|into) the (?:fridge|freezer|pantry|cupboard|cabinet|bathroom))$/, '').trim();
+  // "Costco run: 2 butter, 1 olive oil": a shop named in front of the things is a purchase
+  t = t.replace(/^(?:(?:the|my|our|a|big|quick|weekly) )?(?:[a-z']+ ){0,2}(?:run|haul|trip|shop|order|delivery)\s*[:-]\s*(?=\S)/, 'bought ');
+  // why it went does not change what went: "threw out 2 tomatoes, they went bad"
+  t = t.replace(/,?\s+(?:because |as |since |cos )?(?:it|they) (?:went|had gone|has gone|have gone|was|were|got|smelled|smelt|looked) (?:bad|off|mou?ldy|stale|sour|rotten|expired|out of date|past (?:its|their) date|funny|slimy)$/, '');
+  // "take garlic off the list, we don't need it": the reason is not another request
+  if (/^(?:take|cross|scratch|strike|remove|delete|knock|clear)\b/.test(t)) t = t.replace(/,\s+(?:(?:we|i) )?(?:(?:don't|dont|do not|no longer) need (?:it|them|any|that)(?: any ?more| now)?|(?:already )?(?:have|got) (?:it|them|some|plenty))$/, '');
+  // the amount said after the thing: "grabbed bananas, 6 of them", "got more diapers, a box of 80"
+  { const m2 = t.match(/^(.+), ((?:\d{1,3}|a|an|one|two|three|four|five|six|seven|eight|nine|ten|twelve|a dozen|a couple) of (?:them|those)|(?:(?:a|one|two|three|\d) )?(?:box(?:es)?|packs?|packets?|trays?|cartons?|crates?) of \d{1,2}|(?:\d{1,3}|a|one|two|three|four|five|six|seven|eight|nine|ten|twelve) (?:rolls?|packs?|packets?|bags?|box(?:es)?|bottles?|cans?|tins?|jars?|tubes?|bars?|loaves|loaf|cartons?|tubs?))$/);
+    if (m2) { VERB_RE.lastIndex = 0; const h = [...m2[1].matchAll(VERB_RE)].pop(); VERB_RE.lastIndex = 0;
+      const cut = h ? h.index + h[0].length : -1, thing = h ? m2[1].slice(cut).trim().replace(/^(?:some|more|the|some more)\s+/, '') : '';
+      if (thing && !/,|\band\b|\d/.test(thing)) t = m2[1].slice(0, cut) + ' ' + m2[2].replace(/ of (?:them|those)$/, '').replace(/^a couple$/, '2') + (/ of \d+$/.test(m2[2]) || / of (?:them|those)$/.test(m2[2]) ? ' ' : ' of ') + thing; } }
+  // "actually there are 10 bananas": said with a number, it is simply how things are
+  t = t.replace(/^actually,?\s+(?=(?:we|i|there)\b.*(?:\d|\b(?:two|three|four|five|six|seven|eight|nine|ten|twelve|dozen)\b))/, '');
+  // "don't forget cilantro", "remember to get stamps": something to buy
+  { const m3 = t.match(/^(?:and )?(?:don't|dont|do not) forget (?:to (?:buy|get|pick up|grab) )?(?:the |some |more )?(.+)$/) || t.match(/^remember to (?:buy|get|pick up|grab) (?:the |some |more )?(.+)$/); if (m3) t = 'need to buy ' + m3[1]; }
   if (!t || /[?;:]|[^\x00-\x7f]|\d\s*\/\s*\d|[$€£₹%]|\[removed\]|\badd \d{2,} /.test(t)) return null;
   // right after a change: "and bread too" repeats what I just did; "put it on the list" names the thing just asked about
   const last = history && history.length ? String((history[history.length - 1] || {}).content || '') : '';
@@ -2364,25 +2396,27 @@ async function quickParse(env, raw, rows, profile, history, ai) {
   const sentence = [], verbOf = new Map();
   // whole-sentence forms first
   let m;
-  if ((m = t.match(/^(?:take|cross|scratch|strike|remove|delete|knock)\s+(.+?)\s+(?:off|from)\s+(?:of\s+)?(?:the|my|our)?\s*(?:shopping\s+|grocery\s+)?list$/)) || (m = t.match(/^(?:cross|scratch|strike|tick)\s+off\s+(.+?)(?:\s+(?:from|on)\s+(?:the|my|our)?\s*(?:shopping\s+)?list)?$/))) sentence.push(['unlist', m[1]]);
+  if ((m = t.match(/^(?:take|cross|scratch|strike|remove|delete|knock|clear)\s+(.+?)\s+(?:off|from)\s+(?:of\s+)?(?:the|my|our)?\s*(?:shopping\s+|grocery\s+)?list$/)) || (m = t.match(/^(?:cross|scratch|strike|tick)\s+off\s+(.+?)(?:\s+(?:from|on)\s+(?:the|my|our)?\s*(?:shopping\s+)?list)?$/))) sentence.push(['unlist', m[1]]);
   else if (((m = t.match(/^(?:(?:we|i)\s+(?:have|still have|have got)\s+|(?:we|i)'ve got\s+|there (?:are|is)\s+|only\s+|just\s+)?(\S+(?:\s+\S+)?\s+.+?)\s+left(?:\s+(?:now|at home))?$/)) || (m = t.match(/^(?:we|i)\s+(?:have|still have|have got)\s+(.+)$/)) || (m = t.match(/^(?:we|i)'ve got\s+(.+)$/)) || (m = t.match(/^(?:we're|we are|i'm|i am)\s+down to\s+(.+)$/))) && m[1].split(/\s*(?:,|\band\b)\s*/).every((x) => { const p = readPiece(x); return p && p.qty !== null; })) sentence.push(['set', m[1]]);
+  else if ((m = t.match(/^there (?:are|is)\s+((?:\d+|two|three|four|five|six|seven|eight|nine|ten|twelve)\b.+?)(?:\s+(?:now|at home))?$/)) && m[1].split(/\s*(?:,|\band\b)\s*/).every((x) => { const p = readPiece(x); return p && p.qty !== null; })) sentence.push(['set', m[1]]);
   else if ((m = t.match(/^(.+?)\s+(?:is|are|'s|'re)\s+(?:running low|getting low|low|almost (?:gone|finished|out|empty)|nearly (?:gone|finished|out|empty)|running out)(?:\s+now)?$/))) sentence.push(['low', m[1]]);
-  else if ((m = t.match(/^(.+?)\s+(?:is|are|'s|'re)\s+(?:finished|all gone|done|empty|used up|out)(?:\s+now)?$/))) sentence.push(['out', m[1]]);
+  else if ((m = t.match(/^(.+?)\s+(?:is|are|'s|'re)\s+(?:finished|all gone|gone|done|empty|used up|out)(?:\s+now)?$/))) sentence.push(['out', m[1]]);
   else if ((m = t.match(/^(.+?)\s+(?:on|to)\s+(?:the|my|our)\s+(?:shopping\s+)?list$/)) && !VERB_RE.test(m[1])) sentence.push(['list', m[1]]);
   VERB_RE.lastIndex = 0;
   if (!sentence.length) {
     const hits = [...t.matchAll(VERB_RE)];
     if (!hits.length) return null;
-    const lead = t.slice(0, hits[0].index).replace(/(?:^|\s)(?:we've|i've|we're|i'm|we are|i am|we have|i have|we|i|just|also|and|then|so|plus|already|all|now)(?=\s|,|$)/g, ' ').replace(/[\s,]+/g, '');
+    const lead = t.slice(0, hits[0].index).replace(/(?:^|\s)(?:we've|i've|we're|i'm|we are|i am|we have|i have|we all|we|i|the kids|kids|the family|everyone|just|also|and|then|so|plus|already|all|now)(?=\s|,|$)/g, ' ').replace(/[\s,]+/g, '');
     if (lead) return null;
     hits.forEach((h, i) => {
-      const kind = Object.keys(h.groups).find((k) => h.groups[k]);
+      let kind = Object.keys(h.groups).find((k) => h.groups[k]);
       const end = i + 1 < hits.length ? hits[i + 1].index : t.length;
       let obj = t.slice(h.index + h[0].length, end).replace(/[\s,]+$/, '');
       for (let j = 0; j < 3; j++) obj = obj.replace(/[\s,]+(?:and also|we've|i've|we're|i'm|we are|i am|and|also|then|plus|we|i|just|so)$/, '').trim();
       // "put" and friends only mean the list when the list is named
       if (/^(put|pop|stick)$/.test(h[0]) && !LIST_TO.test(obj)) obj = '';
-      verbOf.set(obj.trim(), h[0]);
+      if (h[0] === 'added' && LIST_TO.test(obj)) kind = 'list'; // "added eggs to the list" is the list, "added eggs" is the home
+      verbOf.set(obj.trim(), h[0] === 'added' ? 'add' : h[0]);
       sentence.push([kind === 'list2' ? 'list' : kind, obj.trim()]);
     });
   }
@@ -2393,27 +2427,34 @@ async function quickParse(env, raw, rows, profile, history, ai) {
     if (!obj) return null;
     if (kind !== 'list' && kind !== 'unlist' && LIST_TO.test(obj0)) return null;
     for (const c of compound) obj = obj.split(c).join(c.replace(/ and /g, ' _and_ '));
-    const parts = obj.split(/\s*(?:,|\band\b|&|\bplus\b|\balso\b)\s*/).map((p) => p.replace(/ _and_ /g, ' and ').trim()).filter(Boolean);
+    const parts = obj.split(/\s*(?:,|\band\b|&(?![a-z])|(?<![a-z])&|\bplus\b|\balso\b)\s*/).map((p) => p.replace(/ _and_ /g, ' and ').trim()).filter(Boolean);
     if (!parts.length) return null;
     for (const p of parts) {
       const it = readPiece(p);
       if (!it || (it.qty !== null && it.qty > 50 && !it.unit)) return null; // "99 gold bars" is the model's (and the guardrails') call
       // "bananas spinach" with no comma is two things: leave a run-together list to the model
       const ws = normKey(it.name).split(' ');
-      if (ws.length > 1 && !STAPLES.has(normKey(it.name)) && !rows.some((x) => normKey(x.name) === normKey(it.name)) && ws.some((_, i) => i > 0 && STAPLES.has(ws.slice(0, i).join(' ')) && STAPLES.has(ws.slice(i).join(' ')))) return null;
+      if (ws.length > 1 && !STAPLES.has(normKey(it.name)) && !rows.some((x) => normKey(x.name) === normKey(it.name)) && ws.some((_, i) => i > 0 && STAPLES.has(ws.slice(0, i).join(' ')) && STAPLES.has(ws.slice(i).join(' '))) && !((itemMatch(it.name) || {}).rest === '')) return null;
       // a short nickname for something everyday ("tp") is written out in full
       const known = STAPLES.get(normKey(it.name));
       if (known && it.name.length <= 3) it.name = known.name.toLowerCase();
       // "need help" is not shopping: a bare "need X" only goes on the list when X is a thing I know, or the list is named
       if (kind === 'list' && !findRow(it.name, rows) && !STAPLES.has(normKey(it.name)) && !stapleFor(it.name) && !/^(add|put|pop|stick)$/.test(verbOf.get(obj0) || '') && !LIST_TO.test(obj0)) return null;
       const r = findRow(it.name, rows);
-      if (r === 'many' || (r && it.pack && r.unit !== 'pack' && kind !== 'list' && kind !== 'unlist')) return null;
-      const qIn = (to) => (it.qty === null ? null : it.dozen && to === 'pack' ? it.dozen : it.unit && it.unit !== 'pcs' && it.unit !== 'pack' ? convert(it.qty, it.unit, to) : it.unit && it.unit !== to ? null : it.qty);
+      // "a bag of dog food" is one Dog Food; "a box of eggs" is not one egg: a pack of something counted by the piece is left to the model
+      const whole = r && r !== 'many' && it.pack && r.unit === 'pcs' && !it.each && !/[^s]s$/i.test(r.name.trim());
+      if (r === 'many' || (r && it.pack && r.unit !== 'pack' && !whole && kind !== 'list' && kind !== 'unlist')) return null;
+      const qIn = (to) => (it.qty === null ? null : whole ? it.qty : it.dozen && to === 'pack' ? it.dozen : it.unit && it.unit !== 'pcs' && it.unit !== 'pack' ? convert(it.qty, it.unit, to) : it.unit && it.unit !== to ? null : it.qty);
       if (kind === 'unlist') { acts.push({ action: 'unlist', name: r ? r.name : titleCase(it.name) }); continue; }
       if (kind === 'list') { acts.push({ action: 'list', name: r ? r.name : (it.qty && it.qty > 1 ? it.qty + ' ' : '') + titleCase(it.name) }); continue; }
       if (kind === 'low') { acts.push(r ? { action: 'low', name: r.name } : { action: 'list', name: titleCase(it.name) }); continue; }
       if (kind === 'out') { if (r) acts.push({ action: 'use', name: r.name, quantity: 0, unit: r.unit }); else acts.push({ action: 'list', name: titleCase(it.name) }); continue; }
-      if (kind === 'gone') { acts.push({ action: 'use', name: r ? r.name : titleCase(it.name), quantity: 0, unit: r ? r.unit : 'pcs' }); continue; }
+      if (kind === 'gone') {
+        // "threw out 2 tomatoes" is 2, not all of them; "finished the bread" is all of it
+        let q = 0;
+        if (it.qty !== null && r && /\d|\b(?:two|three|four|five|six|seven|eight|nine|ten|twelve|dozen|both|couple)\b/.test(p)) { q = qIn(r.unit); if (q === null) return null; }
+        acts.push({ action: 'use', name: r ? r.name : titleCase(it.name), quantity: q, unit: r ? r.unit : 'pcs' }); continue;
+      }
       if (kind === 'use') {
         if (!r || it.qty === null) return null; // "used milk": how much is the model's guess, not code's
         const q = qIn(r.unit); if (q === null) return null;
@@ -2435,7 +2476,8 @@ async function quickParse(env, raw, rows, profile, history, ai) {
           acts.push({ action: 'add', name: r.name, quantity: q, unit: it.each && r.unit === 'pack' && it.unit === 'pcs' ? 'pcs' : r.unit, each: it.each || 0, sure: it.qty !== null, area: r.area || 'Kitchen', category: r.category || '', shelfLifeDays: (f && f.shelfLifeDays) || span, finishDays: r.finish_days || (f && f.finishDays) || 14 }); continue;
         }
         const f = await factFor(env, it.name);
-        if (!f && ai && restricted(profile)) return null; // something new to a home with allergies: let the model look at it
+        // something new to a home with allergies: let the model look at it, unless the name already shows the clash and code will say so
+        if (!f && ai && restricted(profile) && !clashOf(titleCase(it.name), profile, 'Kitchen')) return null;
         const unit = it.unit === 'gal' ? 'L' : it.unit || (it.qty === null && f ? f.unit : 'pcs');
         acts.push({ action: 'add', name: f && normKey(f.name) === normKey(it.name) ? f.name : titleCase(it.name), quantity: it.unit === 'gal' ? convert(it.qty, 'gal', 'L') : it.qty === null ? 1 : it.qty, unit, each: it.each || 0, sure: it.qty !== null, fact: f });
         continue;
@@ -2490,6 +2532,7 @@ function useFirst(rows, profile, today) {
     .sort((a, b) => (a.expiry < b.expiry ? -1 : a.expiry > b.expiry ? 1 : (PERISH[a.category] ?? 3) - (PERISH[b.category] ?? 3)));
 }
 const dateOf = (r, today) => niceDate(r.expiry, today) + (r.expiry_est ? ', my estimate' : '');
+const SPOIL = /\b(past (?:the|its|their) (?:date|best)|out of date|expired?|still (?:good|ok|okay|fine|safe)|gone (?:off|bad)|go(?:ne|es)? off|sat out|left out|out all (?:night|day)|been out|smells?|mou?ldy?|spoiled|slimy)\b/i;
 const DOSE_REPLY = 'I only keep track of which medicines are at home and their dates. For how much to take, please check the leaflet or ask a pharmacist or doctor.';
 const SAFE_REPLY = 'With an allergy or a health condition I cannot vouch for any food, so please check the label, and ask a doctor or pharmacist if you are unsure.';
 // "what can I eat right now?" asks for an idea, not for a health opinion
@@ -2502,7 +2545,8 @@ async function quickAnswer(env, raw, rows, list, today, profile, ai) {
   if (!bare) return 'Hello. Tell me what you bought or used, or ask what is at home.';
   if (PROBE.test(t) || route(raw) === 'refuse') return 'That is not something I can share or change. I can tell you what is at home, what needs using up, or what is on your list.';
   if (/\b(dose|dosage|how (?:much|many) .{0,40}\b(?:give|take)|should (?:i|we) (?:give|take)|mg\b|milligrams?)\b/.test(t) && /\b(medicine|ibuprofen|paracetamol|tylenol|advil|calpol|motrin|syrup|tablet|pill|dose|dosage|mg|give|take)\b/.test(t)) return DOSE_REPLY;
-  const no = allergyAnswer(t, rows, profile);
+  // "is it safe to eat eggs past the date?" is about food going off, not about an allergy: the name of the food cannot answer it
+  const no = SPOIL.test(t) ? '' : allergyAnswer(t, rows, profile);
   if (no) return no;
   if (HEALTH.test(t) && !MEALQ.test(t)) return SAFE_REPLY;
   if (/\b(passcode|password|pin code|api key|secret)\b/.test(t)) return 'That is not something I can share. I can tell you what is at home, what needs using up, or what is on your list.';
@@ -2520,9 +2564,18 @@ async function quickAnswer(env, raw, rows, list, today, profile, ai) {
     const s = useFirst(rows, profile, today)[0];
     return 'Hello.' + (s && s.expiry <= today ? ' ' + capFirst(lname(s.name)) + ' wants using today.' : '') + ' Tell me what you bought or used, or ask what is at home.';
   }
+  // "are we out of butter?": yes or no, with what is there
+  { const o = bare.match(/^(?:are|were) (?:we|you) (?:all |nearly |almost |running )?(?:out of|low on|short on) (?:the |any )?(.+)$/), r = o ? findRow(o[1], rows) : null;
+    if (r && r !== 'many') return r.qty > 0 ? 'No, you have ' + amountOf(r) + (r.low ? ', and it is running low' : '') + '.' : 'Yes, you are out of ' + lname(r.name) + ', so it is on your list.'; }
+  // "what's in the bathroom?": what is kept in that room
+  { const w = bare.match(/^(?:what'?s|what is|whats|what do (?:we|i) have|what have (?:we|i) got|show me what'?s) (?:in|under) (?:the|my|our) (kitchen|pantry|bathroom|cleaning (?:cupboard|cabinet)|medicine (?:cabinet|cupboard|box))$/);
+    if (w) { const area = /^bath/.test(w[1]) ? 'Bathroom' : /^clean/.test(w[1]) ? 'Cleaning' : /^medi/.test(w[1]) ? 'Health' : 'Kitchen', here = rows.filter((r) => (r.area || 'Kitchen') === area && r.qty > 0);
+      return here.length ? 'In the ' + w[1] + ' you have ' + listOf(here.slice(0, 8).map(amountOf)) + (here.length > 8 ? ', and ' + (here.length - 8) + ' more' : '') + '.' : 'I have nothing on record in the ' + w[1] + '.'; } }
   // what is on the list, what is low, what is out
   if (/\b(what'?s|what is|whats|show(?: me)?|read(?: me)?)\s+(?:on\s+)?(?:my|the|our)\s+(?:shopping\s+|grocery\s+)?list\b|^(?:my |the |our )?(?:shopping )?list$|\bwhat (?:are we|am i) (?:out of|low on|running low on)\b|\bwhat(?:'s| is| are)? (?:running low|low)\b|\bwhat do (?:we|i) need(?: to buy| to get)?$/.test(bare)) {
     const out = rows.filter((r) => r.qty <= 0 && !r.nolist).map((r) => r.name + ' (out)'), low = rows.filter((r) => r.qty > 0 && r.low).map((r) => r.name + ' (running low)');
+    // "what's running low?" asks about things at home, not about everything waiting to be bought
+    if (/\bwhat (?:are we|am i) (?:out of|low on|running low on)\b|\bwhat(?:'s| is| are)? (?:running low|low)\b/.test(bare) && !/\blist\b/.test(bare)) return out.length + low.length ? capFirst(listOf(out.concat(low).slice(0, 6))) + '.' : 'Nothing at home is running low or out.';
     const all = out.concat(low, (list || []).map(String));
     if (!all.length) return 'Your list is empty, and nothing is running low.';
     return 'On your list: ' + listOf(all.slice(0, 5)) + (all.length > 5 ? ', and ' + (all.length - 5) + ' more' : '') + '.';
@@ -2657,6 +2710,9 @@ async function answerTurn(env, text, history, rows, list, today, profile, missed
     const m = quickMeals(rows, profile, today).meals[0];
     if (m) return { reply: 'A simple idea from what needs using first: ' + m.name.toLowerCase() + '. It uses ' + listOf(m.uses.map((u) => lname(u.name))) + '.', via: 'code' };
   }
+  if (SPOIL.test(text)) return { reply: 'I cannot tell whether food is still good to eat. Go by the date on the pack and how it looks and smells, and when in doubt, leave it out.', via: 'code' };
+  // a plan or a maybe needs no answer from a model to be handled right: nothing has happened yet
+  if (LATER.test(text) && !/\?/.test(text)) return { reply: 'That sounds like a plan, so I have not changed anything. Tell me once it has happened and I will update your home.', via: 'code' };
   return { reply: OFFLINE_ANSWER, via: 'none' };
 }
 
@@ -3504,7 +3560,9 @@ function simApply(rows, list, actions) {
       continue;
     }
     if (a.action === 'set' && r) { const prev = r.qty; r.qty = a.quantity; r.low = 0; changes.push({ name: r.name, action: 'set', prevQty: prev, qty: a.quantity, unit: r.unit }); continue; }
-    if (r) { const prev = r.qty; r.qty += a.quantity; r.low = 0; r.nolist = 0; changes.push({ name: r.name, action: 'add', created: false, prevQty: prev, qty: r.qty, added: a.quantity, unit: a.unit, area: r.area, cleared: clear(r.name) }); }
+    // like the real home: a purchase lands on a thing only when the name is that thing's name, never on one that merely contains it
+    const own = rows.find((x) => keyOf(x.name) === keyOf(a.name));
+    if (own) { const r = own, prev = r.qty; r.qty += a.quantity; r.low = 0; r.nolist = 0; changes.push({ name: r.name, action: 'add', created: false, prevQty: prev, qty: r.qty, added: a.quantity, unit: a.unit, area: r.area, cleared: clear(r.name) }); }
     else { rows.push({ name: a.name, qty: a.quantity, unit: a.unit, area: a.area, category: a.category, low: 0, frozen: 0, expiry: null }); changes.push({ name: a.name, action: 'add', created: true, prevQty: 0, qty: a.quantity, added: a.quantity, unit: a.unit, area: a.area, cleared: clear(a.name) }); }
   }
   return { changes, missed, notListed };
